@@ -27,6 +27,7 @@ sys.path.insert(0, str(src_path))
 
 from bitcrafty_extractor.config.config_manager import ConfigManager
 from bitcrafty_extractor.ai_analysis.vision_client import VisionClient, ImageData
+from bitcrafty_extractor.ai_analysis.prompts import PromptBuilder, ExtractionType
 from bitcrafty_extractor.capture.window_capture import WindowCapture
 from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler
 
@@ -55,6 +56,7 @@ class BitCraftyExtractor:
         self.vision_client = None
         self.window_capture = None
         self.hotkey_handler = None
+        self.prompt_builder = PromptBuilder()  # External prompt system
         self.screenshot_queue: List[ImageData] = []
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
@@ -447,8 +449,11 @@ class BitCraftyExtractor:
         try:
             self.add_debug_message(f"🤖 Analyzing {len(self.screenshot_queue)} screenshots")
             
-            # Create analysis prompt
-            prompt = self._create_analysis_prompt()
+            # Create analysis prompt using external prompt system
+            prompt = self.prompt_builder.get_queue_analysis_prompt(
+                screenshot_count=len(self.screenshot_queue),
+                include_examples=True
+            )
             
             # Analyze with AI
             result = await self.vision_client.analyze_images(
@@ -582,63 +587,6 @@ class BitCraftyExtractor:
             except Exception as e:
                 pass
                 
-    def _create_analysis_prompt(self) -> str:
-        """Create analysis prompt for the queue."""
-        return f"""
-TASK: Analyze {len(self.screenshot_queue)} screenshots and extract item details and crafting recipes.
-
-INSTRUCTIONS:
-1. Look for item tooltips, descriptions, and details
-2. Look for crafting interfaces and recipe views
-3. Pay careful attention to quantities - count exactly what you see
-4. Extract complete item details AND any crafting recipes shown
-
-REQUIRED JSON RESPONSE:
-{{
-  "analysis_type": "queue_analysis",
-  "screenshots_processed": {len(self.screenshot_queue)},
-  "items_found": [
-    {{
-      "type": "item",
-      "name": "string - exact item name",
-      "tier": number or null,
-      "rarity": "string",
-      "description": "string - item description", 
-      "uses": "string - what the item is used for",
-      "confidence": 0.0-1.0
-    }}
-  ],
-  "crafts_found": [
-    {{
-      "type": "craft_recipe", 
-      "name": "string - recipe name",
-      "requirements": {{
-        "profession": "string",
-        "tool": "string or null",
-        "building": "string or null"
-      }},
-      "input_materials": [
-        {{
-          "item_name": "string",
-          "quantity": number
-        }}
-      ],
-      "output_materials": [
-        {{
-          "item_name": "string", 
-          "quantity": number,
-          "variable_quantity": boolean
-        }}
-      ],
-      "confidence": 0.0-1.0
-    }}
-  ],
-  "total_confidence": 0.0-1.0
-}}
-
-Analyze all screenshots and extract complete item and recipe data with accurate quantities.
-"""
-
     def _show_analysis_results(self, data: dict, result):
         """Display analysis results."""
         if not RICH_AVAILABLE:

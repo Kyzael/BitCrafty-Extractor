@@ -1,8 +1,7 @@
-"""Structured prompts for AI vision analysis of game interfaces.
+"""Optimized prompts for AI vision analysis of BitCraft game interfaces.
 
-This module contains optimized prompts for extracting different types of 
-game data from screenshots with high accuracy and consistency using a
-queue-based analysis approach.
+Streamlined prompts focused on extracting game data efficiently with 
+reduced token usage while maintaining high accuracy.
 """
 
 from typing import Dict, Any, List
@@ -13,211 +12,234 @@ import json
 class ExtractionType(Enum):
     """Types of data extraction available."""
     QUEUE_ANALYSIS = "queue_analysis"
+    ITEM_TOOLTIP = "item_tooltip"
+    CRAFT_RECIPE = "craft_recipe"
+    SINGLE_ITEM_TEST = "single_item_test"
 
 
 class PromptBuilder:
-    """Builder for creating structured AI vision prompts."""
+    """Builder for creating compact, efficient AI vision prompts."""
     
     def __init__(self):
-        """Initialize prompt builder with base templates."""
-        self.base_context = """
-You are an expert at analyzing game interface screenshots from Bitcraft, 
-a crafting and building game. Your task is to extract structured data 
-from multiple screenshots with high accuracy.
-
-IMPORTANT INSTRUCTIONS:
-1. Return ONLY valid JSON - no additional text or explanations
-2. If you cannot extract any data, return {"error": "reason"}
-3. Be precise with spelling and formatting
-4. Include confidence scores (0.0-1.0) for extracted data
-5. Follow the exact JSON schema provided
-6. Analyze ALL provided screenshots together
-7. Automatically detect items and crafting recipes from any screenshots
-8. Group similar data together (all items, all crafts)
-"""
+        """Initialize prompt builder with optimized templates."""
+        self.base_context = """Extract BitCraft game data from screenshots. Return ONLY valid JSON with exact item/recipe names and confidence scores (0.0-1.0)."""
     
-    def build_queue_analysis_prompt(self, include_examples: bool = True) -> str:
-        """Build prompt for analyzing a queue of screenshots.
+    def build_queue_analysis_prompt(self, screenshot_count: int = 1, include_examples: bool = True) -> str:
+        """Build optimized prompt for analyzing screenshots queue.
         
         Args:
+            screenshot_count: Number of screenshots being analyzed
             include_examples: Whether to include example responses
             
         Returns:
-            Formatted prompt string
+            Compact formatted prompt string
         """
         schema = {
             "analysis_type": "queue_analysis",
-            "screenshots_processed": "number - how many screenshots were analyzed",
+            "screenshots_processed": screenshot_count,
             "items_found": [
                 {
-                    "type": "item",
-                    "name": "string - exact name of the item",
-                    "tier": "number - item tier/level (1-5, or null if not visible)",
-                    "rarity": "string - item rarity (common, uncommon, rare, epic, legendary)",
-                    "description": "string - item description text",
-                    "uses": "string - what the item is used for or its purpose",
-                    "confidence": "number - confidence score 0.0-1.0"
+                    "name": "string - exact item name",
+                    "description": "string - item description", 
+                    "rarity": "string - common/uncommon/rare/epic/legendary",
+                    "tier": "number or null",
+                    "confidence": "number - 0.0-1.0"
                 }
             ],
             "crafts_found": [
                 {
-                    "type": "craft_recipe",
-                    "name": "string - name of the item being crafted",
+                    "name": "string - recipe name", 
                     "requirements": {
-                        "profession": "string - crafting profession required (e.g., blacksmithing, farming)",
-                        "tool": "string - tool required if any (e.g., Anvil, Workbench)",
-                        "building": "string - building required if any (e.g., Blacksmith Shop)"
+                        "profession": "string - e.g. tailoring, farming, cooking",
+                        "building": "string - building name or null",
+                        "tool": "string - tool name or null"
                     },
-                    "input_materials": [
-                        {
-                            "item_name": "string - ingredient item name",
-                            "quantity": "number - amount needed"
-                        }
+                    "materials": [
+                        {"item": "string - ingredient name", "qty": "number"}
                     ],
-                    "output_materials": [
-                        {
-                            "item_name": "string - output item name",
-                            "quantity": "number - base amount produced",
-                            "variable_quantity": "boolean - true if quantity can vary"
-                        }
+                    "outputs": [
+                        {"item": "string - output name", "qty": "number or string for variable"}
                     ],
-                    "confidence": "number - confidence score 0.0-1.0"
+                    "confidence": "number - 0.0-1.0"
                 }
             ],
-            "total_confidence": "number - overall confidence score 0.0-1.0"
+            "total_confidence": "number - 0.0-1.0"
         }
         
         examples = ""
         if include_examples:
             examples = f"""
-EXAMPLE RESPONSE:
+EXAMPLE:
 {json.dumps({
     "analysis_type": "queue_analysis",
-    "screenshots_processed": 3,
+    "screenshots_processed": 2,
     "items_found": [
         {
-            "type": "item",
-            "name": "Iron Sword",
-            "tier": 2,
+            "name": "Rough Cloth Strip",
+            "description": "Basic textile material woven from plant fibers",
             "rarity": "common",
-            "description": "A sturdy sword forged from iron ore",
-            "uses": "Combat weapon for dealing damage to enemies",
-            "confidence": 0.95
-        },
-        {
-            "type": "item",
-            "name": "Wheat Seeds",
             "tier": 1,
-            "rarity": "common", 
-            "description": "Seeds used to grow wheat crops",
-            "uses": "Plant in farmland to grow wheat for food production",
-            "confidence": 0.92
+            "confidence": 0.95
         }
     ],
     "crafts_found": [
         {
-            "type": "craft_recipe",
-            "name": "Iron Sword",
+            "name": "Weave Rough Cloth",
             "requirements": {
-                "profession": "blacksmithing",
-                "tool": "Anvil",
-                "building": "Blacksmith Shop"
+                "profession": "tailoring",
+                "building": None,
+                "tool": "basic-tools"
             },
-            "input_materials": [
-                {"item_name": "Iron Ingot", "quantity": 3},
-                {"item_name": "Wood", "quantity": 1}
+            "materials": [
+                {"item": "cloth-strip", "qty": 1},
+                {"item": "wispweave-filament", "qty": 5}
             ],
-            "output_materials": [
-                {"item_name": "Iron Sword", "quantity": 1, "variable_quantity": False}
+            "outputs": [
+                {"item": "cloth", "qty": 1}
             ],
             "confidence": 0.88
         }
     ],
     "total_confidence": 0.91
 }, indent=2)}
+"""
+        
+        return f"""{self.base_context}
 
-ANOTHER EXAMPLE (No crafts found):
-{json.dumps({
-    "analysis_type": "queue_analysis", 
-    "screenshots_processed": 2,
-    "items_found": [
-        {
-            "type": "item",
-            "name": "Health Potion",
-            "tier": 3,
-            "rarity": "uncommon",
-            "description": "A magical potion that restores health when consumed",
-            "uses": "Restore health points during combat or exploration",
-            "confidence": 0.89
+TASK: Extract items and crafting recipes from {screenshot_count} screenshot(s).
+
+SCHEMA:
+{json.dumps(schema, indent=2)}
+
+{examples}
+
+Return ONLY JSON following the schema above."""
+
+    def build_item_tooltip_prompt(self, include_examples: bool = True) -> str:
+        """Build compact prompt for item tooltip extraction.
+        
+        Args:
+            include_examples: Whether to include example responses
+            
+        Returns:
+            Compact formatted prompt string
+        """
+        schema = {
+            "name": "string - exact item name",
+            "description": "string - item description text",
+            "rarity": "string - common/uncommon/rare/epic/legendary", 
+            "tier": "number - 1-5 or null",
+            "confidence": "number - 0.0-1.0"
         }
-    ],
-    "crafts_found": [],
-    "total_confidence": 0.89
+        
+        examples = ""
+        if include_examples:
+            examples = f"""
+EXAMPLE:
+{json.dumps({
+    "name": "Rough Spool of Thread",
+    "description": "Basic thread crafted from plant fibers",
+    "rarity": "common",
+    "tier": 1,
+    "confidence": 0.95
 }, indent=2)}
 """
         
         return f"""{self.base_context}
 
-TASK: Analyze all provided screenshots and extract item and crafting recipe data.
+TASK: Extract item tooltip data.
 
-ITEM EXTRACTION RULES:
-- Extract items from tooltips, inventory views, or any UI showing item details
-- Include name, tier (if visible), rarity, description, and uses
-- Focus on what the item is used for or its purpose in the game
-
-CRAFTING RECIPE EXTRACTION RULES:
-- Extract recipes from crafting interfaces, recipe books, or recipe tooltips
-- Include all requirements (profession, tool, building)
-- List all input materials with quantities
-- List all output materials with quantities and whether quantity can vary
-- Look for any crafting-related UI elements
-
-REQUIRED JSON SCHEMA:
+SCHEMA:
 {json.dumps(schema, indent=2)}
 
 {examples}
 
-Analyze ALL the provided screenshots together and extract all visible items and crafting recipes.
-Return ONLY the JSON response following the exact schema above."""
+Return ONLY JSON following the schema above."""
+
+    def build_craft_recipe_prompt(self, include_examples: bool = True) -> str:
+        """Build compact prompt for crafting recipe extraction.
+        
+        Args:
+            include_examples: Whether to include example responses
+            
+        Returns:
+            Compact formatted prompt string
+        """
+        schema = {
+            "name": "string - recipe name",
+            "requirements": {
+                "profession": "string - crafting profession",
+                "building": "string - building name or null", 
+                "tool": "string - tool name or null"
+            },
+            "materials": [
+                {"item": "string - ingredient name", "qty": "number or string"}
+            ],
+            "outputs": [
+                {"item": "string - output name", "qty": "number or string"}
+            ],
+            "confidence": "number - 0.0-1.0"
+        }
+        
+        examples = ""
+        if include_examples:
+            examples = f"""
+EXAMPLE:
+{json.dumps({
+    "name": "Weave Rough Cloth",
+    "requirements": {
+        "profession": "tailoring",
+        "building": None,
+        "tool": "basic-tools"
+    },
+    "materials": [
+        {"item": "cloth-strip", "qty": 1},
+        {"item": "wispweave-filament", "qty": 5}
+    ],
+    "outputs": [
+        {"item": "cloth", "qty": 1}
+    ],
+    "confidence": 0.90
+}, indent=2)}
+"""
+        
+        return f"""{self.base_context}
+
+TASK: Extract crafting recipe data.
+
+SCHEMA: 
+{json.dumps(schema, indent=2)}
+
+{examples}
+
+Return ONLY JSON following the schema above."""
 
     def build_single_item_test_prompt(self) -> str:
-        """Build a simple prompt for testing single item recognition.
+        """Build compact prompt for single item testing.
         
         Returns:
-            Formatted prompt string for single item analysis
+            Compact formatted prompt string for single item analysis
         """
-        return """Please analyze this BitCraft game screenshot and identify any items visible.
+        return f"""{self.base_context}
 
-Focus on identifying:
-- Item names (be as accurate as possible)
-- Item descriptions if visible
-- Item rarity or quality if shown
+TASK: Identify items in this BitCraft screenshot.
 
-Return your response as JSON in this exact format:
-{
-    "analysis_type": "single_item_test",
+Return JSON:
+{{
     "items": [
-        {
-            "name": "exact item name as shown in game",
-            "description": "item description if visible",
-            "rarity": "item rarity if visible",
+        {{
+            "name": "exact item name",
+            "description": "item description if visible", 
+            "rarity": "rarity if visible",
+            "tier": "tier if visible",
             "confidence": 0.8
-        }
+        }}
     ],
     "confidence": 0.8
-}
+}}
 
-Examples of BitCraft items to help with recognition:
-- Rough Spool of Thread
-- Rough Cloth Strip
-- Cotton Seeds
-- Cotton
-- Rough Hemp Fiber
-- Basic Weaving Tools
-
-Be very precise with item names. If you see "Rough Spool of Thread" write exactly that.
-If no items are clearly visible, return an empty items array.
-"""
+Common BitCraft items: Rough Spool of Thread, Rough Cloth Strip, Wispweave Seeds, Rough Wood Log, Raw Pelt, Breezy Fin Darter Fillet.
+Be precise with names. Return empty array if no items visible."""
 
     def get_prompt(self, extraction_type: ExtractionType, **kwargs) -> str:
         """Get formatted prompt for specific extraction type.
@@ -231,18 +253,61 @@ If no items are clearly visible, return an empty items array.
         """
         if extraction_type == ExtractionType.QUEUE_ANALYSIS:
             return self.build_queue_analysis_prompt(
+                screenshot_count=kwargs.get('screenshot_count', 1),
                 include_examples=kwargs.get('include_examples', True)
             )
+        elif extraction_type == ExtractionType.ITEM_TOOLTIP:
+            return self.build_item_tooltip_prompt(
+                include_examples=kwargs.get('include_examples', True)
+            )
+        elif extraction_type == ExtractionType.CRAFT_RECIPE:
+            return self.build_craft_recipe_prompt(
+                include_examples=kwargs.get('include_examples', True)
+            )
+        elif extraction_type == ExtractionType.SINGLE_ITEM_TEST:
+            return self.build_single_item_test_prompt()
         else:
             raise ValueError(f"Unknown extraction type: {extraction_type}")
 
-    def get_compact_prompt(self, extraction_type: ExtractionType) -> str:
+    def get_compact_prompt(self, extraction_type: ExtractionType, **kwargs) -> str:
         """Get compact version of prompt (no examples) for cost optimization.
         
         Args:
             extraction_type: Type of extraction to perform
+            **kwargs: Additional parameters for prompt building
             
         Returns:
             Compact prompt string
         """
-        return self.get_prompt(extraction_type, include_examples=False)
+        return self.get_prompt(extraction_type, include_examples=False, **kwargs)
+
+    # Convenience methods for common use cases
+    def get_queue_analysis_prompt(self, screenshot_count: int, include_examples: bool = True) -> str:
+        """Get queue analysis prompt with screenshot count.
+        
+        Args:
+            screenshot_count: Number of screenshots being analyzed
+            include_examples: Whether to include examples
+            
+        Returns:
+            Formatted prompt string
+        """
+        return self.get_prompt(
+            ExtractionType.QUEUE_ANALYSIS,
+            screenshot_count=screenshot_count,
+            include_examples=include_examples
+        )
+    
+    def get_compact_queue_prompt(self, screenshot_count: int) -> str:
+        """Get compact queue analysis prompt for cost optimization.
+        
+        Args:
+            screenshot_count: Number of screenshots being analyzed
+            
+        Returns:
+            Compact prompt string
+        """
+        return self.get_compact_prompt(
+            ExtractionType.QUEUE_ANALYSIS,
+            screenshot_count=screenshot_count
+        )
