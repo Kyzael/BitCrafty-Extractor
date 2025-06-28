@@ -34,6 +34,7 @@ class HotkeyConfig:
     """Configuration for hotkeys."""
     queue_screenshot: str = "ctrl+shift+e"
     analyze_queue: str = "ctrl+shift+x"
+    quit_application: str = "ctrl+shift+q"
     enable_global: bool = True
     debounce_ms: int = 500
 
@@ -182,6 +183,7 @@ class ConfigManager:
                 self.config.hotkeys = HotkeyConfig(
                     queue_screenshot=hotkey_data.get('queue_screenshot', 'ctrl+shift+e'),
                     analyze_queue=hotkey_data.get('analyze_queue', 'ctrl+shift+x'),
+                    quit_application=hotkey_data.get('quit_application', 'ctrl+shift+q'),
                     enable_global=hotkey_data.get('enable_global', True),
                     debounce_ms=hotkey_data.get('debounce_ms', 500)
                 )
@@ -321,7 +323,8 @@ class ConfigManager:
         
         for hotkey_name, hotkey_value in [
             ('queue_screenshot', self.config.hotkeys.queue_screenshot),
-            ('analyze_queue', self.config.hotkeys.analyze_queue)
+            ('analyze_queue', self.config.hotkeys.analyze_queue),
+            ('quit_application', self.config.hotkeys.quit_application)
         ]:
             if not re.match(hotkey_pattern, hotkey_value, re.IGNORECASE):
                 errors.append(f"Invalid hotkey format for {hotkey_name}: {hotkey_value}")
@@ -394,6 +397,8 @@ class ConfigManager:
                 self.config.hotkeys.queue_screenshot = hotkey_value
             elif hotkey_name == 'analyze_queue':
                 self.config.hotkeys.analyze_queue = hotkey_value
+            elif hotkey_name == 'quit_application':
+                self.config.hotkeys.quit_application = hotkey_value
             else:
                 return False
             

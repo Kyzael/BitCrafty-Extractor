@@ -4,7 +4,36 @@
 
 The BitCrafty-Extractor is a revolutionary AI-powered computer vision tool designed to extract game data from Bitcraft with unprecedented accuracy. Unlike traditional OCR approaches that struggle with game UI text (achieving only 60-80% accuracy), this tool leverages state-of-the-art AI vision models like GPT-4 Vision and Claude 3 to achieve 95%+ accuracy in data extraction.
 
+The main application features a sophisticated three-pane console interface with global hotkeys that work seamlessly while playing BitCraft.
+
+## Quick Start
+
+### Basic Usage
+```bash
+# Run the main BitCrafty-Extractor application
+python bitcrafty-extractor.py
+
+# Alternative package entry point
+python -m bitcrafty_extractor
+
+# The three-pane interface will launch with:
+# Left: Hotkey controls and session statistics
+# Right: Live screenshot queue status  
+# Bottom: Real-time debug log
+```
+
+### Global Hotkeys (Work while playing BitCraft!)
+- **📸 Ctrl+Shift+E**: Take screenshot and add to queue
+- **🤖 Ctrl+Shift+X**: Analyze entire screenshot queue with AI
+- **🚪 Ctrl+Shift+Q**: Quit application gracefully
+
 ## Key Features
+
+### 🖥️ Professional Console Interface
+- **Three-Pane Layout**: Organized workflow with live updates
+- **Session Tracking**: Real-time statistics for items found, crafts discovered, costs, and screenshots analyzed
+- **Live Queue Display**: Watch screenshots accumulate and see analysis results instantly
+- **Debug Logging**: Real-time feedback on all operations
 
 ### 🤖 AI-Powered Vision Analysis
 - **OpenAI GPT-4 Vision**: Primary analysis engine with exceptional game UI understanding
@@ -15,39 +44,39 @@ The BitCrafty-Extractor is a revolutionary AI-powered computer vision tool desig
 ### ⌨️ Real-Time Hotkey System
 - **Global Hotkeys**: Work while Bitcraft is in focus - no alt-tabbing required
 - **Instant Capture**: Hit a keybind → screenshot captured → AI analysis → structured data
-- **Configurable**: Customize hotkeys for different extraction types
+- **Configurable**: Customize hotkeys in configuration files
 - **Debounced**: Prevents accidental multiple triggers
 
-### 🎯 Extraction Types
-- **Queue-Based Screenshot System**: Capture multiple screenshots, then analyze them all together
-  - **Ctrl+Shift+E**: Queue screenshots of items, crafts, or any game UI
-  - **Ctrl+Shift+X**: Analyze entire screenshot queue with AI
+### 🎯 Queue-Based Extraction System
+- **Multi-Screenshot Analysis**: Capture multiple screenshots, then analyze them all together
 - **Smart Detection**: AI automatically identifies items and crafts from the screenshot queue
 - **Flexible Capture**: Queue as many screenshots as needed before analysis
 - **Complete Data**: All item and craft details extracted in a single analysis
-
-### 💰 Cost-Optimized
-- **Image Compression**: Smart resizing and quality optimization
-- **Structured Output**: Efficient prompts minimize token usage
-- **Provider Selection**: Choose cheaper providers for routine extractions
-- **Usage Tracking**: Real-time cost monitoring and statistics
+- **Cost Efficient**: Batch analysis reduces API costs
 
 ## Architecture
 
 ```
-Real-Time Workflow:
+Main Application Workflow:
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Hotkey Press  │ -> │  Screenshot     │ -> │  AI Analysis    │
-│   (In-Game)     │    │  Capture        │    │  (GPT-4V/Claude)│
+│   Hotkey Press  │ -> │  Screenshot     │ -> │   Queue         │
+│   (In-Game)     │    │  Capture        │    │   Management    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                         │
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   JSON Output   │ <- │  Data Merger    │ <- │  Structured     │
-│   (BitCrafty)   │    │  & Validation   │    │  Extraction     │
+│   Live Display  │ <- │  AI Analysis    │ <- │  Batch Analysis │
+│   (Console UI)  │    │  (GPT-4V/Claude)│    │  Trigger        │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Core Components
+### Applications
+
+#### Main Application: `bitcrafty-extractor.py`
+- **Primary Interface**: Three-pane console application with global hotkeys
+- **Real-time Operation**: Live updates, session tracking, queue management
+- **Professional UI**: Rich terminal interface with organized layout
+- **Zero Alt-Tab**: Complete workflow without leaving BitCraft
+- **Package Entry**: Also available via `python -m bitcrafty_extractor`
 
 1. **Window Capture** (`capture/window_capture.py`)
    - Finds and captures Bitcraft game window
@@ -75,10 +104,11 @@ Real-Time Workflow:
    - Example-driven prompts for higher accuracy
    - Compact versions for cost optimization
 
-5. **Real-Time App** (`realtime_extractor.py`)
-   - PyQt6 GUI with system tray integration
-   - Configuration management
-   - Results display and export
+5. **Main Application** (`bitcrafty-extractor.py`)
+   - Three-pane console interface with Rich library
+   - Global hotkey system integration
+   - Live queue management and session tracking
+   - Real-time AI analysis and results display
 
 6. **Configuration System** (`config/config_manager.py`)
    - YAML-based configuration management
@@ -118,7 +148,7 @@ bitcrafty-extractor
 - **opencv-python**: Computer vision and image processing
 - **openai**: GPT-4 Vision API client  
 - **anthropic**: Claude Vision API client
-- **PyQt6**: Modern GUI framework
+- **rich**: Modern terminal UI framework
 - **pynput**: Global hotkey handling
 - **pywin32**: Windows system integration
 - **structlog**: Structured logging
@@ -136,12 +166,13 @@ Get API keys from:
 - Anthropic Claude 3: ~$0.008-0.025 per extraction
 
 ### 2. Initial Configuration
-1. Run the application: `bitcrafty-extractor`
-2. Go to the "Configuration" tab
-3. Enter your API keys (at least one required)
-4. Choose primary/fallback providers
-5. Customize hotkeys if desired
-6. Save configuration
+Configuration is handled via YAML file located at `~/.bitcrafty-extractor/config.yaml`. The application will guide you through the setup process on first launch:
+
+1. Run the application: `python bitcrafty-extractor.py`
+2. Follow the configuration prompts for API keys
+3. Choose primary/fallback providers
+4. Customize hotkeys if desired
+5. Configuration is automatically saved
 
 ### 3. Hotkey Customization
 Default hotkeys:
@@ -156,35 +187,24 @@ The BitCrafty-Extractor supports several command-line options:
 
 ```bash
 # Show help
-bitcrafty-extractor --help
+python bitcrafty-extractor.py --help
 
 # Show version
-bitcrafty-extractor --version
+python bitcrafty-extractor.py --version
 
-# Run Phase 1 validation test
-bitcrafty-extractor --test-capture
-
-# Launch GUI (default)
-bitcrafty-extractor --gui
+# Run with alternative entry point
+python -m bitcrafty_extractor
 ```
-
-### Phase 1 Validation Test
-Use `--test-capture` to validate the capture system:
-- Tests BitCraft window detection
-- Validates focus-based capture functionality
-- Confirms screenshot quality and content
-- Perfect for troubleshooting capture issues
 
 ## Usage
 
 ### Quick Start
-1. Launch BitCrafty-Extractor
-2. Configure API keys and save
-3. Enable hotkeys in the "Extraction" tab
-4. Launch Bitcraft
-5. **Queue Screenshots**: Press Ctrl+Shift+E multiple times to capture items/crafts
-6. **Analyze Queue**: Press Ctrl+Shift+X to analyze all queued screenshots
-7. View extracted items and crafts in the Results tab
+1. Launch BitCrafty-Extractor: `python bitcrafty-extractor.py`
+2. Configure API keys when prompted or edit config file
+3. Launch Bitcraft
+4. **Queue Screenshots**: Press Ctrl+Shift+E multiple times to capture items/crafts
+5. **Analyze Queue**: Press Ctrl+Shift+X to analyze all queued screenshots
+6. View extracted items and crafts in the console interface
 
 ### Real-Time Extraction Workflow
 
@@ -207,15 +227,11 @@ Use `--test-capture` to validate the capture system:
    - Queue automatically clears after successful analysis
 
 ### Manual Extraction
-- Use the "Extraction" tab for manual screenshot analysis
-- Upload multiple screenshots to analyze together
-- Click "Analyze Queue" to process all uploaded images
-- AI automatically detects and extracts items and crafts from all images
-
-### System Tray Operation
-- Application minimizes to system tray for background operation
-- Right-click tray icon for quick access to show/quit
-- Hotkeys work even when application is minimized
+The console interface displays all extraction data in real-time:
+- Screenshots are queued automatically when using hotkeys
+- Analysis results appear in the console interface immediately
+- Session statistics track your extraction progress
+- Debug panel shows all system operations
 
 ## Data Integration
 

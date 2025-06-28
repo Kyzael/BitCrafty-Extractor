@@ -20,7 +20,7 @@ pip install -r requirements.txt
 # Install development dependencies
 pip install -e ".[dev]"
 
-# Run application
+# Run main application
 python bitcrafty-extractor.py
 ```
 
@@ -29,11 +29,11 @@ python bitcrafty-extractor.py
 ### Code Quality & Testing
 ```powershell
 # Format code
-black src/ --line-length 88
-isort src/ --profile black
+black . --line-length 88
+isort . --profile black
 
 # Lint code
-flake8 src/ --max-line-length 88
+flake8 . --max-line-length 88
 mypy src/ --strict
 
 # Run tests
@@ -43,9 +43,6 @@ pytest tests/ -m "integration" -v   # Integration tests only
 
 # Test coverage
 pytest tests/ --cov=src --cov-report=html
-
-# Test Phase 1 completion
-python test_window_capture.py
 ```
 
 **Note**: Use PowerShell for all terminal commands in this Windows-specific project.
@@ -53,16 +50,15 @@ python test_window_capture.py
 ## 2. Architecture Overview
 
 ### Core Components
-- **Application Entry**: `bitcrafty-extractor.py` - Main runner script
-- **Real-time Extractor**: `realtime_extractor.py` - PyQt6 GUI application with system tray
-- **Configuration**: `config/config_manager.py` - YAML-based configuration management
-- **Window Capture**: `capture/window_capture.py` - Windows API game window capture
-- **Hotkey Handler**: `capture/hotkey_handler.py` - Global hotkey system using pynput
-- **AI Vision**: `ai_analysis/vision_client.py` - OpenAI GPT-4V/Anthropic Claude integration
-- **Prompt System**: `ai_analysis/prompts*.py` - Structured prompts for AI analysis
+- **Main Application**: `bitcrafty-extractor.py` - Console-based extractor with Rich UI
+- **Configuration**: `src/bitcrafty_extractor/config/config_manager.py` - YAML-based configuration management
+- **Window Capture**: `src/bitcrafty_extractor/capture/window_capture.py` - Windows API game window capture
+- **Hotkey Handler**: `src/bitcrafty_extractor/capture/hotkey_handler.py` - Global hotkey system using pynput
+- **AI Vision**: `src/bitcrafty_extractor/ai_analysis/vision_client.py` - OpenAI GPT-4V/Anthropic Claude integration
+- **Prompt System**: `src/bitcrafty_extractor/ai_analysis/prompts*.py` - Structured prompts for AI analysis
 
 ### Major Dependencies
-- **PyQt6**: GUI framework for main application
+- **Rich**: Terminal UI framework for professional console interface
 - **pynput**: Global hotkey handling across applications
 - **pywin32**: Windows API integration for window capture
 - **openai**: GPT-4 Vision API client
@@ -73,9 +69,9 @@ python test_window_capture.py
 
 ### Data Flow
 ```
-Hotkey Press → Screenshot Queue → AI Analysis → Structured JSON → Export
-     ↓              ↓                ↓             ↓            ↓
-Global Hotkey → Window Capture → Vision Client → Data Merge → BitCrafty Format
+Hotkey Press → Screenshot Queue → AI Analysis → Console Display → Export
+     ↓              ↓                ↓             ↓              ↓
+Global Hotkey → Window Capture → Vision Client → Rich UI → BitCrafty Format
 ```
 
 ### External APIs
@@ -86,19 +82,31 @@ Global Hotkey → Window Capture → Vision Client → Data Merge → BitCrafty 
 ## 3. Repository Structure (MANDATORY)
 
 ```
+bitcrafty-extractor.py             # Main console application entry point
 src/bitcrafty_extractor/
-├── realtime_extractor.py      # Main PyQt6 application
+├── __init__.py                    # Package initialization
+├── __main__.py                    # Package entry point
 ├── config/
-│   └── config_manager.py      # YAML configuration management
+│   └── config_manager.py          # YAML configuration management
 ├── capture/
-│   ├── window_capture.py      # Windows game window capture
-│   └── hotkey_handler.py      # Global hotkey system
+│   ├── window_capture.py          # Windows game window capture
+│   └── hotkey_handler.py          # Global hotkey system
 └── ai_analysis/
-    ├── vision_client.py       # AI vision API clients
-    ├── prompts.py            # Queue-based analysis prompts
-    ├── prompts_new.py        # Single-item analysis prompts
-    └── prompts_queue.py      # Additional queue prompts
+    ├── vision_client.py           # AI vision API clients
+    ├── prompts.py                 # Queue-based analysis prompts
+    ├── prompts_new.py             # Single-item analysis prompts
+    └── prompts_queue.py           # Additional queue prompts
 config/
+└── default.yaml                   # Default configuration template
+test/                              # Test suite
+pyproject.toml                     # Project configuration and dependencies
+```
+
+**REQUIREMENTS:**
+- **Entry Point**: `bitcrafty-extractor.py` MUST be the main application launcher
+- **Package Structure**: All library code MUST be in `src/bitcrafty_extractor/` for proper packaging
+- **Modular Components**: Each module MUST have single responsibility
+- **Configuration**: MUST use YAML configuration in `config/` directory
 └── default.yaml              # Default configuration template
 bitcrafty-extractor.py        # Application entry point
 ```
@@ -144,7 +152,8 @@ from enum import Enum
 
 # Third-party libraries
 import structlog
-from PyQt6.QtWidgets import QApplication
+from rich.console import Console
+from rich.layout import Layout
 
 # Local relative imports (package-style)
 from ..capture.window_capture import WindowCapture
@@ -165,11 +174,11 @@ from .vision_client import VisionClient
 - **Secure Storage**: API keys MUST be stored securely
 - **Environment Override**: MUST support environment variable overrides
 
-### GUI Application (PyQt6)
-- **System Tray**: MUST support minimizing to system tray
-- **Background Operation**: MUST work while game is in focus
-- **Threading**: MUST use QThread for long-running operations
-- **Progress Feedback**: MUST provide visual/audio feedback for operations
+### Console Application (Rich)
+- **Three-Pane Layout**: MUST use organized layout with commands, queue, and debug panels
+- **Global Hotkeys**: MUST work while game is in focus with no alt-tabbing
+- **Live Updates**: MUST use Rich Live display for real-time interface updates
+- **Session Tracking**: MUST provide real-time statistics and cost monitoring
 
 ## 6. Data Models & APIs (STRICT FORMAT)
 
@@ -243,7 +252,7 @@ class AIResponse:
 - **Unit Tests**: Component isolation, mocking external dependencies
 - **Integration Tests**: AI API integration, configuration loading
 - **Vision Tests**: Screenshot processing, image optimization
-- **GUI Tests**: PyQt6 widget behavior, user interactions
+- **Console Tests**: Rich interface behavior, hotkey interactions
 
 ### Mock Requirements
 - **AI APIs**: MUST mock OpenAI/Anthropic API calls in unit tests

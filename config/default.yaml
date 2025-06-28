@@ -53,6 +53,9 @@ hotkeys:
   # Analyze queue hotkey  
   analyze_queue: "ctrl+shift+x"
   
+  # Quit application hotkey
+  quit_application: "ctrl+shift+q"
+  
   # Enable/disable hotkeys globally
   enabled: true
 
