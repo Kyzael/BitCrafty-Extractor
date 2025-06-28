@@ -198,6 +198,7 @@ logs/
 cache/
 temp/
 tmp/
+exports/
 
 # Configuration overrides (keep defaults, exclude local configs)
 config/local.yaml
@@ -242,4 +243,3 @@ Thumbs.db
 dev_notes.md
 dev_screenshots/
 sandbox/
-src/bitcrafty_extractor.egg-info/dependency_links.txt
