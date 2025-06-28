@@ -30,6 +30,7 @@ from bitcrafty_extractor.ai_analysis.vision_client import VisionClient, ImageDat
 from bitcrafty_extractor.ai_analysis.prompts import PromptBuilder, ExtractionType
 from bitcrafty_extractor.capture.window_capture import WindowCapture
 from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler
+from bitcrafty_extractor.export.export_manager import ExportManager
 
 
 
@@ -57,6 +58,7 @@ class BitCraftyExtractor:
         self.window_capture = None
         self.hotkey_handler = None
         self.prompt_builder = PromptBuilder()  # External prompt system
+        self.export_manager = ExportManager()  # Export system for items/crafts
         self.screenshot_queue: List[ImageData] = []
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
@@ -76,6 +78,7 @@ class BitCraftyExtractor:
         self.total_cost = 0.0
         self.is_analyzing = False
         self.show_analysis_results = False
+        self.last_export_stats = None  # Track last export statistics
         
     def create_layout(self):
         """Create the three-section layout."""
@@ -127,6 +130,12 @@ class BitCraftyExtractor:
         commands_text.append("📊 Session Stats:\n", style="bold magenta")
         commands_text.append(f"  🍎 Items Found: {len(self.session_items_found)}\n", style="green")
         commands_text.append(f"  🔨 Crafts Found: {len(self.session_crafts_found)}\n", style="yellow")
+        
+        # Export statistics
+        export_stats = self.export_manager.get_stats()
+        commands_text.append(f"  💾 Total Exported:\n", style="bold cyan")
+        commands_text.append(f"    Items: {export_stats['total_items']}\n", style="white")
+        commands_text.append(f"    Crafts: {export_stats['total_crafts']}\n", style="white")
         commands_text.append(f"  📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
         commands_text.append(f"  💰 Est. Cost: ${self.total_cost:.3f}\n", style="red")
         
@@ -588,9 +597,13 @@ class BitCraftyExtractor:
                 pass
                 
     def _show_analysis_results(self, data: dict, result):
-        """Display analysis results."""
+        """Display analysis results and export new items/crafts."""
         if not RICH_AVAILABLE:
             return
+            
+        # Process and export new items/crafts
+        export_stats = self.export_manager.process_extraction_results(data)
+        self.last_export_stats = export_stats
             
         # Update session tracking
         items = data.get('items_found', [])
@@ -617,6 +630,18 @@ class BitCraftyExtractor:
         results_text.append(f"  Confidence: {result.confidence:.2f}\n", style="white")
         results_text.append(f"  Cost: ${result.cost_estimate:.4f}\n", style="white")
         results_text.append(f"  Screenshots: {data.get('screenshots_processed', 0)}\n\n", style="white")
+        
+        # Export statistics
+        if self.last_export_stats:
+            stats = self.last_export_stats
+            results_text.append(f"💾 Export Results:\n", style="bold cyan")
+            if stats['new_items_added'] > 0:
+                results_text.append(f"  ✅ {stats['new_items_added']} new items saved\n", style="green")
+            if stats['new_crafts_added'] > 0:
+                results_text.append(f"  ✅ {stats['new_crafts_added']} new crafts saved\n", style="green")
+            if stats['new_items_added'] == 0 and stats['new_crafts_added'] == 0:
+                results_text.append(f"  ℹ️ No new items/crafts (already in database)\n", style="yellow")
+            results_text.append(f"  📁 Total: {stats['total_items']} items, {stats['total_crafts']} crafts\n\n", style="white")
         
         # Items found
         items = data.get('items_found', [])
@@ -652,13 +677,13 @@ class BitCraftyExtractor:
                     results_text.append(f"     Profession: {profession}\n", style="white")
                 
                 # Materials
-                inputs = craft.get('input_materials', [])
-                outputs = craft.get('output_materials', [])
+                inputs = craft.get('materials', [])  # Updated field name
+                outputs = craft.get('outputs', [])  # Updated field name
                 if inputs:
-                    materials = ", ".join([f"{m.get('quantity', 1)}x {m.get('item_name', 'Unknown')}" for m in inputs])
+                    materials = ", ".join([f"{m.get('qty', 1)}x {m.get('item', 'Unknown')}" for m in inputs])  # Updated field names
                     results_text.append(f"     Inputs: {materials}\n", style="green")
                 if outputs:
-                    materials = ", ".join([f"{m.get('quantity', 1)}x {m.get('item_name', 'Unknown')}" for m in outputs])
+                    materials = ", ".join([f"{o.get('qty', 1)}x {o.get('item', 'Unknown')}" for o in outputs])  # Updated field names
                     results_text.append(f"     Outputs: {materials}\n", style="cyan")
                 results_text.append("\n")
         
