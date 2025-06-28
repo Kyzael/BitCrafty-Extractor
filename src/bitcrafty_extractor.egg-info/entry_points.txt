@@ -1,0 +1,2 @@
+[console_scripts]
+bitcrafty-extractor = bitcrafty_extractor.main:main

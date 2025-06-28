@@ -1,3 +1,49 @@
+Metadata-Version: 2.4
+Name: bitcrafty-extractor
+Version: 1.0.0
+Summary: Real-time data extraction tool for Bitcraft game data
+Author: BitCrafty Team
+License: MIT
+Project-URL: Homepage, https://github.com/Kyzael/BitCrafty-Extractor
+Project-URL: Repository, https://github.com/Kyzael/BitCrafty-Extractor
+Project-URL: Issues, https://github.com/Kyzael/BitCrafty-Extractor/issues
+Keywords: bitcraft,data-extraction,computer-vision,ocr,gaming
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Games/Entertainment
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: opencv-python>=4.8.0
+Requires-Dist: pytesseract>=0.3.10
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: structlog>=23.1.0
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: psutil>=5.9.0
+Requires-Dist: pywin32>=306; sys_platform == "win32"
+Requires-Dist: pygetwindow>=0.0.9; sys_platform == "win32"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.11.0; extra == "dev"
+Requires-Dist: black>=23.7.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: pre-commit>=3.3.0; extra == "dev"
+Provides-Extra: performance
+Requires-Dist: opencv-contrib-python>=4.8.0; extra == "performance"
+Requires-Dist: scikit-image>=0.21.0; extra == "performance"
+Dynamic: license-file
+
 # BitCrafty-Extractor
 
 A real-time data extraction tool that monitors the Bitcraft game window to automatically discover and catalog items, crafts, buildings, and professions for the BitCrafty application.
@@ -296,11 +342,11 @@ python extractor.py --export --output ../BitCrafty/data
 
 ## Development Roadmap
 
-### Phase 1: Core Infrastructure ✅ COMPLETED
-- [x] Window detection and capture system
-- [x] Basic OCR integration (with graceful degradation)
-- [x] Configuration system
-- [x] Logging framework
+### Phase 1: Core Infrastructure
+- [ ] Window detection and capture system
+- [ ] Basic OCR integration
+- [ ] Configuration system
+- [ ] Logging framework
 
 ### Phase 2: Data Extraction
 - [ ] Item tooltip extraction

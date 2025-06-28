@@ -32,17 +32,10 @@ capture:
     
 # OCR Configuration
 ocr:
-  engine: "tesseract"
   language: "eng"
-  config: "--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,()-+:/ "
-  confidence_threshold: 75
-  
-  # Text preprocessing
-  text_processing:
-    min_text_length: 2
-    max_text_length: 100
-    filter_special_chars: true
-    normalize_whitespace: true
+  config_string: "--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,()-+:/ "
+  confidence_threshold: 0.75
+  preprocessing_enabled: true
 
 # Data Extraction
 extraction:
