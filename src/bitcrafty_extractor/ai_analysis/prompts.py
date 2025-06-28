@@ -180,6 +180,45 @@ REQUIRED JSON SCHEMA:
 Analyze ALL the provided screenshots together and extract all visible items and crafting recipes.
 Return ONLY the JSON response following the exact schema above."""
 
+    def build_single_item_test_prompt(self) -> str:
+        """Build a simple prompt for testing single item recognition.
+        
+        Returns:
+            Formatted prompt string for single item analysis
+        """
+        return """Please analyze this BitCraft game screenshot and identify any items visible.
+
+Focus on identifying:
+- Item names (be as accurate as possible)
+- Item descriptions if visible
+- Item rarity or quality if shown
+
+Return your response as JSON in this exact format:
+{
+    "analysis_type": "single_item_test",
+    "items": [
+        {
+            "name": "exact item name as shown in game",
+            "description": "item description if visible",
+            "rarity": "item rarity if visible",
+            "confidence": 0.8
+        }
+    ],
+    "confidence": 0.8
+}
+
+Examples of BitCraft items to help with recognition:
+- Rough Spool of Thread
+- Rough Cloth Strip
+- Cotton Seeds
+- Cotton
+- Rough Hemp Fiber
+- Basic Weaving Tools
+
+Be very precise with item names. If you see "Rough Spool of Thread" write exactly that.
+If no items are clearly visible, return an empty items array.
+"""
+
     def get_prompt(self, extraction_type: ExtractionType, **kwargs) -> str:
         """Get formatted prompt for specific extraction type.
         

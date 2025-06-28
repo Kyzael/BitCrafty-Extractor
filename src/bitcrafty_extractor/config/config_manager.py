@@ -30,7 +30,6 @@ class AIProviderConfig:
 
 
 @dataclass
-@dataclass
 class HotkeyConfig:
     """Configuration for hotkeys."""
     queue_screenshot: str = "ctrl+shift+e"
@@ -62,7 +61,7 @@ class CaptureConfig:
 @dataclass
 class ExtractionConfig:
     """Configuration for data extraction."""
-    primary_provider: AIProviderType = AIProviderType.OPENAI
+    primary_provider: AIProviderType = AIProviderType.ANTHROPIC
     fallback_provider: AIProviderType = AIProviderType.ANTHROPIC
     use_fallback: bool = True
     include_examples: bool = True
@@ -321,10 +320,8 @@ class ConfigManager:
         import re
         
         for hotkey_name, hotkey_value in [
-            ('item_tooltip', self.config.hotkeys.item_tooltip),
-            ('craft_recipe', self.config.hotkeys.craft_recipe),
-            ('building_info', self.config.hotkeys.building_info),
-            ('inventory_items', self.config.hotkeys.inventory_items)
+            ('queue_screenshot', self.config.hotkeys.queue_screenshot),
+            ('analyze_queue', self.config.hotkeys.analyze_queue)
         ]:
             if not re.match(hotkey_pattern, hotkey_value, re.IGNORECASE):
                 errors.append(f"Invalid hotkey format for {hotkey_name}: {hotkey_value}")
@@ -393,14 +390,10 @@ class ConfigManager:
             True if updated successfully
         """
         try:
-            if hotkey_name == 'item_tooltip':
-                self.config.hotkeys.item_tooltip = hotkey_value
-            elif hotkey_name == 'craft_recipe':
-                self.config.hotkeys.craft_recipe = hotkey_value
-            elif hotkey_name == 'building_info':
-                self.config.hotkeys.building_info = hotkey_value
-            elif hotkey_name == 'inventory_items':
-                self.config.hotkeys.inventory_items = hotkey_value
+            if hotkey_name == 'queue_screenshot':
+                self.config.hotkeys.queue_screenshot = hotkey_value
+            elif hotkey_name == 'analyze_queue':
+                self.config.hotkeys.analyze_queue = hotkey_value
             else:
                 return False
             

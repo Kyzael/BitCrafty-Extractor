@@ -2,22 +2,22 @@
 
 # AI Provider Settings
 ai:
-  # Primary AI provider: "openai_gpt4v" or "anthropic_claude"
-  default_provider: "openai_gpt4v"
+  # Primary AI provider: "anthropic_claude" (most accurate for quantities)
+  default_provider: "anthropic_claude"
   
-  # Fallback provider if primary fails
-  fallback_provider: "anthropic_claude"
+  # Fallback provider if primary fails: "openai_gpt4v" (GPT-4-Turbo)
+  fallback_provider: "openai_gpt4v"
   
   # OpenAI Configuration
   openai:
     api_key: ""  # Set your OpenAI API key here
-    model: "gpt-4-vision-preview"
+    model: "gpt-4-turbo"  # Updated to GPT-4-Turbo for better accuracy
     timeout: 30.0
     
   # Anthropic Configuration  
   anthropic:
     api_key: ""  # Set your Anthropic API key here
-    model: "claude-3-sonnet-20240229"
+    model: "claude-3-5-sonnet-20241022"  # Updated to latest Claude 3.5 Sonnet
     timeout: 30.0
 
 # Screenshot Capture Settings

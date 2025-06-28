@@ -66,13 +66,15 @@ class ImageData:
 class VisionClient:
     """AI vision client for game interface analysis."""
     
-    def __init__(self, logger: structlog.BoundLogger):
+    def __init__(self, logger: structlog.BoundLogger, config_manager=None):
         """Initialize the vision client.
         
         Args:
             logger: Structured logger for operation tracking
+            config_manager: Configuration manager for API keys and settings
         """
         self.logger = logger
+        self.config_manager = config_manager
         self.openai_client = None
         self.anthropic_client = None
         
@@ -84,20 +86,52 @@ class VisionClient:
         self.last_request_time = 0.0
         self.min_request_interval = 1.0  # seconds
         
-        # Configuration
-        self.default_provider = AIProvider.OPENAI_GPT4V
-        self.fallback_provider = AIProvider.ANTHROPIC_CLAUDE
+        # Configuration - use config_manager if available
+        if config_manager and config_manager.config.extraction:
+            self.default_provider = (AIProvider.OPENAI_GPT4V if config_manager.config.extraction.primary_provider.value == 'openai' 
+                                    else AIProvider.ANTHROPIC_CLAUDE)
+            self.fallback_provider = (AIProvider.OPENAI_GPT4V if config_manager.config.extraction.fallback_provider.value == 'openai' 
+                                     else AIProvider.ANTHROPIC_CLAUDE)
+            self.min_request_interval = config_manager.config.extraction.rate_limit_delay
+        else:
+            self.default_provider = AIProvider.OPENAI_GPT4V
+            self.fallback_provider = AIProvider.ANTHROPIC_CLAUDE
         self.max_retries = 3
         self.timeout = 30.0
         
         self.logger.info("Vision client initialized")
 
-    def configure_openai(self, api_key: str, model: str = "gpt-4-vision-preview"):
+        # Initialize clients from config if available
+        if config_manager:
+            self._initialize_from_config()
+
+    def _initialize_from_config(self):
+        """Initialize AI clients from configuration manager."""
+        if not self.config_manager:
+            return
+            
+        # Configure OpenAI if available
+        openai_config = self.config_manager.config.openai
+        if openai_config and openai_config.enabled and openai_config.api_key:
+            try:
+                self.configure_openai(openai_config.api_key, openai_config.model)
+            except Exception as e:
+                self.logger.warning("Failed to configure OpenAI", error=str(e))
+        
+        # Configure Anthropic if available  
+        anthropic_config = self.config_manager.config.anthropic
+        if anthropic_config and anthropic_config.enabled and anthropic_config.api_key:
+            try:
+                self.configure_anthropic(anthropic_config.api_key, anthropic_config.model)
+            except Exception as e:
+                self.logger.warning("Failed to configure Anthropic", error=str(e))
+
+    def configure_openai(self, api_key: str, model: str = "gpt-4o"):
         """Configure OpenAI client.
         
         Args:
             api_key: OpenAI API key
-            model: Model name to use
+            model: Model name to use (gpt-4o, gpt-4o-mini for vision)
         """
         if not OPENAI_AVAILABLE:
             raise RuntimeError("OpenAI library not available. Install openai package.")
@@ -107,7 +141,7 @@ class VisionClient:
         
         self.logger.info("OpenAI client configured", model=model)
 
-    def configure_anthropic(self, api_key: str, model: str = "claude-3-opus-20240229"):
+    def configure_anthropic(self, api_key: str, model: str = "claude-3-5-sonnet-20241022"):
         """Configure Anthropic client.
         
         Args:
@@ -194,6 +228,42 @@ class VisionClient:
         
         return 0.01  # Default estimate
 
+    def _extract_json_from_response(self, raw_response: str) -> Dict[str, Any]:
+        """Extract JSON data from AI response, handling markdown code blocks.
+        
+        Args:
+            raw_response: Raw response text from AI
+            
+        Returns:
+            Parsed JSON data or fallback structure
+        """
+        # First try direct JSON parsing
+        try:
+            return json.loads(raw_response)
+        except json.JSONDecodeError:
+            pass
+        
+        # Try to extract JSON from markdown code blocks
+        import re
+        
+        # Look for ```json ... ``` or ``` ... ``` blocks
+        json_patterns = [
+            r'```json\s*\n(.*?)\n```',
+            r'```\s*\n(.*?)\n```'
+        ]
+        
+        for pattern in json_patterns:
+            match = re.search(pattern, raw_response, re.DOTALL)
+            if match:
+                try:
+                    json_text = match.group(1).strip()
+                    return json.loads(json_text)
+                except json.JSONDecodeError:
+                    continue
+        
+        # If no JSON found, return as raw text
+        return {"raw_text": raw_response}
+
     async def _analyze_with_openai(self, prompt: str, image_base64: str) -> AIResponse:
         """Analyze image using OpenAI GPT-4 Vision.
         
@@ -238,15 +308,9 @@ class VisionClient:
             raw_response = response.choices[0].message.content
             
             # Try to parse JSON response
-            try:
-                data = json.loads(raw_response)
-                success = True
-                confidence = data.get('confidence', 0.8)  # Default confidence
-            except json.JSONDecodeError:
-                # If not JSON, treat as text response
-                data = {"raw_text": raw_response}
-                success = True
-                confidence = 0.6  # Lower confidence for non-JSON
+            data = self._extract_json_from_response(raw_response)
+            success = True
+            confidence = data.get('confidence', 0.8) if 'raw_text' not in data else 0.6
             
             # Estimate cost
             cost_estimate = self._estimate_cost(AIProvider.OPENAI_GPT4V, len(image_base64))
@@ -340,14 +404,9 @@ class VisionClient:
             raw_response = response.content[0].text
             
             # Try to parse JSON response
-            try:
-                data = json.loads(raw_response)
-                success = True
-                confidence = data.get('confidence', 0.8)
-            except json.JSONDecodeError:
-                data = {"raw_text": raw_response}
-                success = True
-                confidence = 0.6
+            data = self._extract_json_from_response(raw_response)
+            success = True
+            confidence = data.get('confidence', 0.8) if 'raw_text' not in data else 0.6
             
             # Estimate cost
             cost_estimate = self._estimate_cost(AIProvider.ANTHROPIC_CLAUDE, len(image_base64))
@@ -435,14 +494,9 @@ class VisionClient:
             raw_response = response.choices[0].message.content
             
             # Try to parse JSON response
-            try:
-                data = json.loads(raw_response)
-                success = True
-                confidence = data.get('confidence', 0.8)
-            except json.JSONDecodeError:
-                data = {"raw_text": raw_response}
-                success = True
-                confidence = 0.6
+            data = self._extract_json_from_response(raw_response)
+            success = True
+            confidence = data.get('confidence', 0.8) if 'raw_text' not in data else 0.6
             
             # Estimate cost for multiple images
             total_image_size = sum(len(img) for img in images_base64)
@@ -533,14 +587,9 @@ class VisionClient:
             raw_response = response.content[0].text
             
             # Try to parse JSON response
-            try:
-                data = json.loads(raw_response)
-                success = True
-                confidence = data.get('confidence', 0.8)
-            except json.JSONDecodeError:
-                data = {"raw_text": raw_response}
-                success = True
-                confidence = 0.6
+            data = self._extract_json_from_response(raw_response)
+            success = True
+            confidence = data.get('confidence', 0.8) if 'raw_text' not in data else 0.6
             
             # Estimate cost for multiple images
             total_image_size = sum(len(img) for img in images_base64)

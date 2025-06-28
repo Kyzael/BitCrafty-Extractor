@@ -35,6 +35,7 @@ try:
     from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler
     from bitcrafty_extractor.ai_analysis.vision_client import VisionClient, ImageData, AIProvider
     from bitcrafty_extractor.ai_analysis.prompts import PromptBuilder, ExtractionType
+    from bitcrafty_extractor.config.config_manager import ConfigManager
     COMPONENTS_AVAILABLE = True
 except ImportError as e:
     COMPONENTS_AVAILABLE = False
@@ -45,13 +46,21 @@ except ImportError as e:
         value = "queue_analysis"
     
     class ImageData:
-        pass
+        def __init__(self, image_array):
+            self.image_array = image_array
     
     class AIProvider:
-        pass
+        OPENAI_GPT4V = "openai_gpt4v"
+        ANTHROPIC_CLAUDE = "anthropic_claude"
     
     class VisionClient:
         def __init__(self, *args, **kwargs):
+            pass
+        
+        def configure_openai(self, *args, **kwargs):
+            pass
+            
+        def configure_anthropic(self, *args, **kwargs):
             pass
         
         async def analyze_image(self, *args, **kwargs):
@@ -59,6 +68,9 @@ except ImportError as e:
         
         async def analyze_images(self, *args, **kwargs):
             return type('MockResponse', (), {'success': False, 'data': None, 'cost_estimate': 0, 'confidence': 0, 'error_message': 'Components not available'})()
+        
+        def get_stats(self):
+            return {'total_requests': 0, 'total_cost': 0, 'average_cost_per_request': 0, 'configured_providers': {'openai': False, 'anthropic': False}, 'default_provider': 'openai_gpt4v', 'fallback_provider': 'anthropic_claude'}
     
     class PromptBuilder:
         def __init__(self, *args, **kwargs):
@@ -70,6 +82,9 @@ except ImportError as e:
     class WindowCapture:
         def __init__(self, *args, **kwargs):
             pass
+        
+        def capture_current_window(self):
+            return None
     
     class HotkeyHandler:
         def __init__(self, *args, **kwargs):
@@ -200,10 +215,12 @@ class ExtractionWorker(QThread):
 class BitCraftyExtractorApp(QWidget):
     """Main application window for BitCrafty Extractor."""
     
-    def __init__(self, config_manager=None):
+    def __init__(self, config_manager):
         super().__init__()
         
-        # Store configuration
+        # Store configuration (required)
+        if config_manager is None:
+            raise ValueError("ConfigManager is required")
         self.config_manager = config_manager
         
         # Initialize logging
@@ -227,7 +244,7 @@ class BitCraftyExtractorApp(QWidget):
         
         # Initialize components with configuration
         self.window_capture = WindowCapture(self.logger, self.config_manager)
-        self.vision_client = VisionClient(self.logger)
+        self.vision_client = VisionClient(self.logger, self.config_manager)
         self.prompt_builder = PromptBuilder()
         self.hotkey_handler = None
         
@@ -283,6 +300,9 @@ class BitCraftyExtractorApp(QWidget):
         
         layout.addWidget(tabs)
         self.setLayout(layout)
+        
+        # Load existing configuration
+        self.load_configuration()
 
     def create_config_tab(self):
         """Create configuration tab."""
@@ -529,52 +549,186 @@ class BitCraftyExtractorApp(QWidget):
     def save_configuration(self):
         """Save current configuration."""
         try:
-            # Configure AI providers
+            # Get values from UI
             openai_key = self.openai_key_input.text().strip()
             anthropic_key = self.anthropic_key_input.text().strip()
-            
-            if openai_key:
-                self.vision_client.configure_openai(openai_key)
-            
-            if anthropic_key:
-                self.vision_client.configure_anthropic(anthropic_key)
             
             if not openai_key and not anthropic_key:
                 QMessageBox.warning(self, "Configuration", 
                                   "Please provide at least one API key.")
                 return
             
-            # Set provider preferences
+            # Update config manager with API keys
+            if openai_key:
+                from bitcrafty_extractor.config.config_manager import AIProviderConfig
+                openai_config = AIProviderConfig(
+                    api_key=openai_key,
+                    model='gpt-4o',
+                    enabled=True,
+                    max_tokens=1000,
+                    temperature=0.1,
+                    timeout=30.0
+                )
+                self.config_manager.config.openai = openai_config
+            
+            if anthropic_key:
+                from bitcrafty_extractor.config.config_manager import AIProviderConfig
+                anthropic_config = AIProviderConfig(
+                    api_key=anthropic_key,
+                    model='claude-3-5-sonnet-20241022',
+                    enabled=True,
+                    max_tokens=1000,
+                    temperature=0.1,
+                    timeout=30.0
+                )
+                self.config_manager.config.anthropic = anthropic_config
+            
+            # Update provider preferences
+            from bitcrafty_extractor.config.config_manager import AIProviderType
             if self.provider_combo.currentText() == "OpenAI GPT-4V":
-                self.vision_client.default_provider = AIProvider.OPENAI_GPT4V
-                self.vision_client.fallback_provider = AIProvider.ANTHROPIC_CLAUDE
+                self.config_manager.config.extraction.primary_provider = AIProviderType.OPENAI
+                self.config_manager.config.extraction.fallback_provider = AIProviderType.ANTHROPIC
             else:
-                self.vision_client.default_provider = AIProvider.ANTHROPIC_CLAUDE
-                self.vision_client.fallback_provider = AIProvider.OPENAI_GPT4V
+                self.config_manager.config.extraction.primary_provider = AIProviderType.ANTHROPIC
+                self.config_manager.config.extraction.fallback_provider = AIProviderType.OPENAI
             
-            self.is_configured = True
-            self.status_label.setText("Status: Configured")
-            self.queue_screenshot_btn.setEnabled(True)
-            self.analyze_queue_btn.setEnabled(True)
-            self.clear_queue_btn.setEnabled(True)
-            self.toggle_hotkeys_btn.setEnabled(True)
-            
-            QMessageBox.information(self, "Configuration", 
-                                  "Configuration saved successfully!")
-            
-            self.logger.info("Configuration saved")
+            # Save configuration to file
+            if self.config_manager.save_config():
+                # Re-initialize vision client with new config
+                self.vision_client = VisionClient(self.logger, self.config_manager)
+                
+                self.is_configured = True
+                self.status_label.setText("Status: Configured ✓")
+                self.queue_screenshot_btn.setEnabled(True)
+                self.analyze_queue_btn.setEnabled(True)
+                self.clear_queue_btn.setEnabled(True)
+                self.toggle_hotkeys_btn.setEnabled(True)
+                
+                QMessageBox.information(self, "Configuration", 
+                                      f"Configuration saved successfully!\nConfig file: {self.config_manager.config_path}")
+                
+                self.logger.info("Configuration saved successfully", 
+                               config_path=str(self.config_manager.config_path))
+            else:
+                QMessageBox.critical(self, "Configuration Error", 
+                                   "Failed to save configuration to file.")
             
         except Exception as e:
-            QMessageBox.critical(self, "Configuration Error", str(e))
+            QMessageBox.critical(self, "Configuration Error", 
+                               f"Configuration failed: {str(e)}")
             self.logger.error("Configuration failed", error=str(e))
 
     def test_configuration(self):
-        """Test current configuration."""
+        """Test current configuration by validating API keys."""
         if not self.is_configured:
-            QMessageBox.warning(self, "Test", "Please save configuration first.")
+            QMessageBox.warning(self, "Test Configuration", "Please save configuration first.")
             return
         
-        QMessageBox.information(self, "Test", "Configuration test not yet implemented.")
+        # Use QProgressDialog instead of custom QMessageBox
+        from PyQt6.QtWidgets import QProgressDialog
+        progress = QProgressDialog("Validating API keys...", None, 0, 0, self)
+        progress.setWindowTitle("Testing Configuration")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setCancelButton(None)  # No cancel button
+        progress.show()
+        
+        # Process events to show the dialog
+        QApplication.processEvents()
+        
+        try:
+            test_results = []
+            
+            # Test OpenAI if configured
+            if (self.config_manager.config.openai and 
+                self.config_manager.config.openai.enabled and 
+                self.config_manager.config.openai.api_key):
+                
+                progress.setLabelText("Testing OpenAI API key...")
+                QApplication.processEvents()
+                
+                try:
+                    # Test OpenAI API key by listing models (minimal cost operation)
+                    import openai
+                    openai_client = openai.OpenAI(api_key=self.config_manager.config.openai.api_key)
+                    
+                    # This is a very cheap operation that validates the API key
+                    models = openai_client.models.list()
+                    test_results.append(("OpenAI", True, "API key valid"))
+                    
+                except Exception as e:
+                    test_results.append(("OpenAI", False, str(e)))
+            
+            # Test Anthropic if configured
+            if (self.config_manager.config.anthropic and 
+                self.config_manager.config.anthropic.enabled and 
+                self.config_manager.config.anthropic.api_key):
+                
+                progress.setLabelText("Testing Anthropic API key...")
+                QApplication.processEvents()
+                
+                try:
+                    # Test Anthropic API key with a minimal request
+                    import anthropic
+                    anthropic_client = anthropic.Anthropic(api_key=self.config_manager.config.anthropic.api_key)
+                    
+                    # Send a very minimal message to validate the key (low cost)
+                    response = anthropic_client.messages.create(
+                        model="claude-3-haiku-20240307",  # Cheapest model
+                        max_tokens=1,
+                        messages=[{"role": "user", "content": "Hi"}]
+                    )
+                    test_results.append(("Anthropic", True, "API key valid"))
+                    
+                except Exception as e:
+                    test_results.append(("Anthropic", False, str(e)))
+            
+        except Exception as e:
+            # Always close progress dialog on error
+            progress.close()
+            progress.deleteLater()
+            QApplication.processEvents()
+            QMessageBox.critical(self, "Test Error", 
+                               f"Test failed with error:\n{str(e)}")
+            self.logger.error("Configuration test failed", error=str(e))
+            return
+        
+        # Always close and delete progress dialog before showing results
+        progress.close()
+        progress.deleteLater()
+        QApplication.processEvents()
+        
+        # Show results
+        if not test_results:
+            QMessageBox.warning(self, "Test Configuration", 
+                              "No API keys are configured.\n\n"
+                              "Please add at least one API key (OpenAI or Anthropic) and save the configuration.")
+            return
+        
+        # Check if any provider worked
+        working_providers = [result for result in test_results if result[1]]
+        failed_providers = [result for result in test_results if not result[1]]
+        
+        if working_providers and not failed_providers:
+            # All configured providers work
+            provider_list = "\n".join([f"✅ {name}: {message}" for name, success, message in working_providers])
+            QMessageBox.information(self, "Test Successful! ✅", 
+                                  f"All configured API keys are working!\n\n{provider_list}\n\n"
+                                  f"Your configuration is ready for AI analysis.")
+            
+        elif working_providers and failed_providers:
+            # Some work, some don't
+            working_list = "\n".join([f"✅ {name}: Working" for name, success, message in working_providers])
+            failed_list = "\n".join([f"❌ {name}: {message}" for name, success, message in failed_providers])
+            QMessageBox.warning(self, "Test Partial ⚠️", 
+                              f"Some API keys are working:\n\n{working_list}\n\nFailed:\n{failed_list}\n\n"
+                              f"You can use the working providers, but consider fixing the failed ones.")
+            
+        else:
+            # None work
+            failed_list = "\n".join([f"❌ {name}: {message}" for name, success, message in failed_providers])
+            QMessageBox.critical(self, "Test Failed ❌", 
+                               f"No API keys are working!\n\n{failed_list}\n\n"
+                               f"Please check your API keys and network connection.")
 
     def queue_screenshot(self):
         """Queue a screenshot for later analysis."""
@@ -583,18 +737,23 @@ class BitCraftyExtractorApp(QWidget):
             return
         
         try:
-            # Capture screenshot
-            screenshot = self.window_capture.capture_current_window()
-            if screenshot is None:
+            # Capture screenshot (returns numpy array)
+            screenshot_array = self.window_capture.capture_current_window()
+            if screenshot_array is None:
                 QMessageBox.warning(self, "Queue", 
                                   "Could not capture game window. Is Bitcraft running?")
                 return
             
+            # Convert to ImageData for AI analysis
+            image_data = ImageData(image_array=screenshot_array)
+            
             # Add to queue
-            self.screenshot_queue.append(screenshot)
+            self.screenshot_queue.append(image_data)
             self.update_queue_display()
             
-            self.logger.info("Screenshot queued", queue_size=len(self.screenshot_queue))
+            self.logger.info("Screenshot queued", 
+                           queue_size=len(self.screenshot_queue),
+                           image_shape=screenshot_array.shape)
             
         except Exception as e:
             QMessageBox.critical(self, "Queue Error", str(e))
@@ -611,13 +770,10 @@ class BitCraftyExtractorApp(QWidget):
             return
         
         try:
-            # Create image data from queue
-            image_data_list = [ImageData(img) for img in self.screenshot_queue]
-            
-            # Start analysis
+            # Start analysis (queue already contains ImageData objects)
             self.progress_bar.setVisible(True)
             self.progress_bar.setRange(0, 0)  # Indeterminate
-            self.worker.add_queue_analysis(image_data_list)
+            self.worker.add_queue_analysis(self.screenshot_queue)
             
             self.logger.info("Queue analysis started", queue_size=len(self.screenshot_queue))
             
@@ -681,17 +837,22 @@ class BitCraftyExtractorApp(QWidget):
             return
         
         try:
-            # Capture screenshot
-            screenshot = self.window_capture.capture_current_window()
-            if screenshot is None:
+            # Capture screenshot (returns numpy array)
+            screenshot_array = self.window_capture.capture_current_window()
+            if screenshot_array is None:
                 self.logger.warning("Hotkey queue failed - no game window")
                 return
             
+            # Convert to ImageData for AI analysis
+            image_data = ImageData(image_array=screenshot_array)
+            
             # Add to queue
-            self.screenshot_queue.append(screenshot)
+            self.screenshot_queue.append(image_data)
             self.update_queue_display()
             
-            self.logger.info("Screenshot queued via hotkey", queue_size=len(self.screenshot_queue))
+            self.logger.info("Screenshot queued via hotkey", 
+                           queue_size=len(self.screenshot_queue),
+                           image_shape=screenshot_array.shape)
             
         except Exception as e:
             self.logger.error("Hotkey queue failed", error=str(e))
@@ -702,11 +863,8 @@ class BitCraftyExtractorApp(QWidget):
             return
         
         try:
-            # Create image data from queue
-            image_data_list = [ImageData(img) for img in self.screenshot_queue]
-            
-            # Start analysis
-            self.worker.add_queue_analysis(image_data_list)
+            # Start analysis (queue already contains ImageData objects)
+            self.worker.add_queue_analysis(self.screenshot_queue)
             
             self.logger.info("Queue analysis triggered via hotkey", queue_size=len(self.screenshot_queue))
             
@@ -862,6 +1020,51 @@ Provider Configuration:
         
         QApplication.quit()
 
+    def load_configuration(self):
+        """Load configuration from config manager and update UI."""
+        try:
+            if not self.config_manager:
+                return
+                
+            # Load API keys into UI
+            if self.config_manager.config.openai and self.config_manager.config.openai.api_key:
+                self.openai_key_input.setText(self.config_manager.config.openai.api_key)
+            
+            if self.config_manager.config.anthropic and self.config_manager.config.anthropic.api_key:
+                self.anthropic_key_input.setText(self.config_manager.config.anthropic.api_key)
+            
+            # Set provider preference
+            if (self.config_manager.config.extraction and 
+                self.config_manager.config.extraction.primary_provider.value == 'anthropic'):
+                self.provider_combo.setCurrentText("Anthropic Claude")
+            else:
+                self.provider_combo.setCurrentText("OpenAI GPT-4V")
+            
+            # Check if we have at least one API key configured
+            has_openai = (self.config_manager.config.openai and 
+                         self.config_manager.config.openai.enabled and 
+                         self.config_manager.config.openai.api_key)
+            has_anthropic = (self.config_manager.config.anthropic and 
+                           self.config_manager.config.anthropic.enabled and 
+                           self.config_manager.config.anthropic.api_key)
+            
+            if has_openai or has_anthropic:
+                self.is_configured = True
+                self.status_label.setText("Status: Configured ✓")
+                self.queue_screenshot_btn.setEnabled(True)
+                self.analyze_queue_btn.setEnabled(True)
+                self.clear_queue_btn.setEnabled(True)
+                self.toggle_hotkeys_btn.setEnabled(True)
+                
+                self.logger.info("Configuration loaded successfully", 
+                               has_openai=has_openai, has_anthropic=has_anthropic)
+            else:
+                self.status_label.setText("Status: Not configured")
+                
+        except Exception as e:
+            self.logger.error("Failed to load configuration", error=str(e))
+            self.status_label.setText("Status: Configuration error")
+
 
 # Alias for backward compatibility
 BitCraftyExtractor = BitCraftyExtractorApp
@@ -991,8 +1194,11 @@ def main():
     app.setApplicationVersion("1.0.0")
     app.setOrganizationName("BitCrafty")
     
-    # Create main window
-    window = BitCraftyExtractorApp()
+    # Initialize configuration manager
+    config_manager = ConfigManager()
+    
+    # Create main window with config manager
+    window = BitCraftyExtractorApp(config_manager)
     window.show()
     
     # Run application
