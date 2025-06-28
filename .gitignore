@@ -204,6 +204,7 @@ temp/
 tmp/
 exports/
 queue_screenshots/
+analysis_logs/
 
 # Configuration overrides (keep defaults, exclude local configs)
 config/local.yaml

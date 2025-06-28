@@ -17,6 +17,7 @@ import argparse
 import sys
 import asyncio
 import signal
+import json
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
@@ -62,6 +63,17 @@ class BitCraftyExtractor:
         self.screenshot_queue: List[ImageData] = []
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
+        
+        # Analysis log file setup
+        self.analysis_log_folder = Path("analysis_logs")
+        self.analysis_log_folder.mkdir(exist_ok=True)
+        session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.analysis_log_file = self.analysis_log_folder / f"analysis_session_{session_timestamp}.json"
+        self.analysis_log_entries = []  # Store log entries in memory before writing
+        
+        # Create README for analysis logs
+        self._create_analysis_log_readme()
+        
         self.logger = None
         self.loop = None  # Store event loop reference
         self.analysis_in_progress = False  # Track analysis state
@@ -81,6 +93,7 @@ class BitCraftyExtractor:
         self.is_analyzing = False
         self.show_analysis_results = False
         self.last_export_stats = None  # Track last export statistics
+        self.last_analysis_display = None  # Store last analysis for final summary
         
     def create_layout(self):
         """Create the three-section layout."""
@@ -141,6 +154,12 @@ class BitCraftyExtractor:
         commands_text.append(f"  📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
         commands_text.append(f"  💰 Est. Cost: ${self.total_cost:.3f}\n", style="red")
         
+        # Analysis log information
+        commands_text.append(f"\n📄 Analysis Log:\n", style="bold yellow")
+        commands_text.append(f"  📝 Analyses: {len(self.analysis_log_entries)}\n", style="white")
+        commands_text.append(f"  📁 File: {self.analysis_log_file.name}\n", style="dim")
+        commands_text.append(f"  💡 Detailed results saved to disk\n", style="dim")
+        
         return Panel(commands_text, title="[bold blue]BitCrafty-Extractor[/bold blue]", border_style="blue")
         
     def update_queue_panel(self):
@@ -165,6 +184,24 @@ class BitCraftyExtractor:
             queue_text = Text()
             queue_text.append("🎯 No screenshots queued\n\n", style="yellow")
             queue_text.append("Ready for screenshots!", style="dim")
+            
+            # Show last analysis results even when queue is empty
+            if self.last_analysis:
+                queue_text.append("\n\n📊 Last Analysis Results:\n", style="bold magenta")
+                items = self.last_analysis.get('items_found', [])
+                crafts = self.last_analysis.get('crafts_found', [])
+                queue_text.append(f"📦 Items: {len(items)} | ", style="white")
+                queue_text.append(f"🔧 Recipes: {len(crafts)}\n", style="white")
+                confidence = self.last_analysis.get('total_confidence', 0)
+                queue_text.append(f"📈 Confidence: {confidence:.2f}\n", style="white")
+                
+                # Show export stats from last analysis
+                if self.last_export_stats:
+                    stats = self.last_export_stats
+                    if stats['new_items_added'] > 0 or stats['new_crafts_added'] > 0:
+                        queue_text.append(f"💾 Exported: {stats['new_items_added']} items, {stats['new_crafts_added']} crafts", style="green")
+                    else:
+                        queue_text.append("ℹ️ No new data (already in database)", style="yellow")
             
             content = Layout()
             content.split_column(
@@ -639,10 +676,7 @@ class BitCraftyExtractor:
                 pass
                 
     def _show_analysis_results(self, data: dict, result):
-        """Display analysis results and export new items/crafts."""
-        if not RICH_AVAILABLE:
-            return
-            
+        """Log analysis results to disk and update session tracking."""
         # Get screenshot timestamps for export metadata
         screenshot_times = []
         for image_data in self.screenshot_queue:
@@ -667,83 +701,105 @@ class BitCraftyExtractor:
         self.total_screenshots_analyzed += screenshots_processed
         self.total_cost += result.cost_estimate
         
-        # Set result display mode
-        self.show_analysis_results = True
+        # Store analysis for queue panel display
+        self.last_analysis = data
         
-        # Create detailed results panel
-        results_text = Text()
-        results_text.append("🎉 ANALYSIS COMPLETE\n", style="bold green")
-        results_text.append("=" * 30 + "\n\n", style="dim")
+        # Log analysis to disk after updating session totals
+        self._log_analysis_to_disk(data, result, export_stats, screenshot_times)
         
-        # Summary
-        results_text.append(f"📊 Summary:\n", style="bold yellow")
-        results_text.append(f"  Provider: {result.provider}\n", style="white")
-        results_text.append(f"  Confidence: {result.confidence:.2f}\n", style="white")
-        results_text.append(f"  Cost: ${result.cost_estimate:.4f}\n", style="white")
-        results_text.append(f"  Screenshots: {data.get('screenshots_processed', 0)}\n\n", style="white")
+        # Show brief summary in debug messages
+        items_count = len(items)
+        crafts_count = len(crafts)
+        self.add_debug_message(f"✅ Analysis complete: {items_count} items, {crafts_count} crafts (${result.cost_estimate:.3f})")
+        if export_stats['new_items_added'] > 0 or export_stats['new_crafts_added'] > 0:
+            self.add_debug_message(f"� Exported: {export_stats['new_items_added']} new items, {export_stats['new_crafts_added']} new crafts")
+        else:
+            self.add_debug_message("ℹ️ No new data exported (already in database)")
         
-        # Export statistics
-        if self.last_export_stats:
-            stats = self.last_export_stats
-            results_text.append(f"💾 Export Results:\n", style="bold cyan")
-            if stats['new_items_added'] > 0:
-                results_text.append(f"  ✅ {stats['new_items_added']} new items saved\n", style="green")
-            if stats['new_crafts_added'] > 0:
-                results_text.append(f"  ✅ {stats['new_crafts_added']} new crafts saved\n", style="green")
-            if stats['new_items_added'] == 0 and stats['new_crafts_added'] == 0:
-                results_text.append(f"  ℹ️ No new items/crafts (already in database)\n", style="yellow")
-            results_text.append(f"  📁 Total: {stats['total_items']} items, {stats['total_crafts']} crafts\n\n", style="white")
+        # Show where detailed results are logged
+        self.add_debug_message(f"📄 Full results: /analysis_logs/{self.analysis_log_file.name}")
         
-        # Items found
-        items = data.get('items_found', [])
-        if items:
-            results_text.append(f"📦 ITEMS FOUND ({len(items)}):\n", style="bold cyan")
-            for i, item in enumerate(items, 1):
-                name = item.get('name', 'Unknown')
-                tier = item.get('tier', 'Unknown')
-                rarity = item.get('rarity', 'unknown')
-                confidence = item.get('confidence', 0)
-                results_text.append(f"  {i}. {name}\n", style="bold white")
-                results_text.append(f"     Tier: {tier} | Rarity: {rarity.title()}\n", style="white")
-                results_text.append(f"     Confidence: {confidence:.2f}\n", style="white")
-                description = item.get('description', 'No description')
-                if len(description) > 50:
-                    description = description[:50] + "..."
-                results_text.append(f"     {description}\n\n", style="dim")
-        
-        # Crafts found
-        crafts = data.get('crafts_found', [])
-        if crafts:
-            results_text.append(f"🔧 RECIPES FOUND ({len(crafts)}):\n", style="bold magenta")
-            for i, craft in enumerate(crafts, 1):
-                name = craft.get('name', 'Unknown')
-                confidence = craft.get('confidence', 0)
-                results_text.append(f"  {i}. {name}\n", style="bold white")
-                results_text.append(f"     Confidence: {confidence:.2f}\n", style="white")
+    def _log_analysis_to_disk(self, data: dict, result, export_stats: dict, screenshot_times: List[datetime]):
+        """Log analysis results to disk instead of displaying in console."""
+        try:
+            # Create log entry
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "session_info": {
+                    "analysis_number": len(self.analysis_log_entries) + 1,
+                    "screenshots_in_queue": len(self.screenshot_queue),
+                    "screenshot_timestamps": [t.isoformat() for t in screenshot_times]
+                },
+                "ai_analysis": {
+                    "provider": str(result.provider),
+                    "confidence": result.confidence,
+                    "cost_estimate": result.cost_estimate,
+                    "screenshots_processed": data.get('screenshots_processed', 0),
+                    "total_confidence": data.get('total_confidence', result.confidence)
+                },
+                "extraction_results": {
+                    "items_found": data.get('items_found', []),
+                    "crafts_found": data.get('crafts_found', []),
+                    "summary": {
+                        "total_items": len(data.get('items_found', [])),
+                        "total_crafts": len(data.get('crafts_found', [])),
+                    }
+                },
+                "export_statistics": export_stats,
+                "session_totals": {
+                    "total_items_found": len(self.session_items_found),
+                    "total_crafts_found": len(self.session_crafts_found),
+                    "total_screenshots_analyzed": self.total_screenshots_analyzed,
+                    "total_cost": self.total_cost
+                }
+            }
+            
+            # Add to memory log
+            self.analysis_log_entries.append(log_entry)
+            
+            # Write to disk immediately for persistence
+            self._write_analysis_log_to_disk()
+            
+            # Log success message
+            self.add_debug_message(f"📝 Analysis logged to: {self.analysis_log_file.name}")
+            
+        except Exception as e:
+            self.add_debug_message(f"❌ Failed to log analysis: {str(e)}")
+            if self.logger:
+                self.logger.error("Analysis logging failed", error=str(e))
+    
+    def _write_analysis_log_to_disk(self):
+        """Write analysis log entries to disk."""
+        try:
+            log_data = {
+                "session_metadata": {
+                    "session_start": datetime.now().isoformat(),
+                    "extractor_version": "2.0.0",
+                    "total_analyses": len(self.analysis_log_entries)
+                },
+                "analyses": self.analysis_log_entries
+            }
+            
+            with open(self.analysis_log_file, 'w', encoding='utf-8') as f:
+                json.dump(log_data, f, indent=2, ensure_ascii=False)
                 
-                # Requirements
-                reqs = craft.get('requirements', {})
-                if reqs:
-                    profession = reqs.get('profession', 'Unknown')
-                    results_text.append(f"     Profession: {profession}\n", style="white")
-                
-                # Materials
-                inputs = craft.get('materials', [])  # Updated field name
-                outputs = craft.get('outputs', [])  # Updated field name
-                if inputs:
-                    materials = ", ".join([f"{m.get('qty', 1)}x {m.get('item', 'Unknown')}" for m in inputs])  # Updated field names
-                    results_text.append(f"     Inputs: {materials}\n", style="green")
-                if outputs:
-                    materials = ", ".join([f"{o.get('qty', 1)}x {o.get('item', 'Unknown')}" for o in outputs])  # Updated field names
-                    results_text.append(f"     Outputs: {materials}\n", style="cyan")
-                results_text.append("\n")
+        except Exception as e:
+            if self.logger:
+                self.logger.error("Failed to write analysis log", error=str(e))
+    
+    def _get_analysis_log_summary(self) -> str:
+        """Get a brief summary of the current analysis log for display."""
+        if not self.analysis_log_entries:
+            return "No analyses logged yet"
+            
+        last_entry = self.analysis_log_entries[-1]
+        total_items = sum(len(entry['extraction_results']['items_found']) for entry in self.analysis_log_entries)
+        total_crafts = sum(len(entry['extraction_results']['crafts_found']) for entry in self.analysis_log_entries)
+        total_cost = sum(entry['ai_analysis']['cost_estimate'] for entry in self.analysis_log_entries)
         
-        # Overall confidence
-        total_confidence = data.get('total_confidence', result.confidence)
-        results_text.append(f"📈 Overall Confidence: {total_confidence:.2f}\n", style="bold green")
-        
-        panel = Panel(results_text, title="[bold green]Analysis Results[/bold green]", border_style="green")
-        self.console.print(panel)
+        return (f"Log: {len(self.analysis_log_entries)} analyses | "
+                f"{total_items} items, {total_crafts} crafts | "
+                f"${total_cost:.3f} total")
         
     async def _clear_queue_and_cleanup(self):
         """Clear screenshot queue and remove files from disk."""
@@ -780,6 +836,7 @@ class BitCraftyExtractor:
         
         self.add_debug_message("🚀 BitCrafty-Extractor started")
         self.add_debug_message("💡 Global hotkeys active - use while playing!")
+        self.add_debug_message(f"📄 Analysis results will be logged to: {self.analysis_log_file.name}")
         
         try:
             # Use a simple Live display without screen complications
@@ -807,6 +864,9 @@ class BitCraftyExtractor:
         # Clean up
         self._stop_hotkeys()
         self.console.print("\n🛑 BitCrafty-Extractor stopped")
+        
+        # Print final session analysis summary
+        self._print_final_session_summary()
         
     async def _basic_run(self):
         """Basic CLI mode without rich interface."""
@@ -871,6 +931,180 @@ class BitCraftyExtractor:
                 self.logger.debug("Anthropic key validation failed", error=str(e))
             return False
 
+    def _print_final_session_summary(self):
+        """Print final session analysis results summary."""
+        if not RICH_AVAILABLE:
+            return
+            
+        # Print session summary
+        summary_text = Text()
+        summary_text.append("\n📊 FINAL SESSION ANALYSIS RESULTS\n", style="bold blue")
+        summary_text.append("=" * 50 + "\n\n", style="dim")
+        
+        # Session statistics
+        summary_text.append("📈 Session Statistics:\n", style="bold yellow")
+        summary_text.append(f"  🍎 Total Items Found: {len(self.session_items_found)}\n", style="green")
+        summary_text.append(f"  🔨 Total Crafts Found: {len(self.session_crafts_found)}\n", style="yellow")
+        summary_text.append(f"  📸 Screenshots Analyzed: {self.total_screenshots_analyzed}\n", style="cyan")
+        summary_text.append(f"  💰 Total Cost: ${self.total_cost:.4f}\n\n", style="red")
+        
+        # Export statistics
+        export_stats = self.export_manager.get_stats()
+        summary_text.append("💾 Export Database Status:\n", style="bold cyan")
+        summary_text.append(f"  📦 Total Items in Database: {export_stats['total_items']}\n", style="white")
+        summary_text.append(f"  🔧 Total Crafts in Database: {export_stats['total_crafts']}\n", style="white")
+        summary_text.append(f"  📁 Files: /exports/items.json, /exports/crafts.json\n\n", style="dim")
+        
+        # Last analysis details (if available)
+        if self.last_analysis:
+            summary_text.append("🔍 Last Analysis Details:\n", style="bold magenta")
+            items = self.last_analysis.get('items_found', [])
+            crafts = self.last_analysis.get('crafts_found', [])
+            confidence = self.last_analysis.get('total_confidence', 0)
+            
+            summary_text.append(f"  📦 Items: {len(items)}\n", style="white")
+            summary_text.append(f"  🔧 Crafts: {len(crafts)}\n", style="white")
+            summary_text.append(f"  📈 Confidence: {confidence:.2f}\n", style="white")
+            
+            # Show item names
+            if items:
+                item_names = [item.get('name', 'Unknown') for item in items]
+                summary_text.append(f"  Items: {', '.join(item_names)}\n", style="dim")
+            
+            # Show craft names  
+            if crafts:
+                craft_names = [craft.get('name', 'Unknown') for craft in crafts]
+                summary_text.append(f"  Crafts: {', '.join(craft_names)}\n", style="dim")
+        
+        # Analysis log information
+        summary_text.append("📄 Analysis Log Details:\n", style="bold cyan")
+        summary_text.append(f"  📝 Total Analyses Logged: {len(self.analysis_log_entries)}\n", style="white")
+        summary_text.append(f"  📁 Log File: /analysis_logs/{self.analysis_log_file.name}\n", style="white")
+        summary_text.append(f"  💡 Detailed results and metadata preserved\n\n", style="dim")
+        
+        summary_text.append("\n🎉 Thank you for using BitCrafty-Extractor!\n", style="bold green")
+        summary_text.append("   📦 Export data: /exports/ folder for BitCrafty integration\n", style="dim")
+        summary_text.append("   📄 Analysis logs: /analysis_logs/ folder for detailed review\n", style="dim")
+        
+        panel = Panel(summary_text, title="[bold blue]Session Complete[/bold blue]", border_style="blue")
+        self.console.print(panel)
+
+    def _create_analysis_log_readme(self):
+        """Create a README file explaining the analysis log format."""
+        readme_path = self.analysis_log_folder / "README.md"
+        if readme_path.exists():
+            return  # Don't overwrite existing README
+            
+        readme_content = """# BitCrafty-Extractor Analysis Logs
+
+This folder contains detailed analysis logs from BitCrafty-Extractor sessions.
+
+## File Format
+
+Each analysis session creates a JSON log file with the following structure:
+
+```json
+{
+  "session_metadata": {
+    "session_start": "2024-12-29T10:30:00.123456",
+    "extractor_version": "2.0.0",
+    "total_analyses": 3
+  },
+  "analyses": [
+    {
+      "timestamp": "2024-12-29T10:35:15.789012",
+      "session_info": {
+        "analysis_number": 1,
+        "screenshots_in_queue": 2,
+        "screenshot_timestamps": ["2024-12-29T10:35:10.123456", "2024-12-29T10:35:12.654321"]
+      },
+      "ai_analysis": {
+        "provider": "AIProviderType.OPENAI",
+        "confidence": 85.5,
+        "cost_estimate": 0.0125,
+        "screenshots_processed": 2,
+        "total_confidence": 82.3
+      },
+      "extraction_results": {
+        "items_found": [
+          {
+            "name": "Stone Axe",
+            "tier": "Tier 1",
+            "rarity": "common",
+            "confidence": 90.2,
+            "description": "A basic stone cutting tool...",
+            // ... other item properties
+          }
+        ],
+        "crafts_found": [
+          {
+            "name": "Stone Axe Recipe",
+            "confidence": 88.7,
+            "requirements": {
+              "profession": "Tool Making",
+              "level": 1
+            },
+            "materials": [
+              {"item": "Stone", "qty": 2},
+              {"item": "Wood", "qty": 1}
+            ],
+            "outputs": [
+              {"item": "Stone Axe", "qty": 1}
+            ]
+            // ... other craft properties
+          }
+        ],
+        "summary": {
+          "total_items": 1,
+          "total_crafts": 1
+        }
+      },
+      "export_statistics": {
+        "new_items_added": 1,
+        "new_crafts_added": 1,
+        "total_items": 15,
+        "total_crafts": 8,
+        "duplicates_found": 0
+      },
+      "session_totals": {
+        "total_items_found": 1,
+        "total_crafts_found": 1,
+        "total_screenshots_analyzed": 2,
+        "total_cost": 0.0125
+      }
+    }
+    // ... more analyses
+  ]
+}
+```
+
+## Key Features
+
+- **Complete Analysis History**: Every AI analysis is preserved with full details
+- **Metadata Tracking**: Screenshot timestamps, costs, providers, confidence scores
+- **Export Integration**: Shows what was exported vs. already in database
+- **Session Tracking**: Cumulative statistics throughout the session
+- **Searchable Format**: JSON structure allows easy querying and processing
+
+## Usage
+
+These logs are perfect for:
+- Reviewing analysis quality and confidence scores
+- Tracking extraction costs and efficiency
+- Debugging AI analysis issues
+- Building analytics on extraction patterns
+- Preserving detailed results that would be lost in console output
+
+The console interface only shows brief summaries - these logs contain the complete detailed results.
+"""
+        
+        try:
+            with open(readme_path, 'w', encoding='utf-8') as f:
+                f.write(readme_content)
+        except Exception as e:
+            if self.logger:
+                self.logger.warning("Failed to create analysis log README", error=str(e))
+
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -883,9 +1117,9 @@ Examples:
   python -m bitcrafty_extractor          # Package entry point
   
 Global Hotkeys (work while playing BitCraft):
-  Ctrl+Shift+E - Take screenshot and add to queue
-  Ctrl+Shift+X - Analyze screenshot queue with AI
-  Ctrl+Shift+Q - Quit application gracefully
+  Alt+E - Take screenshot and add to queue
+  Alt+Q - Analyze screenshot queue with AI
+  Alt+F - Quit application gracefully
 
 For more information, visit: https://github.com/Kyzael/BitCrafty-Extractor
         """
