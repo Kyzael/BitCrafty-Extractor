@@ -113,51 +113,121 @@ class ConfigManager:
         
         # Determine config path
         if config_path is None:
-            # Default to user config directory
-            if Path.home().exists():
-                config_dir = Path.home() / ".bitcrafty-extractor"
-            else:
-                config_dir = Path.cwd() / "config"
-            
+            # Use local config directory in project
+            project_root = Path(__file__).parent.parent.parent.parent
+            config_dir = project_root / "config"
             config_dir.mkdir(exist_ok=True)
             self.config_path = config_dir / "config.yaml"
+            self.default_config_path = config_dir / "default.yaml"
         else:
             self.config_path = Path(config_path)
+            self.default_config_path = self.config_path.parent / "default.yaml"
         
         # Initialize with defaults
         self.config = AppConfig()
         
-        # Load existing config if it exists
-        if self.config_path.exists():
-            self.load_config()
-        else:
-            # Save default config
-            self.save_config()
+        # Load configuration (creates from default if needed)
+        self._initialize_config()
         
         self.logger.info("Configuration manager initialized", 
                         config_path=str(self.config_path))
 
-    def load_config(self) -> bool:
-        """Load configuration from file.
+    def _initialize_config(self):
+        """Initialize configuration from default template and user config."""
+        try:
+            # Always start with default configuration
+            if self.default_config_path.exists():
+                self.logger.info("Loading default configuration template", 
+                               path=str(self.default_config_path))
+                with open(self.default_config_path, 'r', encoding='utf-8') as f:
+                    default_data = yaml.safe_load(f)
+                    self.config = self._dict_to_config(default_data)
+            else:
+                self.logger.warning("Default configuration template not found, using hardcoded defaults",
+                                  expected_path=str(self.default_config_path))
+                # Keep hardcoded defaults if template missing
+            
+            # Load user config if it exists and merge with defaults
+            if self.config_path.exists():
+                self.logger.info("Loading user configuration", 
+                               path=str(self.config_path))
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    user_data = yaml.safe_load(f)
+                    
+                # Merge user settings with defaults
+                self._merge_config(user_data)
+            else:
+                self.logger.info("User configuration not found, will create from template",
+                               path=str(self.config_path))
+                # Save initial config from template
+                self.save_config()
+                
+        except Exception as e:
+            self.logger.error("Failed to initialize configuration", error=str(e))
+            # Keep hardcoded defaults on error
+            self.config = AppConfig()
+    
+    def _merge_config(self, user_data: Dict[str, Any]):
+        """Merge user configuration with loaded defaults.
         
-        Returns:
-            True if loaded successfully, False otherwise
+        Args:
+            user_data: User configuration data from YAML
         """
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                config_data = yaml.safe_load(f)
+            # Convert user data to config objects
+            user_config = self._dict_to_config(user_data)
             
-            if not config_data:
-                self.logger.warning("Config file is empty, using defaults")
-                return False
+            # Merge AI provider configurations
+            if user_config.openai and user_config.openai.api_key:
+                self.config.openai = user_config.openai
+            if user_config.anthropic and user_config.anthropic.api_key:
+                self.config.anthropic = user_config.anthropic
             
-            # Parse configuration sections
-            self.config = AppConfig()
+            # Merge hotkey configuration
+            if user_config.hotkeys:
+                self.config.hotkeys = user_config.hotkeys
             
-            # AI Provider configurations
-            if 'openai' in config_data:
-                openai_data = config_data['openai']
-                self.config.openai = AIProviderConfig(
+            # Merge capture configuration
+            if user_config.capture:
+                self.config.capture = user_config.capture
+                
+            # Merge extraction configuration  
+            if user_config.extraction:
+                self.config.extraction = user_config.extraction
+            
+            # Merge application settings
+            if hasattr(user_config, 'log_level') and user_config.log_level:
+                self.config.log_level = user_config.log_level
+            if hasattr(user_config, 'auto_save_results'):
+                self.config.auto_save_results = user_config.auto_save_results
+            if hasattr(user_config, 'results_directory') and user_config.results_directory:
+                self.config.results_directory = user_config.results_directory
+                    
+            self.logger.info("Successfully merged user configuration with defaults")
+            
+        except Exception as e:
+            self.logger.error("Failed to merge user configuration", error=str(e))
+            # Keep defaults on merge error
+    
+    def _dict_to_config(self, data: Dict[str, Any]) -> AppConfig:
+        """Convert dictionary data to configuration objects.
+        
+        Args:
+            data: Configuration data from YAML
+            
+        Returns:
+            AppConfig object
+        """
+        config = AppConfig()
+        
+        # Parse AI provider configurations
+        if 'ai' in data:
+            ai_data = data['ai']
+            
+            # Parse OpenAI configuration
+            if 'openai' in ai_data:
+                openai_data = ai_data['openai']
+                config.openai = AIProviderConfig(
                     api_key=openai_data.get('api_key', ''),
                     model=openai_data.get('model', 'gpt-4-vision-preview'),
                     enabled=openai_data.get('enabled', True),
@@ -166,81 +236,106 @@ class ConfigManager:
                     timeout=openai_data.get('timeout', 30.0)
                 )
             
-            if 'anthropic' in config_data:
-                anthropic_data = config_data['anthropic']
-                self.config.anthropic = AIProviderConfig(
+            # Parse Anthropic configuration
+            if 'anthropic' in ai_data:
+                anthropic_data = ai_data['anthropic']
+                config.anthropic = AIProviderConfig(
                     api_key=anthropic_data.get('api_key', ''),
-                    model=anthropic_data.get('model', 'claude-3-opus-20240229'),
+                    model=anthropic_data.get('model', 'claude-3-sonnet-20240229'),
                     enabled=anthropic_data.get('enabled', True),
                     max_tokens=anthropic_data.get('max_tokens', 1000),
                     temperature=anthropic_data.get('temperature', 0.1),
                     timeout=anthropic_data.get('timeout', 30.0)
                 )
-            
-            # Hotkey configuration
-            if 'hotkeys' in config_data:
-                hotkey_data = config_data['hotkeys']
-                self.config.hotkeys = HotkeyConfig(
-                    queue_screenshot=hotkey_data.get('queue_screenshot', 'ctrl+shift+e'),
-                    analyze_queue=hotkey_data.get('analyze_queue', 'ctrl+shift+x'),
-                    quit_application=hotkey_data.get('quit_application', 'ctrl+shift+q'),
-                    enable_global=hotkey_data.get('enable_global', True),
-                    debounce_ms=hotkey_data.get('debounce_ms', 500)
+        else:
+            # Also handle legacy format for backwards compatibility
+            if 'openai' in data:
+                openai_data = data['openai']
+                config.openai = AIProviderConfig(
+                    api_key=openai_data.get('api_key', ''),
+                    model=openai_data.get('model', 'gpt-4-vision-preview'),
+                    enabled=openai_data.get('enabled', True),
+                    max_tokens=openai_data.get('max_tokens', 1000),
+                    temperature=openai_data.get('temperature', 0.1),
+                    timeout=openai_data.get('timeout', 30.0)
                 )
-            else:
-                self.config.hotkeys = HotkeyConfig()
             
-            # Capture configuration
-            if 'capture' in config_data:
-                capture_data = config_data['capture']
-                self.config.capture = CaptureConfig(
-                    window_name=capture_data.get('window_name', 'Bitcraft'),
-                    target_process=capture_data.get('target_process', 'bitcraft.exe'),
-                    game_window_patterns=capture_data.get('game_window_patterns', None),
-                    max_image_size=capture_data.get('max_image_size', 1024),
-                    image_format=capture_data.get('image_format', 'PNG'),
-                    image_quality=capture_data.get('image_quality', 85),
-                    capture_timeout=capture_data.get('capture_timeout', 5.0),
-                    queue_max_size=capture_data.get('queue_max_size', 20),
-                    min_window_width=capture_data.get('min_window_width', 400),
-                    min_window_height=capture_data.get('min_window_height', 300)
+            if 'anthropic' in data:
+                anthropic_data = data['anthropic']
+                config.anthropic = AIProviderConfig(
+                    api_key=anthropic_data.get('api_key', ''),
+                    model=anthropic_data.get('model', 'claude-3-sonnet-20240229'),
+                    enabled=anthropic_data.get('enabled', True),
+                    max_tokens=anthropic_data.get('max_tokens', 1000),
+                    temperature=anthropic_data.get('temperature', 0.1),
+                    timeout=anthropic_data.get('timeout', 30.0)
                 )
-            else:
-                self.config.capture = CaptureConfig()
+        
+        # Parse hotkey configuration
+        if 'hotkeys' in data:
+            hotkey_data = data['hotkeys']
+            config.hotkeys = HotkeyConfig(
+                queue_screenshot=hotkey_data.get('queue_screenshot', 'ctrl+shift+e'),
+                analyze_queue=hotkey_data.get('analyze_queue', 'ctrl+shift+x'),
+                quit_application=hotkey_data.get('quit_application', 'ctrl+shift+q'),
+                enable_global=hotkey_data.get('enable_global', True),
+                debounce_ms=hotkey_data.get('debounce_ms', 500)
+            )
+        
+        # Parse capture configuration
+        if 'capture' in data:
+            capture_data = data['capture']
+            config.capture = CaptureConfig(
+                window_name=capture_data.get('window_name', 'Bitcraft'),
+                target_process=capture_data.get('target_process', 'bitcraft.exe'),
+                game_window_patterns=capture_data.get('game_window_patterns'),
+                max_image_size=capture_data.get('max_image_size', 1024),
+                image_format=capture_data.get('image_format', 'PNG'),
+                image_quality=capture_data.get('image_quality', 85),
+                capture_timeout=capture_data.get('capture_timeout', 5.0),
+                queue_max_size=capture_data.get('queue_max_size', 20),
+                min_window_width=capture_data.get('min_window_width', 400),
+                min_window_height=capture_data.get('min_window_height', 300)
+            )
+        
+        # Parse extraction configuration
+        if 'extraction' in data:
+            extraction_data = data['extraction']
             
-            # Extraction configuration
-            if 'extraction' in config_data:
-                extraction_data = config_data['extraction']
-                
-                # Parse provider enums
-                primary_provider = AIProviderType.OPENAI
-                if extraction_data.get('primary_provider') == 'anthropic':
-                    primary_provider = AIProviderType.ANTHROPIC
-                
-                fallback_provider = AIProviderType.ANTHROPIC
-                if extraction_data.get('fallback_provider') == 'openai':
-                    fallback_provider = AIProviderType.OPENAI
-                
-                self.config.extraction = ExtractionConfig(
-                    primary_provider=primary_provider,
-                    fallback_provider=fallback_provider,
-                    use_fallback=extraction_data.get('use_fallback', True),
-                    include_examples=extraction_data.get('include_examples', True),
-                    min_confidence=extraction_data.get('min_confidence', 0.7),
-                    max_retries=extraction_data.get('max_retries', 3),
-                    rate_limit_delay=extraction_data.get('rate_limit_delay', 1.0)
-                )
-            else:
-                self.config.extraction = ExtractionConfig()
+            # Parse provider enums
+            primary_provider = AIProviderType.OPENAI
+            if extraction_data.get('primary_provider') == 'anthropic':
+                primary_provider = AIProviderType.ANTHROPIC
             
-            # Application settings
-            self.config.log_level = config_data.get('log_level', 'INFO')
-            self.config.auto_save_results = config_data.get('auto_save_results', True)
-            self.config.results_directory = config_data.get('results_directory', 'results')
+            fallback_provider = AIProviderType.ANTHROPIC
+            if extraction_data.get('fallback_provider') == 'openai':
+                fallback_provider = AIProviderType.OPENAI
             
-            self.logger.info("Configuration loaded successfully")
+            config.extraction = ExtractionConfig(
+                primary_provider=primary_provider,
+                fallback_provider=fallback_provider,
+                use_fallback=extraction_data.get('use_fallback', True),
+                include_examples=extraction_data.get('include_examples', True),
+                min_confidence=extraction_data.get('min_confidence', 0.7),
+                max_retries=extraction_data.get('max_retries', 3),
+                rate_limit_delay=extraction_data.get('rate_limit_delay', 1.0)
+            )
+        
+        # Parse application settings
+        config.log_level = data.get('log_level', 'INFO')
+        config.auto_save_results = data.get('auto_save_results', True)
+        config.results_directory = data.get('results_directory', 'results')
+        
+        return config
+    def load_config(self) -> bool:
+        """Load configuration from file (legacy method - now uses _initialize_config).
+        
+        Returns:
+            True if loaded successfully, False otherwise
+        """
+        try:
+            self._initialize_config()
             return True
-            
         except Exception as e:
             self.logger.error("Failed to load configuration", error=str(e))
             return False

@@ -12,7 +12,7 @@ Features:
 - Session tracking with cost estimates
 - Export-ready data extraction
 """
-
+import cv2
 import argparse
 import sys
 import asyncio
@@ -29,6 +29,8 @@ from bitcrafty_extractor.config.config_manager import ConfigManager
 from bitcrafty_extractor.ai_analysis.vision_client import VisionClient, ImageData
 from bitcrafty_extractor.capture.window_capture import WindowCapture
 from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler
+
+
 
 try:
     from rich.console import Console
@@ -297,7 +299,7 @@ class BitCraftyExtractor:
         return False
         
     async def _check_configuration(self):
-        """Check if configuration is valid."""
+        """Check if configuration is valid and validate API keys."""
         has_openai = (self.config_manager.config.openai and 
                      self.config_manager.config.openai.enabled and 
                      self.config_manager.config.openai.api_key)
@@ -307,13 +309,54 @@ class BitCraftyExtractor:
         
         if not (has_openai or has_anthropic):
             print("❌ No API keys configured!")
-            print("💡 Please run the GUI app first to configure API keys.")
-            print("   Or manually edit: config/user.yaml")
+            print()
+            print("🔧 Setup Instructions:")
+            print("   1. Open: config/config.yaml")
+            print("   2. Add your API key(s) to the 'api_key' fields:")
+            print("      • OpenAI: Get from https://platform.openai.com/api-keys")
+            print("      • Anthropic: Get from https://console.anthropic.com/")
+            print("   3. Save the file and restart the application")
+            print()
+            print("📝 Example config.yaml:")
+            print("   openai:")
+            print("     api_key: 'sk-your-openai-key-here'")
+            print("   anthropic:")
+            print("     api_key: 'sk-ant-your-anthropic-key-here'")
+            print()
+            sys.exit(1)
+        
+        # Validate API keys by testing them
+        print("🔑 Validating API keys...")
+        
+        valid_providers = []
+        
+        if has_openai:
+            print("   Testing OpenAI API key...", end=" ")
+            if await self._validate_openai_key():
+                print("✅ Valid")
+                valid_providers.append("OpenAI")
+            else:
+                print("❌ Invalid")
+                
+        if has_anthropic:
+            print("   Testing Anthropic API key...", end=" ")
+            if await self._validate_anthropic_key():
+                print("✅ Valid")
+                valid_providers.append("Anthropic")
+            else:
+                print("❌ Invalid")
+        
+        if not valid_providers:
+            print("\n❌ No valid API keys found!")
+            print("💡 Check your API keys in config/config.yaml and restart")
             sys.exit(1)
             
-        print(f"✅ Configuration loaded")
+        print(f"\n✅ Configuration loaded - Valid providers: {', '.join(valid_providers)}")
         print(f"   Primary: {self.config_manager.config.extraction.primary_provider}")
         print(f"   Fallback: {self.config_manager.config.extraction.fallback_provider}")
+
+    
+
         
     def _hotkey_screenshot(self):
         """Hotkey callback for taking screenshots."""
@@ -730,6 +773,53 @@ Analyze all screenshots and extract complete item and recipe data with accurate 
             except KeyboardInterrupt:
                 break
 
+    async def _validate_openai_key(self) -> bool:
+        """Validate OpenAI API key using their health check."""
+        try:
+            import aiohttp
+            
+            headers = {
+                "Authorization": f"Bearer {self.config_manager.config.openai.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                # Use the models endpoint as a health check
+                async with session.get("https://api.openai.com/v1/models", headers=headers) as response:
+                    return response.status == 200
+                    
+        except Exception as e:
+            if self.logger:
+                self.logger.debug("OpenAI key validation failed", error=str(e))
+            return False
+    
+    async def _validate_anthropic_key(self) -> bool:
+        """Validate Anthropic API key using their health check."""
+        try:
+            import aiohttp
+            
+            headers = {
+                "x-api-key": self.config_manager.config.anthropic.api_key,
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01"
+            }
+            
+            # Simple test request with minimal tokens
+            data = {
+                "model": "claude-3-haiku-20240307",  # Use cheapest model for validation
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "Hi"}]
+            }
+            
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.post("https://api.anthropic.com/v1/messages", 
+                                       headers=headers, json=data) as response:
+                    return response.status == 200
+                    
+        except Exception as e:
+            if self.logger:
+                self.logger.debug("Anthropic key validation failed", error=str(e))
+            return False
 
 def parse_arguments():
     """Parse command line arguments."""

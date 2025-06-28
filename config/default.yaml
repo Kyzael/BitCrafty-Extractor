@@ -1,95 +1,61 @@
-# BitCrafty Extractor Configuration
+# BitCrafty Extractor Default Configuration Template
+# This is a template file - the application will create config.yaml from this template
+# WARNING: Do not commit API keys to version control! Use config.yaml for your keys.
 
-# AI Provider Settings
+# AI Provider Configuration
 ai:
-  # Primary AI provider: "anthropic_claude" (most accurate for quantities)
-  default_provider: "anthropic_claude"
-  
-  # Fallback provider if primary fails: "openai_gpt4v" (GPT-4-Turbo)
-  fallback_provider: "openai_gpt4v"
-  
-  # OpenAI Configuration
   openai:
-    api_key: ""  # Set your OpenAI API key here
-    model: "gpt-4-turbo"  # Updated to GPT-4-Turbo for better accuracy
+    api_key: ""  # Add your OpenAI API key in config.yaml
+    model: "gpt-4-vision-preview"
+    enabled: true
+    max_tokens: 1000
+    temperature: 0.1
     timeout: 30.0
-    
-  # Anthropic Configuration  
+  
   anthropic:
-    api_key: ""  # Set your Anthropic API key here
-    model: "claude-3-5-sonnet-20241022"  # Updated to latest Claude 3.5 Sonnet
+    api_key: ""  # Add your Anthropic API key in config.yaml
+    model: "claude-3-sonnet-20240229"
+    enabled: true
+    max_tokens: 1000
+    temperature: 0.1
     timeout: 30.0
 
-# Screenshot Capture Settings
+# Global Hotkey Configuration
+hotkeys:
+  queue_screenshot: "ctrl+shift+e"
+  analyze_queue: "ctrl+shift+x"
+  quit_application: "ctrl+shift+q"
+  enable_global: true
+  debounce_ms: 500
+
+# Screenshot Capture Configuration
 capture:
-  # Image format: "PNG" or "JPEG"
-  format: "PNG"
-  
-  # JPEG quality (1-100, only used if format is JPEG)
-  quality: 95
-  
-  # Automatic window detection
-  auto_detect_game_window: true
-  
-  # Target process name - specifically bitcraft.exe
+  window_name: "Bitcraft"
   target_process: "bitcraft.exe"
-  
-  # Window title patterns to look for (case-insensitive)
   game_window_patterns:
     - "BitCraft"
     - "bitcraft"
     - "BITCRAFT"
     - "Bitcraft"
-  
-  # Minimum window size to consider (filters out small UI windows)
+  max_image_size: 1024
+  image_format: "PNG"
+  image_quality: 85
+  capture_timeout: 5.0
+  queue_max_size: 20
   min_window_width: 400
   min_window_height: 300
 
-# Hotkey Configuration
-hotkeys:
-  # Queue screenshot hotkey
-  queue_screenshot: "ctrl+shift+e"
-  
-  # Analyze queue hotkey  
-  analyze_queue: "ctrl+shift+x"
-  
-  # Quit application hotkey
-  quit_application: "ctrl+shift+q"
-  
-  # Enable/disable hotkeys globally
-  enabled: true
-
-# Queue Settings
-queue:
-  # Maximum number of screenshots in queue
-  max_size: 10
-  
-  # Auto-clear queue after successful analysis
-  auto_clear: true
+# AI Extraction Configuration  
+extraction:
+  primary_provider: "openai"
+  fallback_provider: "anthropic"
+  use_fallback: true
+  include_examples: true
+  min_confidence: 0.7
+  max_retries: 3
+  rate_limit_delay: 1.0
 
 # Application Settings
-app:
-  # Enable debug logging
-  debug: false
-  
-  # Log file path (relative to application directory)
-  log_file: "bitcrafty-extractor.log"
-  
-  # Window size and position
-  window:
-    width: 1200
-    height: 800
-    remember_position: true
-
-# Data Export Settings
-export:
-  # Default export directory
-  output_directory: "exports"
-  
-  # Export formats to generate
-  formats:
-    - "json"
-    - "csv"
-  
-  # Include metadata in exports
-  include_metadata: true
+log_level: "INFO"
+auto_save_results: true
+results_directory: "exports"

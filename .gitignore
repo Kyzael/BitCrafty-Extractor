@@ -209,6 +209,49 @@ config/local.yaml
 config/development.yaml
 config/production.yaml
 config/user_*.yaml
+config/config.yaml
+config/user.yaml
+
+# IMPORTANT: Never commit API keys!
+**/config.yaml
+**/user.yaml
+**/*api_key*
+**/.bitcrafty-extractor/
+
+# ENHANCED API KEY & SECRETS PROTECTION
+# These patterns ensure no API keys or secrets are accidentally committed
+*.env*                       # Environment files anywhere
+**/secrets.*                 # Any secrets files
+**/secret*                   # Files containing 'secret'
+**/*_secret*                 # Files with '_secret' in name
+**/*_key*                    # Files with '_key' in name  
+config/*_local.*             # Local config variations
+config/*.private             # Private config files
+config/personal.*            # Personal config files
+api_keys.*                   # Plain text API key files
+.secrets/                    # Secrets directories
+.env*                        # Environment files in root
+.key*                        # Key files in root
+
+# Configuration backups that might contain secrets
+config/*.backup
+config/*.bak
+config/*_backup.*
+config/*_old.*
+config/backup_*
+config/old_*
+
+# Application-specific secret patterns
+bitcrafty_secrets.*
+openai_key.*
+anthropic_key.*
+claude_key.*
+gpt_key.*
+
+# Local development configurations  
+config/dev_config.*
+config/test_config.*
+config/debug_config.*
 
 # Data extraction results
 extracted_data/
