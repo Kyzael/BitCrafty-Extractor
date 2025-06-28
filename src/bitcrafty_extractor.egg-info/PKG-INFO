@@ -1,3 +1,53 @@
+Metadata-Version: 2.4
+Name: bitcrafty-extractor
+Version: 1.0.0
+Summary: AI-powered real-time data extraction tool for BitCraft game using focus-based fullscreen capture
+Author: BitCrafty Team
+License: MIT
+Project-URL: Homepage, https://github.com/Kyzael/BitCrafty-Extractor
+Project-URL: Repository, https://github.com/Kyzael/BitCrafty-Extractor
+Project-URL: Issues, https://github.com/Kyzael/BitCrafty-Extractor/issues
+Keywords: bitcraft,data-extraction,computer-vision,ai-vision,gaming,focus-based-capture,fullscreen-capture
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Games/Entertainment
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: opencv-python>=4.8.0
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: anthropic>=0.7.0
+Requires-Dist: PyQt6>=6.5.0
+Requires-Dist: pywin32>=306
+Requires-Dist: pynput>=1.7.6
+Requires-Dist: psutil>=5.9.0
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: structlog>=23.0.0
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: pandas>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.11.0; extra == "dev"
+Requires-Dist: black>=23.7.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: pre-commit>=3.3.0; extra == "dev"
+Provides-Extra: ai
+Requires-Dist: openai>=1.0.0; extra == "ai"
+Requires-Dist: anthropic>=0.7.0; extra == "ai"
+Dynamic: license-file
+
 # BitCrafty-Extractor
 
 ## Overview
@@ -107,11 +157,8 @@ venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Install package in development mode
-pip install -e .
-
 # Run the application
-bitcrafty-extractor
+python bitcrafty-extractor.py
 ```
 
 ### Required Packages
@@ -136,7 +183,7 @@ Get API keys from:
 - Anthropic Claude 3: ~$0.008-0.025 per extraction
 
 ### 2. Initial Configuration
-1. Run the application: `bitcrafty-extractor`
+1. Run the application: `python bitcrafty-extractor.py`
 2. Go to the "Configuration" tab
 3. Enter your API keys (at least one required)
 4. Choose primary/fallback providers
@@ -149,31 +196,6 @@ Default hotkeys:
 - **Ctrl+Shift+X**: Analyze screenshot queue (send all queued screenshots to AI)
 
 Configuration file location: `~/.bitcrafty-extractor/config.yaml`
-
-## Command Line Options
-
-The BitCrafty-Extractor supports several command-line options:
-
-```bash
-# Show help
-bitcrafty-extractor --help
-
-# Show version
-bitcrafty-extractor --version
-
-# Run Phase 1 validation test
-bitcrafty-extractor --test-capture
-
-# Launch GUI (default)
-bitcrafty-extractor --gui
-```
-
-### Phase 1 Validation Test
-Use `--test-capture` to validate the capture system:
-- Tests BitCraft window detection
-- Validates focus-based capture functionality
-- Confirms screenshot quality and content
-- Perfect for troubleshooting capture issues
 
 ## Usage
 

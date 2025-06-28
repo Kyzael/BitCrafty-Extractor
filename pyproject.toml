@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bitcrafty-extractor"
 version = "1.0.0"
-description = "Real-time data extraction tool for Bitcraft game data"
+description = "AI-powered real-time data extraction tool for BitCraft game using focus-based fullscreen capture"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "BitCrafty Team"},
 ]
-keywords = ["bitcraft", "data-extraction", "computer-vision", "ocr", "gaming"]
+keywords = ["bitcraft", "data-extraction", "computer-vision", "ai-vision", "gaming", "focus-based-capture", "fullscreen-capture"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -27,15 +27,19 @@ classifiers = [
 
 dependencies = [
     "opencv-python>=4.8.0",
-    "pytesseract>=0.3.10",
-    "numpy>=1.24.0",
-    "pandas>=2.0.0",
-    "PyYAML>=6.0",
-    "structlog>=23.1.0",
     "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "openai>=1.0.0",
+    "anthropic>=0.7.0",
+    "PyQt6>=6.5.0",
+    "pywin32>=306",
+    "pynput>=1.7.6",
     "psutil>=5.9.0",
-    "pywin32>=306; sys_platform=='win32'",
-    "pygetwindow>=0.0.9; sys_platform=='win32'",
+    "PyYAML>=6.0",
+    "structlog>=23.0.0",
+    "aiohttp>=3.8.0",
+    "requests>=2.31.0",
+    "pandas>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -49,13 +53,13 @@ dev = [
     "mypy>=1.5.0",
     "pre-commit>=3.3.0",
 ]
-performance = [
-    "opencv-contrib-python>=4.8.0",
-    "scikit-image>=0.21.0",
+ai = [
+    "openai>=1.0.0",
+    "anthropic>=0.7.0",
 ]
 
 [project.scripts]
-bitcrafty-extractor = "bitcrafty_extractor.main:main"
+bitcrafty-extractor = "bitcrafty_extractor.realtime_extractor:main"
 
 [project.urls]
 Homepage = "https://github.com/Kyzael/BitCrafty-Extractor"
@@ -105,17 +109,20 @@ strict_equality = true
 [[tool.mypy.overrides]]
 module = [
     "cv2.*",
-    "pytesseract.*",
     "win32gui.*",
+    "win32ui.*", 
     "win32con.*",
-    "pygetwindow.*"
+    "win32process.*",
+    "psutil.*",
+    "PyQt6.*",
+    "pynput.*"
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
-testpaths = ["tests"]
+testpaths = ["test"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -124,6 +131,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "vision: marks tests that require computer vision libraries",
+    "focus: marks tests that require BitCraft window focus",
 ]
 
 [tool.coverage.run]

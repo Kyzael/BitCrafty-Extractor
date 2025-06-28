@@ -25,7 +25,7 @@ sdist/
 var/
 wheels/
 share/python-wheels/
-*.egg-info/
+*.egg-info/           # Includes pip install -e . egg-info directories
 .installed.cfg
 *.egg
 MANIFEST
@@ -187,6 +187,11 @@ debug_images/
 debug_screenshots/
 ocr_debug/
 
+# IMPORTANT: Test data screenshots should be committed
+# tests/test_data/ is intentionally NOT ignored - keep this for permanent test data
+!tests/test_data/
+!tests/test_data/**
+
 # Application output directories
 output/
 logs/
@@ -236,5 +241,5 @@ Thumbs.db
 # Local development files
 dev_notes.md
 dev_screenshots/
-test_data/
 sandbox/
+src/bitcrafty_extractor.egg-info/dependency_links.txt

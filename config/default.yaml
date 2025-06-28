@@ -1,131 +1,92 @@
-# Application Configuration
-app:
-  name: "BitCrafty Extractor"
-  version: "1.0.0"
-  debug: false
+# BitCrafty Extractor Configuration
 
-# Window Monitoring
-window:
-  target_name: "Bitcraft"
-  capture_interval_ms: 500
-  max_window_search_attempts: 10
-  window_search_interval_ms: 2000
+# AI Provider Settings
+ai:
+  # Primary AI provider: "openai_gpt4v" or "anthropic_claude"
+  default_provider: "openai_gpt4v"
+  
+  # Fallback provider if primary fails
+  fallback_provider: "anthropic_claude"
+  
+  # OpenAI Configuration
+  openai:
+    api_key: ""  # Set your OpenAI API key here
+    model: "gpt-4-vision-preview"
+    timeout: 30.0
+    
+  # Anthropic Configuration  
+  anthropic:
+    api_key: ""  # Set your Anthropic API key here
+    model: "claude-3-sonnet-20240229"
+    timeout: 30.0
 
-# Screen Capture Settings
+# Screenshot Capture Settings
 capture:
-  regions:
-    # Full screen capture region (will be auto-detected)
-    full_screen: null
-    # Specific UI regions (coordinates will be auto-calibrated)
-    inventory: null
-    crafting_panel: null
-    tooltip_area: null
-    chat_area: null
+  # Image format: "PNG" or "JPEG"
+  format: "PNG"
   
-  # Image preprocessing
-  preprocessing:
-    enabled: true
-    resize_factor: 1.0
-    contrast_enhancement: 1.2
-    brightness_adjustment: 10
-    noise_reduction: true
-    
-# OCR Configuration
-ocr:
-  language: "eng"
-  config_string: "--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,()-+:/ "
-  confidence_threshold: 0.75
-  preprocessing_enabled: true
+  # JPEG quality (1-100, only used if format is JPEG)
+  quality: 95
+  
+  # Automatic window detection
+  auto_detect_game_window: true
+  
+  # Target process name - specifically bitcraft.exe
+  target_process: "bitcraft.exe"
+  
+  # Window title patterns to look for (case-insensitive)
+  game_window_patterns:
+    - "BitCraft"
+    - "bitcraft"
+    - "BITCRAFT"
+    - "Bitcraft"
+  
+  # Minimum window size to consider (filters out small UI windows)
+  min_window_width: 400
+  min_window_height: 300
 
-# Data Extraction
-extraction:
-  # Confidence thresholds for different data types
-  confidence_thresholds:
-    item_names: 85
-    craft_recipes: 80
-    building_names: 85
-    profession_names: 90
-    
-  # Data validation
-  validation:
-    cross_reference_existing: true
-    require_minimum_observations: 2
-    max_extraction_rate_per_minute: 60
-    
-  # Output settings
-  output:
-    format: "json"
-    pretty_print: true
-    backup_existing: true
-    incremental_updates: true
+# Hotkey Configuration
+hotkeys:
+  # Queue screenshot hotkey
+  queue_screenshot: "ctrl+shift+e"
+  
+  # Analyze queue hotkey  
+  analyze_queue: "ctrl+shift+x"
+  
+  # Enable/disable hotkeys globally
+  enabled: true
 
-# Template Matching
-templates:
-  # UI element detection
-  ui_detection:
-    method: "template_matching"
-    threshold: 0.8
-    max_locations: 10
-    
-  # Item categories and their detection patterns
-  item_patterns:
-    tooltip_borders: true
-    inventory_slots: true
-    item_icons: false  # Disabled until icon database is built
-    
-# Logging Configuration
-logging:
-  level: "INFO"
-  format: "structured"
-  output:
-    console: true
-    file: true
-    file_path: "logs/extractor.log"
-    max_file_size_mb: 10
-    backup_count: 5
-    
-  # What to log
-  log_categories:
-    window_events: true
-    ocr_results: false  # Too verbose for production
-    extraction_results: true
-    performance_metrics: true
-    errors_and_warnings: true
+# Queue Settings
+queue:
+  # Maximum number of screenshots in queue
+  max_size: 10
+  
+  # Auto-clear queue after successful analysis
+  auto_clear: true
 
-# Performance Settings
-performance:
-  # Memory management
-  max_memory_usage_mb: 512
-  image_cache_size: 50
-  template_cache_size: 100
+# Application Settings
+app:
+  # Enable debug logging
+  debug: false
   
-  # Processing optimization
-  max_concurrent_extractions: 2
-  processing_timeout_seconds: 30
+  # Log file path (relative to application directory)
+  log_file: "bitcrafty-extractor.log"
   
-  # Quality vs Speed trade-offs
-  ocr_quality_mode: "balanced"  # fast, balanced, accurate
-  image_processing_quality: "high"
+  # Window size and position
+  window:
+    width: 1200
+    height: 800
+    remember_position: true
 
-# Data Output Paths
-paths:
-  # Input paths (relative to project root)
-  templates_dir: "config/templates"
+# Data Export Settings
+export:
+  # Default export directory
+  output_directory: "exports"
   
-  # Output paths
-  output_dir: "output"
-  extracted_data_dir: "output/extracted"
-  bitcrafty_export_dir: "output/bitcrafty_format"
-  logs_dir: "logs"
-  cache_dir: "cache"
+  # Export formats to generate
+  formats:
+    - "json"
+    - "csv"
   
-  # BitCrafty integration paths (will be auto-detected)
-  bitcrafty_data_dir: null  # Auto-detect from relative path
-  
-# Development/Debug Settings (only active when debug: true)
-debug:
-  save_screenshots: false
-  save_processed_images: false
-  save_ocr_debug_images: false
-  detailed_timing: false
-  mock_window_capture: false
+  # Include metadata in exports
+  include_metadata: true
