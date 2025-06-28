@@ -104,9 +104,34 @@ EXAMPLE:
 }, indent=2)}
 """
         
+        craft_validation_rules = """
+CRITICAL CRAFTING RECIPE VALIDATION RULES:
+1. ONLY extract crafts_found if you see an ACTUAL CRAFTING INTERFACE with materials, tools, or profession requirements
+2. Do NOT extract crafts for simple item tooltips or item information screens
+3. A craft MUST have at least one of: materials list, profession requirement, tool requirement, or building requirement
+4. If you only see an item description without crafting details, extract it as items_found ONLY
+5. Crafts without materials[] AND without profession AND without tools are INVALID - exclude them
+6. Item hover tooltips or information screens are NOT crafting recipes
+
+VALID CRAFT INDICATORS:
+- Clear materials list with quantities
+- Profession requirements (tailoring, cooking, farming, etc.)
+- Tool requirements (saw, hammer, loom, etc.)
+- Building requirements (workstation, kiln, etc.)
+- Recipe steps or crafting instructions
+
+INVALID CRAFT INDICATORS (extract as items_found instead):
+- Simple item tooltips or descriptions
+- Item information screens without crafting details
+- Just showing item name and description
+- No materials, tools, professions, or buildings visible
+"""
+        
         return f"""{self.base_context}
 
 TASK: Extract items and crafting recipes from {screenshot_count} screenshot(s).
+
+{craft_validation_rules}
 
 SCHEMA:
 {json.dumps(schema, indent=2)}
@@ -147,7 +172,10 @@ EXAMPLE:
         
         return f"""{self.base_context}
 
-TASK: Extract item tooltip data.
+TASK: Extract ITEM INFORMATION ONLY from this item tooltip or details screen.
+
+CRITICAL: This is for ITEM DETAILS ONLY - do NOT extract crafting recipes or create craft entries.
+Focus only on the item itself (name, description, rarity, tier).
 
 SCHEMA:
 {json.dumps(schema, indent=2)}
@@ -205,7 +233,13 @@ EXAMPLE:
         
         return f"""{self.base_context}
 
-TASK: Extract crafting recipe data.
+TASK: Extract crafting recipe data from an ACTIVE CRAFTING INTERFACE.
+
+VALIDATION REQUIREMENTS:
+- This prompt should ONLY be used for actual crafting interfaces/recipe screens
+- Must show clear materials list with quantities
+- Must show profession, tool, or building requirements
+- Do NOT use this for simple item tooltips or information screens
 
 SCHEMA: 
 {json.dumps(schema, indent=2)}

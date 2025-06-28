@@ -11,15 +11,23 @@ import structlog
 class ExportManager:
     """Manages exporting and deduplicating extracted items and crafts."""
     
-    def __init__(self, exports_dir: Path = None):
+    def __init__(self, exports_dir: Path = None, config_manager=None):
         """Initialize export manager.
         
         Args:
             exports_dir: Directory to save exports (defaults to ./exports)
+            config_manager: Configuration manager for validation settings
         """
         self.logger = structlog.get_logger(__name__)
         self.exports_dir = exports_dir or Path("exports")
         self.exports_dir.mkdir(exist_ok=True)
+        
+        # Configuration for validation
+        self.config_manager = config_manager
+        if config_manager and config_manager.config.extraction:
+            self.min_confidence = config_manager.config.extraction.min_confidence
+        else:
+            self.min_confidence = 0.7  # Default threshold
         
         # File paths
         self.items_file = self.exports_dir / "items.json"
@@ -32,7 +40,8 @@ class ExportManager:
         self.logger.info("Export manager initialized", 
                         exports_dir=str(self.exports_dir),
                         existing_items=len(self.existing_items),
-                        existing_crafts=len(self.existing_crafts))
+                        existing_crafts=len(self.existing_crafts),
+                        min_confidence_threshold=self.min_confidence)
     
     def _load_existing_items(self) -> Dict[str, Dict]:
         """Load existing items from JSON file."""
@@ -110,6 +119,112 @@ class ExportManager:
         hash_string = f"{name}|{materials_str}|{outputs_str}"
         return hashlib.md5(hash_string.encode('utf-8')).hexdigest()[:12]
     
+    def _validate_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate an item and return validation results.
+        
+        Args:
+            item: Item data to validate
+            
+        Returns:
+            Dict with validation results
+        """
+        name = item.get('name', '').strip()
+        confidence = item.get('confidence', 0)
+        
+        validation = {
+            'is_valid': True,
+            'reasons': []
+        }
+        
+        # Check confidence threshold
+        if confidence < self.min_confidence:
+            validation['is_valid'] = False
+            validation['reasons'].append(f"Confidence {confidence:.2f} below threshold {self.min_confidence}")
+        
+        # Check required fields
+        if not name:
+            validation['is_valid'] = False
+            validation['reasons'].append("Missing or empty name")
+        
+        if validation['is_valid']:
+            self.logger.debug("Item validation passed", name=name, confidence=confidence)
+        else:
+            self.logger.info("Item validation failed", 
+                           name=name or "unnamed",
+                           confidence=confidence,
+                           reasons=validation['reasons'])
+        
+        return validation
+    
+    def _validate_craft(self, craft: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a craft and return validation results.
+        
+        Args:
+            craft: Craft data to validate
+            
+        Returns:
+            Dict with validation results
+        """
+        name = craft.get('name', '').strip()
+        confidence = craft.get('confidence', 0)
+        requirements = craft.get('requirements', {})
+        materials = craft.get('materials', [])
+        outputs = craft.get('outputs', [])
+        
+        validation = {
+            'is_valid': True,
+            'reasons': []
+        }
+        
+        # Check confidence threshold
+        if confidence < self.min_confidence:
+            validation['is_valid'] = False
+            validation['reasons'].append(f"Confidence {confidence:.2f} below threshold {self.min_confidence}")
+        
+        # Check required fields
+        if not name:
+            validation['is_valid'] = False
+            validation['reasons'].append("Missing or empty name")
+        
+        # Check for empty requirements - this is critical for preventing false crafts
+        if not requirements or all(not v for v in requirements.values()):
+            validation['is_valid'] = False
+            validation['reasons'].append("Empty or missing requirements (profession, building, tool)")
+        
+        # Check that at least one requirement field is meaningful
+        profession = str(requirements.get('profession', '') or '').strip()
+        building = str(requirements.get('building', '') or '').strip()
+        tool = str(requirements.get('tool', '') or '').strip()
+        
+        if not any([profession, building, tool]):
+            validation['is_valid'] = False
+            validation['reasons'].append("No meaningful profession, building, or tool requirements")
+        
+        # Check materials list
+        if not materials:
+            validation['is_valid'] = False
+            validation['reasons'].append("Missing or empty materials list")
+        
+        # Check outputs list
+        if not outputs:
+            validation['is_valid'] = False
+            validation['reasons'].append("Missing or empty outputs list")
+        
+        if validation['is_valid']:
+            self.logger.debug("Craft validation passed", 
+                            name=name, 
+                            confidence=confidence,
+                            profession=profession,
+                            materials_count=len(materials))
+        else:
+            self.logger.info("Craft validation failed", 
+                           name=name or "unnamed",
+                           confidence=confidence,
+                           requirements=requirements,
+                           reasons=validation['reasons'])
+        
+        return validation
+    
     def process_extraction_results(self, data: Dict[str, Any], extracted_at: datetime = None) -> Dict[str, Any]:
         """Process extraction results and export new items/crafts.
         
@@ -130,6 +245,10 @@ class ExportManager:
         new_items = self._process_items(items, extracted_at)
         new_crafts = self._process_crafts(crafts, extracted_at)
         
+        # Calculate validation statistics
+        items_rejected = len(items) - len([i for i in items if self._validate_item(i)['is_valid']])
+        crafts_rejected = len(crafts) - len([c for c in crafts if self._validate_craft(c)['is_valid']])
+        
         # Save if we have new data
         if new_items or new_crafts:
             self._save_data()
@@ -137,10 +256,13 @@ class ExportManager:
         stats = {
             'items_processed': len(items),
             'crafts_processed': len(crafts),
+            'items_rejected': items_rejected,
+            'crafts_rejected': crafts_rejected,
             'new_items_added': len(new_items),
             'new_crafts_added': len(new_crafts),
             'total_items': len(self.existing_items),
-            'total_crafts': len(self.existing_crafts)
+            'total_crafts': len(self.existing_crafts),
+            'min_confidence_threshold': self.min_confidence
         }
         
         self.logger.info("Processed extraction results", **stats)
@@ -149,8 +271,18 @@ class ExportManager:
     def _process_items(self, items: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process items and add new ones to the store."""
         new_items = []
+        rejected_items = 0
         
         for item in items:
+            # Validate item first
+            validation = self._validate_item(item)
+            if not validation['is_valid']:
+                rejected_items += 1
+                self.logger.info("Rejected item", 
+                               name=item.get('name', 'unnamed'),
+                               reasons=validation['reasons'])
+                continue
+            
             # Add extraction metadata
             processed_item = {
                 **item,
@@ -168,7 +300,8 @@ class ExportManager:
                 
                 self.logger.info("New item discovered", 
                                name=item.get('name'),
-                               item_id=item_hash)
+                               item_id=item_hash,
+                               confidence=item.get('confidence'))
             else:
                 # Item exists, optionally update confidence or other metadata
                 existing = self.existing_items[item_hash]
@@ -184,13 +317,31 @@ class ExportManager:
                                    old_confidence=existing_confidence,
                                    new_confidence=new_confidence)
         
+        if rejected_items > 0:
+            self.logger.info("Items validation summary", 
+                           processed=len(items),
+                           accepted=len(items) - rejected_items,
+                           rejected=rejected_items)
+        
         return new_items
     
     def _process_crafts(self, crafts: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process crafts and add new ones to the store."""
         new_crafts = []
+        rejected_crafts = 0
         
         for craft in crafts:
+            # Validate craft first
+            validation = self._validate_craft(craft)
+            if not validation['is_valid']:
+                rejected_crafts += 1
+                self.logger.info("Rejected craft", 
+                               name=craft.get('name', 'unnamed'),
+                               confidence=craft.get('confidence', 0),
+                               requirements=craft.get('requirements', {}),
+                               reasons=validation['reasons'])
+                continue
+            
             # Add extraction metadata
             processed_craft = {
                 **craft,
@@ -208,7 +359,9 @@ class ExportManager:
                 
                 self.logger.info("New craft discovered",
                                name=craft.get('name'),
-                               craft_id=craft_hash)
+                               craft_id=craft_hash,
+                               confidence=craft.get('confidence'),
+                               profession=craft.get('requirements', {}).get('profession'))
             else:
                 # Craft exists, optionally update confidence
                 existing = self.existing_crafts[craft_hash]
@@ -223,6 +376,12 @@ class ExportManager:
                                    name=craft.get('name'),
                                    old_confidence=existing_confidence,
                                    new_confidence=new_confidence)
+        
+        if rejected_crafts > 0:
+            self.logger.info("Crafts validation summary", 
+                           processed=len(crafts),
+                           accepted=len(crafts) - rejected_crafts,
+                           rejected=rejected_crafts)
         
         return new_crafts
     

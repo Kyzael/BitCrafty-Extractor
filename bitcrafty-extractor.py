@@ -59,7 +59,7 @@ class BitCraftyExtractor:
         self.window_capture = None
         self.hotkey_handler = None
         self.prompt_builder = PromptBuilder()  # External prompt system
-        self.export_manager = ExportManager()  # Export system for items/crafts
+        self.export_manager = ExportManager(config_manager=self.config_manager)  # Export system for items/crafts
         self.screenshot_queue: List[ImageData] = []
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
@@ -711,8 +711,15 @@ class BitCraftyExtractor:
         items_count = len(items)
         crafts_count = len(crafts)
         self.add_debug_message(f"✅ Analysis complete: {items_count} items, {crafts_count} crafts (${result.cost_estimate:.3f})")
+        
+        # Show validation statistics if any items were rejected
+        items_rejected = export_stats.get('items_rejected', 0)
+        crafts_rejected = export_stats.get('crafts_rejected', 0)
+        if items_rejected > 0 or crafts_rejected > 0:
+            self.add_debug_message(f"⚠️ Validation: {items_rejected} items, {crafts_rejected} crafts rejected (confidence < {export_stats.get('min_confidence_threshold', 0.7)})")
+        
         if export_stats['new_items_added'] > 0 or export_stats['new_crafts_added'] > 0:
-            self.add_debug_message(f"� Exported: {export_stats['new_items_added']} new items, {export_stats['new_crafts_added']} new crafts")
+            self.add_debug_message(f"📤 Exported: {export_stats['new_items_added']} new items, {export_stats['new_crafts_added']} new crafts")
         else:
             self.add_debug_message("ℹ️ No new data exported (already in database)")
         
