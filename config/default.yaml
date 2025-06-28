@@ -1,0 +1,138 @@
+# Application Configuration
+app:
+  name: "BitCrafty Extractor"
+  version: "1.0.0"
+  debug: false
+
+# Window Monitoring
+window:
+  target_name: "Bitcraft"
+  capture_interval_ms: 500
+  max_window_search_attempts: 10
+  window_search_interval_ms: 2000
+
+# Screen Capture Settings
+capture:
+  regions:
+    # Full screen capture region (will be auto-detected)
+    full_screen: null
+    # Specific UI regions (coordinates will be auto-calibrated)
+    inventory: null
+    crafting_panel: null
+    tooltip_area: null
+    chat_area: null
+  
+  # Image preprocessing
+  preprocessing:
+    enabled: true
+    resize_factor: 1.0
+    contrast_enhancement: 1.2
+    brightness_adjustment: 10
+    noise_reduction: true
+    
+# OCR Configuration
+ocr:
+  engine: "tesseract"
+  language: "eng"
+  config: "--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,()-+:/ "
+  confidence_threshold: 75
+  
+  # Text preprocessing
+  text_processing:
+    min_text_length: 2
+    max_text_length: 100
+    filter_special_chars: true
+    normalize_whitespace: true
+
+# Data Extraction
+extraction:
+  # Confidence thresholds for different data types
+  confidence_thresholds:
+    item_names: 85
+    craft_recipes: 80
+    building_names: 85
+    profession_names: 90
+    
+  # Data validation
+  validation:
+    cross_reference_existing: true
+    require_minimum_observations: 2
+    max_extraction_rate_per_minute: 60
+    
+  # Output settings
+  output:
+    format: "json"
+    pretty_print: true
+    backup_existing: true
+    incremental_updates: true
+
+# Template Matching
+templates:
+  # UI element detection
+  ui_detection:
+    method: "template_matching"
+    threshold: 0.8
+    max_locations: 10
+    
+  # Item categories and their detection patterns
+  item_patterns:
+    tooltip_borders: true
+    inventory_slots: true
+    item_icons: false  # Disabled until icon database is built
+    
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "structured"
+  output:
+    console: true
+    file: true
+    file_path: "logs/extractor.log"
+    max_file_size_mb: 10
+    backup_count: 5
+    
+  # What to log
+  log_categories:
+    window_events: true
+    ocr_results: false  # Too verbose for production
+    extraction_results: true
+    performance_metrics: true
+    errors_and_warnings: true
+
+# Performance Settings
+performance:
+  # Memory management
+  max_memory_usage_mb: 512
+  image_cache_size: 50
+  template_cache_size: 100
+  
+  # Processing optimization
+  max_concurrent_extractions: 2
+  processing_timeout_seconds: 30
+  
+  # Quality vs Speed trade-offs
+  ocr_quality_mode: "balanced"  # fast, balanced, accurate
+  image_processing_quality: "high"
+
+# Data Output Paths
+paths:
+  # Input paths (relative to project root)
+  templates_dir: "config/templates"
+  
+  # Output paths
+  output_dir: "output"
+  extracted_data_dir: "output/extracted"
+  bitcrafty_export_dir: "output/bitcrafty_format"
+  logs_dir: "logs"
+  cache_dir: "cache"
+  
+  # BitCrafty integration paths (will be auto-detected)
+  bitcrafty_data_dir: null  # Auto-detect from relative path
+  
+# Development/Debug Settings (only active when debug: true)
+debug:
+  save_screenshots: false
+  save_processed_images: false
+  save_ocr_debug_images: false
+  detailed_timing: false
+  mock_window_capture: false

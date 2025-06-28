@@ -1,0 +1,145 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitcrafty-extractor"
+version = "1.0.0"
+description = "Real-time data extraction tool for Bitcraft game data"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "BitCrafty Team"},
+]
+keywords = ["bitcraft", "data-extraction", "computer-vision", "ocr", "gaming"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
+dependencies = [
+    "opencv-python>=4.8.0",
+    "pytesseract>=0.3.10",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "PyYAML>=6.0",
+    "structlog>=23.1.0",
+    "Pillow>=10.0.0",
+    "psutil>=5.9.0",
+    "pywin32>=306; sys_platform=='win32'",
+    "pygetwindow>=0.0.9; sys_platform=='win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+]
+performance = [
+    "opencv-contrib-python>=4.8.0",
+    "scikit-image>=0.21.0",
+]
+
+[project.scripts]
+bitcrafty-extractor = "bitcrafty_extractor.main:main"
+
+[project.urls]
+Homepage = "https://github.com/Kyzael/BitCrafty-Extractor"
+Repository = "https://github.com/Kyzael/BitCrafty-Extractor"
+Issues = "https://github.com/Kyzael/BitCrafty-Extractor/issues"
+
+# Tool configurations
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["bitcrafty_extractor"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "cv2.*",
+    "pytesseract.*",
+    "win32gui.*",
+    "win32con.*",
+    "pygetwindow.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "vision: marks tests that require computer vision libraries",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
