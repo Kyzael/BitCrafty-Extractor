@@ -4,7 +4,7 @@ This directory contains test scripts for validating the BitCrafty-Extractor func
 
 ## Test Scripts
 
-### `test_phase1_completion.py`
+### `test_window_capture.py`
 Validates Phase 1 completion with focus-based fullscreen capture:
 - BitCraft process detection (bitcraft.exe only)
 - Window finding and validation
@@ -19,30 +19,58 @@ Validates Phase 1 completion with focus-based fullscreen capture:
 
 **Usage:**
 ```bash
-cd test
-python test_phase1_completion.py
+python test\test_window_capture.py
 ```
 
-The script will:
-1. Give you 5 seconds to switch to BitCraft window
-2. Test all Phase 1 functionality
-3. Save a test screenshot to `test/output/bitcraft_capture_test.png`
-4. Provide detailed validation results
+### `test_hotkeys.py`
+Validates Phase 2A hotkey system functionality:
+- Global hotkey registration and monitoring
+- Cross-application hotkey functionality
+- Debouncing and error handling
+- Hotkey callback execution
+
+**Requirements:**
+- `pynput` library installed (included in requirements.txt)
+- Appropriate permissions for global hotkeys
+- No conflicting applications using same key combinations
+
+**Usage:**
+```bash
+python test\test_hotkeys.py
+```
+
+**Test Hotkeys:**
+- `Ctrl+Shift+E` - Queue Screenshot
+- `Ctrl+Shift+X` - Analyze Queue
+- `Ctrl+Shift+P` - Toggle Monitoring
 
 ## Output
 
-Test screenshots are saved to `test/output/` directory:
-- `bitcraft_capture_test.png` - High-quality fullscreen capture for validation
+Test screenshots are saved to project root:
+- `test_capture_[timestamp].png` - High-quality fullscreen capture for validation
 
 ## Expected Results
 
-✅ **Successful Test Output:**
+### Window Capture Test ✅
 - File size: 2+ MB (indicates rich content)
-- Pixel variance: 1000+ (complex game graphics)
+- Pixel variance: 4000+ (complex game graphics)
 - Mean brightness: 10-240 (normal game content)
 - All validation checks pass
 
-❌ **Common Issues:**
+### Hotkey Test ✅
+- Global hotkeys register successfully
+- Hotkeys work even when other apps have focus
+- Debouncing prevents multiple triggers (0.5s delay)
+- Clean startup and shutdown
+
+## Common Issues
+
+### Window Capture
 - BitCraft not in focus → Only captures when foreground
 - Black screenshots → Use windowed fullscreen mode
 - Small file sizes → Hardware acceleration blocking (fixed with fullscreen)
+
+### Hotkeys
+- Import errors → Install dependencies: `pip install -r requirements.txt`
+- Hotkeys not working → Check for conflicting applications
+- Permission errors → May need elevated permissions on some systems

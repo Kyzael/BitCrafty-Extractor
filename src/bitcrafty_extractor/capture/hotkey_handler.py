@@ -5,10 +5,9 @@ allowing players to trigger data extraction without alt-tabbing.
 """
 
 import time
-from typing import Callable, Dict, Set, Optional
+from typing import Callable, Dict, Optional
 import structlog
 from dataclasses import dataclass
-from enum import Enum
 
 try:
     import pynput
@@ -18,19 +17,11 @@ except ImportError:
     HOTKEY_AVAILABLE = False
 
 
-class HotkeyAction(Enum):
-    """Available hotkey actions."""
-    QUEUE_SCREENSHOT = "queue_screenshot"
-    ANALYZE_QUEUE = "analyze_queue" 
-    TOGGLE_PAUSE = "toggle_pause"
-    SHOW_STATUS = "show_status"
-
-
 @dataclass
 class HotkeyConfig:
     """Configuration for a hotkey binding."""
-    action: HotkeyAction
-    keys: Set[str]  # e.g., {'ctrl', 'shift', 'e'}
+    hotkey_string: str  # e.g., "ctrl+shift+e"
+    callback: Callable
     description: str
     enabled: bool = True
 
@@ -51,168 +42,168 @@ class HotkeyHandler:
             raise RuntimeError("Hotkey system not available. Install pynput library.")
         
         self.logger = logger
-        self.hotkeys: Dict[HotkeyAction, HotkeyConfig] = {}
-        self.callbacks: Dict[HotkeyAction, Callable] = {}
+        self.hotkeys: Dict[str, HotkeyConfig] = {}  # hotkey_string -> config
         self.listener: Optional[keyboard.GlobalHotKeys] = None
-        self.is_active = False
+        self.is_monitoring = False
         
         # Track key states for debouncing
-        self.last_trigger_time: Dict[HotkeyAction, float] = {}
-        self.debounce_delay = 1.0  # seconds
-        
-        # Default hotkey configurations
-        self._setup_default_hotkeys()
+        self.last_trigger_time: Dict[str, float] = {}
+        self.debounce_delay = 0.5  # seconds
         
         self.logger.info("Hotkey handler initialized")
 
-    def _setup_default_hotkeys(self):
-        """Set up default hotkey configurations."""
-        self.hotkeys = {
-            HotkeyAction.EXTRACT_AUTO: HotkeyConfig(
-                action=HotkeyAction.EXTRACT_AUTO,
-                keys={'ctrl', 'shift', 'e'},
-                description="Auto-detect and extract item/craft data",
-                enabled=True
-            ),
-            HotkeyAction.EXTRACT_ITEM: HotkeyConfig(
-                action=HotkeyAction.EXTRACT_ITEM,
-                keys={'ctrl', 'shift', 'i'},
-                description="Force extract as item tooltip",
-                enabled=True
-            ),
-            HotkeyAction.EXTRACT_CRAFT: HotkeyConfig(
-                action=HotkeyAction.EXTRACT_CRAFT,
-                keys={'ctrl', 'shift', 'c'},
-                description="Force extract as craft recipe",
-                enabled=True
-            ),
-            HotkeyAction.TOGGLE_PAUSE: HotkeyConfig(
-                action=HotkeyAction.TOGGLE_PAUSE,
-                keys={'ctrl', 'shift', 'p'},
-                description="Pause/resume extraction system",
-                enabled=True
-            ),
-            HotkeyAction.SHOW_STATUS: HotkeyConfig(
-                action=HotkeyAction.SHOW_STATUS,
-                keys={'ctrl', 'shift', 's'},
-                description="Show system status",
-                enabled=True
-            )
-        }
-
-    def register_callback(self, action: HotkeyAction, callback: Callable):
-        """Register a callback function for a hotkey action.
+    def register_callback(self, hotkey_string: str, callback: Callable, description: str = ""):
+        """Register a callback function for a hotkey.
         
         Args:
-            action: The hotkey action to register
+            hotkey_string: Hotkey combination (e.g., "ctrl+shift+e")
             callback: Function to call when hotkey is triggered
+            description: Human-readable description of the hotkey
         """
-        self.callbacks[action] = callback
-        self.logger.info("Callback registered", 
-                        action=action.value,
-                        callback_name=callback.__name__)
+        # Convert to pynput format
+        pynput_hotkey = self._convert_to_pynput_format(hotkey_string)
+        
+        config = HotkeyConfig(
+            hotkey_string=pynput_hotkey,
+            callback=callback,
+            description=description or f"Hotkey: {hotkey_string}",
+            enabled=True
+        )
+        
+        self.hotkeys[pynput_hotkey] = config
+        
+        self.logger.info("Hotkey registered", 
+                        hotkey=hotkey_string,
+                        pynput_format=pynput_hotkey,
+                        callback_name=callback.__name__,
+                        description=description)
+        
+        # Restart listener if already monitoring
+        if self.is_monitoring:
+            self.stop_monitoring()
+            self.start_monitoring()
 
-    def unregister_callback(self, action: HotkeyAction):
-        """Unregister a callback for a hotkey action.
+    def unregister_callback(self, hotkey_string: str):
+        """Unregister a callback for a hotkey.
         
         Args:
-            action: The hotkey action to unregister
+            hotkey_string: The hotkey to unregister
         """
-        if action in self.callbacks:
-            del self.callbacks[action]
-            self.logger.info("Callback unregistered", action=action.value)
+        pynput_hotkey = self._convert_to_pynput_format(hotkey_string)
+        
+        if pynput_hotkey in self.hotkeys:
+            del self.hotkeys[pynput_hotkey]
+            if pynput_hotkey in self.last_trigger_time:
+                del self.last_trigger_time[pynput_hotkey]
+            
+            self.logger.info("Hotkey unregistered", hotkey=hotkey_string)
+            
+            # Restart listener if already monitoring
+            if self.is_monitoring:
+                self.stop_monitoring()
+                self.start_monitoring()
 
-    def _format_hotkey_string(self, keys: Set[str]) -> str:
-        """Format a set of keys into a hotkey string for pynput.
+    def _convert_to_pynput_format(self, hotkey_string: str) -> str:
+        """Convert a hotkey string to pynput format.
         
         Args:
-            keys: Set of key names
+            hotkey_string: Input hotkey (e.g., "ctrl+shift+e")
             
         Returns:
-            Formatted hotkey string (e.g., '<ctrl>+<shift>+e')
+            Pynput-formatted hotkey string (e.g., "<ctrl>+<shift>+e")
         """
+        # Split the hotkey string
+        keys = [key.strip().lower() for key in hotkey_string.split('+')]
+        
         # Map common key names to pynput format
         key_mapping = {
             'ctrl': '<ctrl>',
+            'control': '<ctrl>',
             'shift': '<shift>',
             'alt': '<alt>',
             'cmd': '<cmd>',
             'win': '<cmd>',  # Windows key
-            'super': '<cmd>'  # Super key (Linux)
+            'super': '<cmd>',  # Super key (Linux)
+            'tab': '<tab>',
+            'space': '<space>',
+            'enter': '<enter>',
+            'return': '<enter>',
+            'esc': '<esc>',
+            'escape': '<esc>'
         }
         
         formatted_keys = []
-        for key in sorted(keys):
+        for key in keys:
             if key in key_mapping:
                 formatted_keys.append(key_mapping[key])
             else:
-                # Regular key (letter, number, etc.)
+                # Regular key (letter, number, etc.) - no brackets needed
                 formatted_keys.append(key)
         
         return '+'.join(formatted_keys)
 
-    def _create_hotkey_callback(self, action: HotkeyAction):
-        """Create a callback function for a specific action.
+    def _create_hotkey_callback(self, pynput_hotkey: str):
+        """Create a debounced callback function for a specific hotkey.
         
         Args:
-            action: The action to create a callback for
+            pynput_hotkey: The pynput-formatted hotkey string
             
         Returns:
             Callback function
         """
         def callback():
             try:
-                # Check if action is enabled
-                if action not in self.hotkeys or not self.hotkeys[action].enabled:
+                # Check if hotkey is still registered and enabled
+                if pynput_hotkey not in self.hotkeys or not self.hotkeys[pynput_hotkey].enabled:
                     return
                 
                 # Check debouncing
                 current_time = time.time()
-                if action in self.last_trigger_time:
-                    if current_time - self.last_trigger_time[action] < self.debounce_delay:
-                        self.logger.debug("Hotkey debounced", action=action.value)
+                if pynput_hotkey in self.last_trigger_time:
+                    if current_time - self.last_trigger_time[pynput_hotkey] < self.debounce_delay:
+                        self.logger.debug("Hotkey debounced", hotkey=pynput_hotkey)
                         return
                 
-                self.last_trigger_time[action] = current_time
+                self.last_trigger_time[pynput_hotkey] = current_time
                 
                 # Log the trigger
+                config = self.hotkeys[pynput_hotkey]
                 self.logger.info("Hotkey triggered", 
-                               action=action.value,
-                               keys=self.hotkeys[action].keys)
+                               hotkey=pynput_hotkey,
+                               description=config.description)
                 
-                # Call registered callback if available
-                if action in self.callbacks:
-                    try:
-                        self.callbacks[action]()
-                    except Exception as e:
-                        self.logger.error("Hotkey callback failed",
-                                        action=action.value,
-                                        error=str(e))
-                else:
-                    self.logger.warning("No callback registered for hotkey",
-                                      action=action.value)
+                # Call the registered callback
+                try:
+                    config.callback()
+                except Exception as e:
+                    self.logger.error("Hotkey callback failed",
+                                    hotkey=pynput_hotkey,
+                                    error=str(e))
                     
             except Exception as e:
                 self.logger.error("Hotkey processing failed",
-                                action=action.value,
+                                hotkey=pynput_hotkey,
                                 error=str(e))
         
         return callback
 
-    def start(self):
+    def start_monitoring(self):
         """Start the global hotkey listener."""
-        if self.is_active:
-            self.logger.warning("Hotkey handler already active")
+        if self.is_monitoring:
+            self.logger.warning("Hotkey monitoring already active")
+            return
+        
+        if not self.hotkeys:
+            self.logger.warning("No hotkeys registered")
             return
         
         try:
             # Build hotkey dictionary for pynput
             hotkey_dict = {}
-            for action, config in self.hotkeys.items():
+            for pynput_hotkey, config in self.hotkeys.items():
                 if config.enabled:
-                    hotkey_string = self._format_hotkey_string(config.keys)
-                    callback = self._create_hotkey_callback(action)
-                    hotkey_dict[hotkey_string] = callback
+                    callback = self._create_hotkey_callback(pynput_hotkey)
+                    hotkey_dict[pynput_hotkey] = callback
             
             if not hotkey_dict:
                 self.logger.warning("No enabled hotkeys to register")
@@ -221,19 +212,20 @@ class HotkeyHandler:
             # Create and start the listener
             self.listener = keyboard.GlobalHotKeys(hotkey_dict)
             self.listener.start()
-            self.is_active = True
+            self.is_monitoring = True
             
-            self.logger.info("Hotkey listener started",
+            self.logger.info("Hotkey monitoring started",
                            registered_hotkeys=len(hotkey_dict),
                            hotkeys=list(hotkey_dict.keys()))
             
         except Exception as e:
-            self.logger.error("Failed to start hotkey listener", error=str(e))
-            self.is_active = False
+            self.logger.error("Failed to start hotkey monitoring", error=str(e))
+            self.is_monitoring = False
+            raise
 
-    def stop(self):
+    def stop_monitoring(self):
         """Stop the global hotkey listener."""
-        if not self.is_active:
+        if not self.is_monitoring:
             return
         
         try:
@@ -241,11 +233,11 @@ class HotkeyHandler:
                 self.listener.stop()
                 self.listener = None
             
-            self.is_active = False
-            self.logger.info("Hotkey listener stopped")
+            self.is_monitoring = False
+            self.logger.info("Hotkey monitoring stopped")
             
         except Exception as e:
-            self.logger.error("Failed to stop hotkey listener", error=str(e))
+            self.logger.error("Failed to stop hotkey monitoring", error=str(e))
 
     def is_running(self) -> bool:
         """Check if the hotkey listener is running.
@@ -253,63 +245,41 @@ class HotkeyHandler:
         Returns:
             True if listener is active, False otherwise
         """
-        return self.is_active and self.listener is not None
+        return self.is_monitoring and self.listener is not None
 
-    def update_hotkey(self, action: HotkeyAction, keys: Set[str], enabled: bool = True):
-        """Update a hotkey configuration.
-        
-        Args:
-            action: The action to update
-            keys: New set of keys for the hotkey
-            enabled: Whether the hotkey should be enabled
-        """
-        if action in self.hotkeys:
-            old_keys = self.hotkeys[action].keys
-            self.hotkeys[action].keys = keys
-            self.hotkeys[action].enabled = enabled
-            
-            self.logger.info("Hotkey updated",
-                           action=action.value,
-                           old_keys=old_keys,
-                           new_keys=keys,
-                           enabled=enabled)
-            
-            # Restart listener if active to apply changes
-            if self.is_active:
-                self.stop()
-                self.start()
-        else:
-            self.logger.warning("Attempted to update unknown hotkey", action=action.value)
-
-    def enable_hotkey(self, action: HotkeyAction):
+    def enable_hotkey(self, hotkey_string: str):
         """Enable a specific hotkey.
         
         Args:
-            action: The action to enable
+            hotkey_string: The hotkey to enable
         """
-        if action in self.hotkeys:
-            self.hotkeys[action].enabled = True
-            self.logger.info("Hotkey enabled", action=action.value)
+        pynput_hotkey = self._convert_to_pynput_format(hotkey_string)
+        
+        if pynput_hotkey in self.hotkeys:
+            self.hotkeys[pynput_hotkey].enabled = True
+            self.logger.info("Hotkey enabled", hotkey=hotkey_string)
             
             # Restart listener if active to apply changes
-            if self.is_active:
-                self.stop()
-                self.start()
+            if self.is_monitoring:
+                self.stop_monitoring()
+                self.start_monitoring()
 
-    def disable_hotkey(self, action: HotkeyAction):
+    def disable_hotkey(self, hotkey_string: str):
         """Disable a specific hotkey.
         
         Args:
-            action: The action to disable
+            hotkey_string: The hotkey to disable
         """
-        if action in self.hotkeys:
-            self.hotkeys[action].enabled = False
-            self.logger.info("Hotkey disabled", action=action.value)
+        pynput_hotkey = self._convert_to_pynput_format(hotkey_string)
+        
+        if pynput_hotkey in self.hotkeys:
+            self.hotkeys[pynput_hotkey].enabled = False
+            self.logger.info("Hotkey disabled", hotkey=hotkey_string)
             
             # Restart listener if active to apply changes
-            if self.is_active:
-                self.stop()
-                self.start()
+            if self.is_monitoring:
+                self.stop_monitoring()
+                self.start_monitoring()
 
     def get_hotkey_info(self) -> Dict[str, Dict]:
         """Get information about all configured hotkeys.
@@ -318,14 +288,12 @@ class HotkeyHandler:
             Dictionary with hotkey information
         """
         info = {}
-        for action, config in self.hotkeys.items():
-            hotkey_string = self._format_hotkey_string(config.keys)
-            info[action.value] = {
-                "keys": list(config.keys),
-                "hotkey_string": hotkey_string,
+        for pynput_hotkey, config in self.hotkeys.items():
+            info[pynput_hotkey] = {
+                "hotkey_string": pynput_hotkey,
                 "description": config.description,
                 "enabled": config.enabled,
-                "has_callback": action in self.callbacks
+                "callback_name": config.callback.__name__ if config.callback else None
             }
         
         return info
@@ -337,9 +305,18 @@ class HotkeyHandler:
             Status information dictionary
         """
         return {
-            "is_active": self.is_active,
+            "is_monitoring": self.is_monitoring,
             "total_hotkeys": len(self.hotkeys),
             "enabled_hotkeys": sum(1 for h in self.hotkeys.values() if h.enabled),
-            "registered_callbacks": len(self.callbacks),
-            "debounce_delay": self.debounce_delay
+            "debounce_delay": self.debounce_delay,
+            "available": HOTKEY_AVAILABLE
         }
+
+    # Compatibility methods for the main application
+    def start(self):
+        """Compatibility method - alias for start_monitoring."""
+        self.start_monitoring()
+
+    def stop(self):
+        """Compatibility method - alias for stop_monitoring."""
+        self.stop_monitoring()

@@ -97,7 +97,7 @@ Real-Time Workflow:
 ### Quick Install
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/BitCrafty-Extractor.git
+git clone https://github.com/Kyzael/BitCrafty-Extractor.git
 cd BitCrafty-Extractor
 
 # Create virtual environment

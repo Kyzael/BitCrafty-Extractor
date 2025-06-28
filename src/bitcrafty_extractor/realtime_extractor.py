@@ -23,7 +23,7 @@ try:
                                 QMessageBox, QProgressBar, QTabWidget,
                                 QFormLayout, QLineEdit, QGroupBox)
     from PyQt6.QtCore import QThread, pyqtSignal, QTimer, Qt
-    from PyQt6.QtGui import QIcon, QPixmap, QFont
+    from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
@@ -244,7 +244,9 @@ class BitCraftyExtractorApp(QWidget):
         
         # Initialize UI
         self.init_ui()
-        self.setup_system_tray()
+        
+        # System tray will be set up in showEvent
+        self.tray_icon = None
         
         # Statistics
         self.total_extractions = 0
@@ -462,6 +464,14 @@ class BitCraftyExtractorApp(QWidget):
         widget.setLayout(layout)
         return widget
 
+    def showEvent(self, event):
+        """Handle window show event - set up system tray after window is shown."""
+        super().showEvent(event)
+        
+        # Set up system tray only once, after the window is properly initialized
+        if self.tray_icon is None:
+            self.setup_system_tray()
+
     def setup_system_tray(self):
         """Setup system tray icon and menu."""
         if not QSystemTrayIcon.isSystemTrayAvailable():
@@ -469,10 +479,38 @@ class BitCraftyExtractorApp(QWidget):
             return
         
         # Create tray icon
-        self.tray_icon = QSystemTrayIcon()
+        self.tray_icon = QSystemTrayIcon(self)  # Pass parent
+        
+        # Create a simple icon
+        try:
+            # Create a simple 16x16 blue square icon
+            pixmap = QPixmap(16, 16)
+            pixmap.fill(Qt.GlobalColor.blue)
+            
+            # Ensure the pixmap is valid
+            if not pixmap.isNull():
+                icon = QIcon(pixmap)
+                self.tray_icon.setIcon(icon)
+                self.logger.debug("Tray icon set successfully")
+            else:
+                raise Exception("Pixmap creation failed")
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to create custom tray icon: {e}")
+            # Try using system style icon as fallback
+            try:
+                icon = self.style().standardIcon(self.style().StandardPixmap.SP_ComputerIcon)
+                self.tray_icon.setIcon(icon)
+                self.logger.debug("System tray icon set using fallback")
+            except Exception as e2:
+                self.logger.error(f"Failed to set any tray icon: {e2}")
+                return  # Don't show tray if no icon can be set
+        
+        # Set tooltip
+        self.tray_icon.setToolTip("BitCrafty Extractor")
         
         # Create tray menu
-        tray_menu = QMenu()
+        tray_menu = QMenu(self)  # Pass parent
         
         show_action = tray_menu.addAction("Show")
         show_action.triggered.connect(self.show)
@@ -485,7 +523,7 @@ class BitCraftyExtractorApp(QWidget):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.activated.connect(self.tray_icon_activated)
         
-        # Show tray icon
+        # Show tray icon (now with icon set)
         self.tray_icon.show()
 
     def save_configuration(self):
@@ -608,11 +646,13 @@ class BitCraftyExtractorApp(QWidget):
                 # Register hotkey callbacks
                 self.hotkey_handler.register_callback(
                     self.queue_hotkey_input.text(),
-                    self.hotkey_queue_screenshot
+                    self.hotkey_queue_screenshot,
+                    "Queue screenshot for AI analysis"
                 )
                 self.hotkey_handler.register_callback(
                     self.analyze_hotkey_input.text(),
-                    self.hotkey_analyze_queue
+                    self.hotkey_analyze_queue,
+                    "Analyze screenshot queue with AI"
                 )
                 
                 self.hotkey_handler.start_monitoring()
@@ -781,27 +821,44 @@ Provider Configuration:
             self.show()
 
     def closeEvent(self, event):
-        """Handle window close event."""
-        # Hide to system tray instead of closing
-        event.ignore()
-        self.hide()
+        """Handle window close event - close gracefully instead of minimizing to tray."""
+        self.logger.info("Close event received - shutting down gracefully")
         
-        if self.tray_icon.isVisible():
-            QMessageBox.information(
-                self, "BitCrafty Extractor",
-                "Application minimized to system tray. "
-                "Right-click the tray icon to quit."
-            )
+        # Stop worker thread
+        if hasattr(self, 'worker') and self.worker:
+            self.worker.stop()
+            self.worker.wait()
+        
+        # Stop hotkey handler
+        if hasattr(self, 'hotkey_handler') and self.hotkey_handler:
+            self.hotkey_handler.stop()
+        
+        # Hide tray icon
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.hide()
+        
+        # Accept the close event to allow the application to exit
+        event.accept()
+        
+        # Quit the application
+        QApplication.quit()
 
     def quit_application(self):
         """Quit the application completely."""
-        # Stop worker thread
-        self.worker.stop()
-        self.worker.wait()
+        self.logger.info("Quit application requested")
         
-        # Stop hotkeys
-        if self.hotkey_handler:
-            self.hotkey_handler.stop_monitoring()
+        # Stop worker thread
+        if hasattr(self, 'worker') and self.worker:
+            self.worker.stop()
+            self.worker.wait()
+        
+        # Stop hotkey handler
+        if hasattr(self, 'hotkey_handler') and self.hotkey_handler:
+            self.hotkey_handler.stop()
+        
+        # Hide tray icon
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.hide()
         
         QApplication.quit()
 
@@ -865,7 +922,69 @@ def main():
         print("Try running from the project root or using: pip install -e .")
         sys.exit(1)
     
+    # Set environment variables to help with Qt font rendering on Windows
+    import os
+    # Force Qt to use GDI instead of DirectWrite for font rendering
+    os.environ['QT_QPA_PLATFORM'] = 'windows:fontengine=gdi'
+    # Alternative: disable hardware acceleration
+    os.environ.setdefault('QT_OPENGL', 'software')
+    # Force Qt to not use problematic fonts
+    os.environ['QT_FONT_DPI'] = '96'
+    
     app = QApplication(sys.argv)
+    
+    # Set Qt attributes to reduce font rendering issues
+    try:
+        app.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton, True)
+    except AttributeError:
+        pass  # Ignore if not available
+    
+    # Configure comprehensive font handling to avoid DirectWrite issues
+    def setup_fonts():
+        """Setup proper font configuration to avoid MS Sans Serif issues."""
+        try:
+            # List of preferred fonts in order of preference
+            font_preferences = [
+                ("Segoe UI", 9),           # Modern Windows default
+                ("Microsoft Sans Serif", 9), # Proper substitute for MS Sans Serif
+                ("Tahoma", 9),             # Fallback 1
+                ("Arial", 9),              # Fallback 2  
+                ("Sans Serif", 9)          # Generic fallback
+            ]
+            
+            # Try each font until we find one that works
+            font_set = False
+            for font_name, size in font_preferences:
+                try:
+                    font = QFont(font_name, size)
+                    app.setFont(font)
+                    font_set = True
+                    break
+                except Exception:
+                    continue
+            
+            # Set additional font substitutions to prevent MS Sans Serif issues
+            try:
+                # Add font substitutions to replace problematic fonts
+                font_substitutions = {
+                    "MS Sans Serif": "Microsoft Sans Serif",
+                    "MS Shell Dlg": "Segoe UI", 
+                    "MS Shell Dlg 2": "Segoe UI",
+                    "System": "Segoe UI"
+                }
+                
+                # Note: QFont.insertSubstitution is static
+                for old_font, new_font in font_substitutions.items():
+                    QFont.insertSubstitution(old_font, new_font)
+                    
+            except Exception:
+                pass
+                
+        except Exception:
+            pass
+    
+    # Setup fonts before creating any widgets
+    setup_fonts()
     
     # Set application properties
     app.setApplicationName("BitCrafty Extractor")
