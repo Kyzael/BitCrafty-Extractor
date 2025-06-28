@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bitcrafty-extractor"
-version = "1.0.0"
+version = "2.0.0"
 description = "AI-powered real-time data extraction tool for BitCraft game with console interface and global hotkeys"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -59,7 +59,7 @@ ai = [
 ]
 
 [project.scripts]
-bitcrafty-extractor = "bitcrafty_extractor.__main__:main"
+bitcrafty-extractor = "bitcrafty_extractor:main"
 
 [project.urls]
 Homepage = "https://github.com/Kyzael/BitCrafty-Extractor"

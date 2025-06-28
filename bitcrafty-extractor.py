@@ -738,8 +738,9 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python bitcrafty-extractor.py          # Launch the console interface
-  python -m bitcrafty_extractor          # Alternative entry point
+  bitcrafty-extractor                     # Launch the console interface (recommended)
+  python bitcrafty-extractor.py          # Alternative launch method
+  python -m bitcrafty_extractor          # Package entry point
   
 Global Hotkeys (work while playing BitCraft):
   Ctrl+Shift+E - Take screenshot and add to queue

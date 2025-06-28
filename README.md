@@ -10,10 +10,11 @@ The main application features a sophisticated three-pane console interface with 
 
 ### Basic Usage
 ```bash
-# Run the main BitCrafty-Extractor application
-python bitcrafty-extractor.py
+# Run the main BitCrafty-Extractor application (recommended)
+bitcrafty-extractor
 
-# Alternative package entry point
+# Alternative methods
+python bitcrafty-extractor.py
 python -m bitcrafty_extractor
 
 # The three-pane interface will launch with:
@@ -168,7 +169,7 @@ Get API keys from:
 ### 2. Initial Configuration
 Configuration is handled via YAML file located at `~/.bitcrafty-extractor/config.yaml`. The application will guide you through the setup process on first launch:
 
-1. Run the application: `python bitcrafty-extractor.py`
+1. Run the application: `bitcrafty-extractor`
 2. Follow the configuration prompts for API keys
 3. Choose primary/fallback providers
 4. Customize hotkeys if desired
@@ -187,19 +188,20 @@ The BitCrafty-Extractor supports several command-line options:
 
 ```bash
 # Show help
-python bitcrafty-extractor.py --help
+bitcrafty-extractor --help
 
 # Show version
-python bitcrafty-extractor.py --version
+bitcrafty-extractor --version
 
-# Run with alternative entry point
+# Run with alternative entry points
+python bitcrafty-extractor.py
 python -m bitcrafty_extractor
 ```
 
 ## Usage
 
 ### Quick Start
-1. Launch BitCrafty-Extractor: `python bitcrafty-extractor.py`
+1. Launch BitCrafty-Extractor: `bitcrafty-extractor`
 2. Configure API keys when prompted or edit config file
 3. Launch Bitcraft
 4. **Queue Screenshots**: Press Ctrl+Shift+E multiple times to capture items/crafts
