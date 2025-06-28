@@ -36,9 +36,9 @@ bitcrafty-extractor
 3. Configure hotkeys (defaults work for most users)
 
 ### Usage
-- **📸 Ctrl+Shift+E**: Screenshot → Queue
-- **🤖 Ctrl+Shift+X**: Analyze Queue → Extract Data
-- **🚪 Ctrl+Shift+Q**: Quit Application
+- **📸 Alt+E**: Screenshot → Queue
+- **🤖 Alt+Q**: Analyze Queue → Extract Data
+- **🚪 Ctrl+Z**: Quit Application
 
 ## Key Features
 
@@ -64,8 +64,8 @@ Main Application Workflow:
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-1. **Queue Screenshots**: Press `Ctrl+Shift+E` to capture item tooltips, craft recipes, etc.
-2. **Batch Analysis**: Press `Ctrl+Shift+X` to analyze all screenshots with AI
+1. **Queue Screenshots**: Press `Alt+E` to capture item tooltips, craft recipes, etc.
+2. **Batch Analysis**: Press `Alt+Q` to analyze all screenshots with AI
 3. **Auto-Export**: Results saved to `/exports/items.json` and `/exports/crafts.json`
 4. **Integration**: Import files into BitCrafty application
 
@@ -83,8 +83,8 @@ ai:
     model: "claude-3-5-sonnet-20241022"
 
 hotkeys:
-  queue_screenshot: "ctrl+shift+e"
-  analyze_queue: "ctrl+shift+x"
+  queue_screenshot: "alt+e"
+  analyze_queue: "alt+q"
   
 capture:
   queue_max_size: 20

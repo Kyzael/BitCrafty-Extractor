@@ -110,21 +110,25 @@ class ExportManager:
         hash_string = f"{name}|{materials_str}|{outputs_str}"
         return hashlib.md5(hash_string.encode('utf-8')).hexdigest()[:12]
     
-    def process_extraction_results(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def process_extraction_results(self, data: Dict[str, Any], extracted_at: datetime = None) -> Dict[str, Any]:
         """Process extraction results and export new items/crafts.
         
         Args:
             data: Extraction results from AI analysis
+            extracted_at: Timestamp of when screenshots were taken
             
         Returns:
             Dict with processing statistics
         """
+        if extracted_at is None:
+            extracted_at = datetime.now()
+            
         items = data.get('items_found', [])
         crafts = data.get('crafts_found', [])
         
         # Process items
-        new_items = self._process_items(items)
-        new_crafts = self._process_crafts(crafts)
+        new_items = self._process_items(items, extracted_at)
+        new_crafts = self._process_crafts(crafts, extracted_at)
         
         # Save if we have new data
         if new_items or new_crafts:
@@ -142,7 +146,7 @@ class ExportManager:
         self.logger.info("Processed extraction results", **stats)
         return stats
     
-    def _process_items(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _process_items(self, items: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process items and add new ones to the store."""
         new_items = []
         
@@ -150,7 +154,7 @@ class ExportManager:
             # Add extraction metadata
             processed_item = {
                 **item,
-                'extracted_at': datetime.now().isoformat(),
+                'extracted_at': extracted_at.isoformat(),
                 'extraction_source': 'bitcrafty-extractor'
             }
             
@@ -182,7 +186,7 @@ class ExportManager:
         
         return new_items
     
-    def _process_crafts(self, crafts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _process_crafts(self, crafts: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process crafts and add new ones to the store."""
         new_crafts = []
         
@@ -190,7 +194,7 @@ class ExportManager:
             # Add extraction metadata
             processed_craft = {
                 **craft,
-                'extracted_at': datetime.now().isoformat(),
+                'extracted_at': extracted_at.isoformat(),
                 'extraction_source': 'bitcrafty-extractor'
             }
             

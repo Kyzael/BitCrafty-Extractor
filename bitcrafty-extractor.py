@@ -63,6 +63,8 @@ class BitCraftyExtractor:
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
         self.logger = None
+        self.loop = None  # Store event loop reference
+        self.analysis_in_progress = False  # Track analysis state
         self.console = Console() if RICH_AVAILABLE else None
         self.layout = None
         self.live_display = None
@@ -154,10 +156,11 @@ class BitCraftyExtractor:
         # Create header with provider info
         header_text = Text()
         header_text.append(f"🤖 Provider: {provider} | ", style="bold cyan")
-        header_text.append(f"� Queue: {len(self.screenshot_queue)}\n", style="bold yellow")
+        queue_status = "⏳ Analyzing..." if self.analysis_in_progress else f"Queue: {len(self.screenshot_queue)}"
+        header_text.append(f"📊 {queue_status}\n", style="bold yellow")
         header_text.append("=" * 40 + "\n", style="dim")
         
-        if not self.screenshot_queue:
+        if not self.screenshot_queue and not self.analysis_in_progress:
             # Empty queue display
             queue_text = Text()
             queue_text.append("🎯 No screenshots queued\n\n", style="yellow")
@@ -171,6 +174,21 @@ class BitCraftyExtractor:
             
             return Panel(content, title="[bold green]Live Queue Status[/bold green]", border_style="green")
         
+        if self.analysis_in_progress:
+            # Show analysis in progress
+            queue_text = Text()
+            queue_text.append("⏳ Analysis in progress...\n\n", style="bold yellow")
+            queue_text.append(f"Processing {len(self.screenshot_queue)} screenshots with AI\n", style="white")
+            queue_text.append("Please wait for response...", style="dim")
+            
+            content = Layout()
+            content.split_column(
+                Layout(Panel(header_text, border_style="dim"), ratio=1),
+                Layout(Panel(queue_text, border_style="dim"), ratio=3)
+            )
+            
+            return Panel(content, title="[bold yellow]Analysis In Progress[/bold yellow]", border_style="yellow")
+        
         # Create table for queue items
         table = Table(show_header=True, header_style="bold green", box=None)
         table.add_column("#", style="dim", width=3)
@@ -179,8 +197,8 @@ class BitCraftyExtractor:
         table.add_column("Status", style="white", width=15)
         
         for i, image_data in enumerate(self.screenshot_queue, 1):
-            # Get timestamp from when it was added (approximate)
-            timestamp = datetime.now().strftime("%H:%M:%S")
+            # Use actual timestamp from when screenshot was taken
+            timestamp = image_data.timestamp.strftime("%H:%M:%S") if hasattr(image_data, 'timestamp') else datetime.now().strftime("%H:%M:%S")
             
             # Get image size
             if hasattr(image_data, 'image_array') and image_data.image_array is not None:
@@ -389,25 +407,42 @@ class BitCraftyExtractor:
             self.add_debug_message("❌ No screenshots to analyze")
             return
             
-        self.add_debug_message(f"🤖 Hotkey pressed - analyzing {len(self.screenshot_queue)} screenshots")
+        if self.analysis_in_progress:
+            self.add_debug_message("⏳ Analysis already in progress")
+            return
+            
+        # Mark analysis as starting
+        self.analysis_in_progress = True
+        self.add_debug_message(f"🤖 Starting analysis of {len(self.screenshot_queue)} screenshots...")
         
-        # Schedule analysis in the event loop
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-            loop.create_task(self._hotkey_analyze_async())
-        except RuntimeError:
-            self.add_debug_message("❌ Could not schedule analysis")
+        # Schedule analysis in the event loop using thread-safe method
+        if self.loop and not self.loop.is_closed():
+            try:
+                # Use call_soon_threadsafe to schedule from hotkey thread
+                self.loop.call_soon_threadsafe(
+                    lambda: self.loop.create_task(self._hotkey_analyze_async())
+                )
+            except Exception as e:
+                self.analysis_in_progress = False
+                self.add_debug_message(f"❌ Could not schedule analysis: {e}")
+        else:
+            self.analysis_in_progress = False
+            self.add_debug_message("❌ Event loop not available")
             
     async def _hotkey_analyze_async(self):
         """Async analysis for hotkey callback."""
         try:
             success = await self.analyze_queue()
             if success:
-                self.add_debug_message("✅ Analysis completed successfully")
+                # Clear queue and remove screenshot files
+                await self._clear_queue_and_cleanup()
+                self.add_debug_message("✅ Analysis completed - queue cleared")
             else:
-                self.add_debug_message("❌ Analysis failed")
+                self.add_debug_message("❌ Analysis failed - queue retained")
         except Exception as e:
+            self.add_debug_message(f"❌ Analysis error: {e}")
+        finally:
+            self.analysis_in_progress = False
             self.add_debug_message(f"❌ Analysis error: {str(e)}")
             if self.logger:
                 self.logger.error("Hotkey analysis error", error=str(e))
@@ -425,7 +460,7 @@ class BitCraftyExtractor:
         """Take a screenshot and add to queue."""
         try:
             # Find BitCraft window
-            window_info = self.window_capture.find_bitcraft_window()
+            window_info = self.window_capture.find_game_window()
             if not window_info:
                 return False
                 
@@ -434,15 +469,22 @@ class BitCraftyExtractor:
             if screenshot is None:
                 return False
                 
-            # Add to queue
-            timestamp = datetime.now().strftime("%H%M%S")
-            image_data = ImageData(image_array=screenshot)
-            self.screenshot_queue.append(image_data)
+            # Create static timestamp for this screenshot
+            capture_time = datetime.now()
+            timestamp_str = capture_time.strftime("%H%M%S")
             
-            # Save screenshot for reference
-            filename = f"queue_{len(self.screenshot_queue):03d}_{timestamp}.png"
+            # Save screenshot file
+            filename = f"queue_{len(self.screenshot_queue)+1:03d}_{timestamp_str}.png"
             filepath = self.queue_folder / filename
             cv2.imwrite(str(filepath), screenshot)
+            
+            # Create ImageData with timestamp and file path
+            image_data = ImageData(image_array=screenshot)
+            image_data.timestamp = capture_time  # Store static timestamp
+            image_data.file_path = filepath      # Store file path for cleanup
+            
+            # Add to queue
+            self.screenshot_queue.append(image_data)
             
             return True
             
@@ -601,8 +643,17 @@ class BitCraftyExtractor:
         if not RICH_AVAILABLE:
             return
             
-        # Process and export new items/crafts
-        export_stats = self.export_manager.process_extraction_results(data)
+        # Get screenshot timestamps for export metadata
+        screenshot_times = []
+        for image_data in self.screenshot_queue:
+            if hasattr(image_data, 'timestamp'):
+                screenshot_times.append(image_data.timestamp)
+        
+        # Use earliest screenshot time for extracted_at timestamp
+        extracted_at = min(screenshot_times) if screenshot_times else datetime.now()
+            
+        # Process and export new items/crafts with proper timestamp
+        export_stats = self.export_manager.process_extraction_results(data, extracted_at=extracted_at)
         self.last_export_stats = export_stats
             
         # Update session tracking
@@ -694,8 +745,34 @@ class BitCraftyExtractor:
         panel = Panel(results_text, title="[bold green]Analysis Results[/bold green]", border_style="green")
         self.console.print(panel)
         
+    async def _clear_queue_and_cleanup(self):
+        """Clear screenshot queue and remove files from disk."""
+        try:
+            # Remove screenshot files from disk
+            for image_data in self.screenshot_queue:
+                if hasattr(image_data, 'file_path') and image_data.file_path:
+                    try:
+                        if image_data.file_path.exists():
+                            image_data.file_path.unlink()
+                            self.logger.debug("Removed screenshot file", path=str(image_data.file_path))
+                    except Exception as e:
+                        self.logger.warning("Failed to remove screenshot file", 
+                                          path=str(image_data.file_path), error=str(e))
+            
+            # Clear the queue
+            queue_size = len(self.screenshot_queue)
+            self.screenshot_queue.clear()
+            
+            self.logger.info("Queue cleared and files cleaned up", files_removed=queue_size)
+            
+        except Exception as e:
+            self.logger.error("Error during queue cleanup", error=str(e))
+            
     async def run(self):
         """Main CLI loop with live display."""
+        # Store event loop reference for thread-safe hotkey callbacks
+        self.loop = asyncio.get_running_loop()
+        
         await self.initialize()
         
         if not RICH_AVAILABLE:

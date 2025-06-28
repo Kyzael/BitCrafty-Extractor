@@ -22,9 +22,9 @@ ai:
 
 # Global Hotkey Configuration
 hotkeys:
-  queue_screenshot: "ctrl+shift+e"
-  analyze_queue: "ctrl+shift+x"
-  quit_application: "ctrl+shift+q"
+  queue_screenshot: "alt+e"
+  analyze_queue: "alt+q"
+  quit_application: "alt+f"
   enable_global: true
   debounce_ms: 500
 

@@ -203,6 +203,7 @@ cache/
 temp/
 tmp/
 exports/
+queue_screenshots/
 
 # Configuration overrides (keep defaults, exclude local configs)
 config/local.yaml
