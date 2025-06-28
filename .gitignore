@@ -179,6 +179,10 @@ pyrightconfig.json
 # BitCrafty-Extractor Specific
 # ============================================================================
 
+# Development installation artifacts (pip install -e .)
+src/*.egg-info/
+*.egg-info/
+
 # Validation data (screenshots, OCR results, annotations)
 validation/
 screenshots/
