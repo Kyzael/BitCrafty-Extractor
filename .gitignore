@@ -174,3 +174,67 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+# ============================================================================
+# BitCrafty-Extractor Specific
+# ============================================================================
+
+# Validation data (screenshots, OCR results, annotations)
+validation/
+screenshots/
+extracted/
+debug_images/
+debug_screenshots/
+ocr_debug/
+
+# Application output directories
+output/
+logs/
+cache/
+temp/
+tmp/
+
+# Configuration overrides (keep defaults, exclude local configs)
+config/local.yaml
+config/development.yaml
+config/production.yaml
+config/user_*.yaml
+
+# Data extraction results
+extracted_data/
+bitcrafty_format/
+bitcrafty_export/
+
+# Performance and profiling
+*.prof
+*.pstats
+.benchmarks/
+
+# IDE and development files
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# OS specific files
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archive files (for manual validation exports)
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Local development files
+dev_notes.md
+dev_screenshots/
+test_data/
+sandbox/
