@@ -11,8 +11,18 @@ try:
     import win32ui
     from PIL import Image
     WINDOWS_AVAILABLE = True
+    
+    # Optional imports for enhanced verification
+    try:
+        import win32process
+        import psutil
+        PROCESS_VERIFICATION_AVAILABLE = True
+    except ImportError:
+        PROCESS_VERIFICATION_AVAILABLE = False
+        
 except ImportError:
     WINDOWS_AVAILABLE = False
+    PROCESS_VERIFICATION_AVAILABLE = False
 
 from bitcrafty_extractor import WindowNotFoundError, ImageProcessingError
 from bitcrafty_extractor.core.config_manager import WindowConfig
@@ -41,8 +51,98 @@ class WindowMonitor:
         
         self.logger.info("Window monitor initialized", target_window=config.target_name)
     
+    def _is_bitcraft_window(self, window_handle: int, window_title: str) -> bool:
+        """Verify if a window is actually the BitCraft game.
+        
+        Args:
+            window_handle: Window handle to check
+            window_title: Window title to analyze
+            
+        Returns:
+            True if this appears to be the actual BitCraft game window
+        """
+        try:
+            # Enhanced verification if process libraries are available
+            if PROCESS_VERIFICATION_AVAILABLE:
+                # Get process ID from window handle
+                _, process_id = win32process.GetWindowThreadProcessId(window_handle)
+                
+                # Get process information
+                try:
+                    process = psutil.Process(process_id)
+                    process_name = process.name().lower()
+                    process_exe = process.exe().lower() if hasattr(process, 'exe') else ""
+                    
+                    # Check if process name matches expected game executable
+                    if "bitcraft" in process_name or "bitcraft.exe" in process_name:
+                        self.logger.debug("Process verification passed", 
+                                        process_name=process_name,
+                                        window_title=window_title)
+                        return True
+                    
+                    # Check executable path contains game indicators
+                    if process_exe and ("bitcraft" in process_exe):
+                        self.logger.debug("Executable path verification passed", 
+                                        exe_path=process_exe,
+                                        window_title=window_title)
+                        return True
+                        
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    # If we can't access process info, fall back to title analysis
+                    pass
+            
+            # Analyze window title for game-specific patterns
+            title_lower = window_title.lower()
+            
+            # Reject common non-game windows
+            non_game_indicators = [
+                "visual studio", "vscode", "vs code", "code.exe",
+                "notepad", "explorer", "chrome", "firefox", "edge",
+                "discord", "steam", "origin", "uplay", "epic",
+                "obs", "streamlabs", "twitch", "bitcrafty"  # Our own app!
+            ]
+            
+            for indicator in non_game_indicators:
+                if indicator in title_lower:
+                    self.logger.debug("Window rejected due to non-game indicator", 
+                                    indicator=indicator,
+                                    window_title=window_title)
+                    return False
+            
+            # Look for positive game indicators in title
+            # BitCraft game window usually has just "Bitcraft" or "Bitcraft - [Server Name]"
+            if title_lower == "bitcraft" or title_lower.startswith("bitcraft -"):
+                self.logger.debug("Window title matches game pattern", window_title=window_title)
+                return True
+            
+            # Check window class name (if available)
+            try:
+                class_name = win32gui.GetClassName(window_handle)
+                # Unity games often use specific class names
+                if "unity" in class_name.lower():
+                    self.logger.debug("Unity window class detected", 
+                                    class_name=class_name,
+                                    window_title=window_title)
+                    return True
+            except Exception:
+                pass
+            
+            self.logger.debug("Window verification failed", 
+                            window_title=window_title,
+                            reason="No positive indicators found")
+            return False
+            
+        except Exception as e:
+            self.logger.warning("Error verifying window", error=str(e), window_title=window_title)
+            # For safety, be conservative and reject windows when verification fails
+            # unless they have a clear positive game indicator in the title
+            title_lower = window_title.lower()
+            if title_lower == "bitcraft" or title_lower.startswith("bitcraft -"):
+                return True
+            return False
+
     def find_window(self) -> bool:
-        """Find the target game window.
+        """Find the target game window with enhanced verification.
         
         Returns:
             True if window was found, False otherwise
@@ -56,24 +156,45 @@ class WindowMonitor:
         self._last_window_search = current_time
         
         try:
-            # Search for windows with the target name
-            windows = gw.getWindowsWithTitle(self.config.target_name)
+            # Search for windows with the target name (case-insensitive)
+            all_windows = gw.getAllWindows()
+            candidate_windows = []
             
-            if windows:
-                window = windows[0]  # Take the first match
-                self._window_handle = window._hWnd
-                
-                self.logger.info("Target window found", 
-                               window_title=window.title,
-                               window_handle=self._window_handle,
-                               position=(window.left, window.top),
-                               size=(window.width, window.height))
-                return True
-            else:
+            for window in all_windows:
+                if (window.title and 
+                    self.config.target_name.lower() in window.title.lower() and
+                    window.visible and
+                    window.width > 100 and window.height > 100):  # Minimum size check
+                    candidate_windows.append(window)
+            
+            if not candidate_windows:
                 if self._window_handle is not None:
                     self.logger.warning("Target window lost", target=self.config.target_name)
                     self._window_handle = None
                 return False
+            
+            # Verify each candidate window to find the actual game
+            for window in candidate_windows:
+                if self._is_bitcraft_window(window._hWnd, window.title):
+                    self._window_handle = window._hWnd
+                    
+                    self.logger.info("BitCraft game window found", 
+                                   window_title=window.title,
+                                   window_handle=self._window_handle,
+                                   position=(window.left, window.top),
+                                   size=(window.width, window.height))
+                    return True
+            
+            # If no candidates passed verification
+            if candidate_windows:
+                self.logger.warning("Found windows with 'Bitcraft' in title, but none verified as game", 
+                                  candidate_count=len(candidate_windows),
+                                  titles=[w.title for w in candidate_windows])
+            
+            if self._window_handle is not None:
+                self.logger.warning("Target window lost", target=self.config.target_name)
+                self._window_handle = None
+            return False
                 
         except Exception as e:
             self.logger.error("Error searching for window", error=str(e), target=self.config.target_name)
