@@ -29,13 +29,13 @@ class TestPromptBuilder(unittest.TestCase):
         """Set up test fixtures."""
         self.prompt_builder = PromptBuilder()
         
-        # Expected prompt sizes (to ensure optimizations are maintained)
+        # Expected prompt sizes (updated for validation improvements June 2025)
         self.expected_max_sizes = {
-            "queue_full": 2100,     # ~2043 chars with examples
-            "queue_compact": 1300,   # ~1228 chars without examples  
-            "item_tooltip": 650,     # ~606 chars
-            "craft_recipe": 1100,    # ~1054 chars
-            "single_item": 700       # ~670 chars
+            "queue_full": 3300,     # ~3153 chars with validation rules and examples
+            "queue_compact": 2500,   # ~2338 chars without examples but with validation
+            "item_tooltip": 900,     # ~816 chars with validation instructions
+            "craft_recipe": 1500,    # ~1364 chars with validation requirements
+            "single_item": 750       # ~670 chars (minimal changes)
         }
     
     def test_prompt_builder_initialization(self):
@@ -317,7 +317,33 @@ class TestPromptBuilder(unittest.TestCase):
         
         # Validate that compact is significantly smaller than full
         size_reduction = (queue_full - queue_compact) / queue_full
-        self.assertGreater(size_reduction, 0.3, "Compact prompt should be at least 30% smaller")
+        self.assertGreater(size_reduction, 0.2, "Compact prompt should be at least 20% smaller")
+    
+    def test_validation_rules_present(self):
+        """Test that our validation improvements are present in prompts."""
+        # Queue analysis should have craft validation rules
+        queue_prompt = self.prompt_builder.get_queue_analysis_prompt(2, True)
+        
+        # Check for validation rules
+        self.assertIn("CRITICAL CRAFTING RECIPE VALIDATION RULES", queue_prompt)
+        self.assertIn("ONLY extract crafts_found if you see an ACTUAL CRAFTING INTERFACE", queue_prompt)
+        self.assertIn("Do NOT extract crafts for simple item tooltips", queue_prompt)
+        self.assertIn("materials list, profession requirement", queue_prompt)
+        self.assertIn("VALID CRAFT INDICATORS", queue_prompt)
+        self.assertIn("INVALID CRAFT INDICATORS", queue_prompt)
+        
+        # Item tooltip should have explicit instructions against crafts
+        item_prompt = self.prompt_builder.get_prompt(ExtractionType.ITEM_TOOLTIP)
+        self.assertIn("ITEM INFORMATION ONLY", item_prompt)
+        self.assertIn("do NOT extract crafting recipes", item_prompt)
+        self.assertIn("Focus only on the item itself", item_prompt)
+        
+        # Craft recipe should have validation requirements
+        craft_prompt = self.prompt_builder.get_prompt(ExtractionType.CRAFT_RECIPE)
+        self.assertIn("ACTIVE CRAFTING INTERFACE", craft_prompt)
+        self.assertIn("VALIDATION REQUIREMENTS", craft_prompt)
+        self.assertIn("clear materials list with quantities", craft_prompt)
+        self.assertIn("profession, tool, or building requirements", craft_prompt)
 
 
 class TestPromptPerformance(unittest.TestCase):
@@ -355,9 +381,10 @@ def run_prompt_validation_tests():
     # Create test suite
     test_suite = unittest.TestSuite()
     
-    # Add all test cases
-    test_suite.addTest(unittest.makeSuite(TestPromptBuilder))
-    test_suite.addTest(unittest.makeSuite(TestPromptPerformance))
+    # Add all test cases (updated for Python 3.13+ compatibility)
+    loader = unittest.TestLoader()
+    test_suite.addTests(loader.loadTestsFromTestCase(TestPromptBuilder))
+    test_suite.addTests(loader.loadTestsFromTestCase(TestPromptPerformance))
     
     # Run tests with detailed output
     runner = unittest.TextTestRunner(verbosity=2, stream=sys.stdout)

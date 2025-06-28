@@ -32,7 +32,18 @@ bitcrafty-extractor
 1. Application will prompt for API keys:
    - **OpenAI**: Get from [platform.openai.com](https://platform.openai.com/api-keys)
    - **Anthropic**: Get from [console.anthropic.com](https://console.anthropic.com/)
-2. Choose primary provider (OpenAI recommended)
+2. Choose primary provider (/test/ai_analysis/test_provider_comparison.py)
+================================================================================
+🏆 Provider Performance Ranking
+================================================================================
+Provider                  Status   Confidence  Cost     Time   Validation
+--------------------------------------------------------------------------------
+Anthropic Claude 3 Haiku  ✅ PASS   0.80        $0.0555  4.6s   ✅ PASS
+Anthropic Claude 3.5 Sonnet ✅ PASS   0.80        $0.0555  8.3s   ✅ PASS
+OpenAI GPT-4 Turbo        ✅ PASS   0.80        $0.0694  11.8s  ✅ PASS
+OpenAI GPT-4o             ✅ PASS   0.80        $0.0694  7.6s   ✅ PASS
+================================================================================
+🏆 Best Provider: Anthropic Claude 3 Haiku ($0.0555, 4.6s)
 3. Configure hotkeys (defaults work for most users)
 
 ### Usage
@@ -51,6 +62,29 @@ bitcrafty-extractor
 
 ## How It Works
 
+The BitCrafty-Extractor uses a streamlined workflow to capture and analyze game data:
+
+### 1. Application Launch
+![Launch Interface](images/1_launch.PNG)
+*The console application starts with a clean three-pane interface showing commands, queue status, and debug information.*
+
+### 2. Screenshot Queuing
+![Queue Management](images/2_queue.PNG)
+*Press `Alt+E` while in-game to capture screenshots. The queue panel shows captured images ready for analysis.*
+
+### 3. AI Processing
+![Processing Analysis](images/3_processing.PNG)
+*Press `Alt+Q` to trigger batch AI analysis. The interface shows real-time processing status and cost estimates.*
+
+### 4. AI Response
+![AI Response](images/4_response.PNG)
+*AI providers (GPT-4V/Claude) analyze screenshots and return structured data with confidence scores.*
+
+### 5. Export Results 
+![Export Results](images/5_results.PNG)
+*Processed data is automatically exported to JSON files and displayed with validation status.*
+
+### Workflow Summary
 ```
 Main Application Workflow:
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -63,11 +97,6 @@ Main Application Workflow:
 │   (Console UI)  │    │  (GPT-4V/Claude)│    │  Trigger        │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
-
-1. **Queue Screenshots**: Press `Alt+E` to capture item tooltips, craft recipes, etc.
-2. **Batch Analysis**: Press `Alt+Q` to analyze all screenshots with AI
-3. **Auto-Export**: Results saved to `/exports/items.json` and `/exports/crafts.json`
-4. **Integration**: Import files into BitCrafty application
 
 ## Configuration
 
