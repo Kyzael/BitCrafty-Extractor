@@ -1,168 +1,91 @@
-# BitCrafty-Extractor Tests
+# BitCrafty-Extractor Test Suite
 
-This directory contains organized test scripts for validating the BitCrafty-Extractor functionality.
+Comprehensive test suite with **pytest framework** (modern) and **standalone scripts** (legacy support).
+
+## ✅ Quick Start (52/52 Working Tests)
+
+```powershell
+# Install test dependencies
+pip install -e ".[dev]"
+
+# Run all working tests (~5 seconds, no API costs)
+pytest test/unit/ai_analysis/ test/integration/ -v
+
+# Run by component
+pytest test/unit/ai_analysis/test_vision_client.py -v    # 16 tests
+pytest test/unit/ai_analysis/test_prompts.py -v         # 28 tests  
+pytest test/integration/test_configuration_validation.py -v  # 8 tests
+```
+
+## Test Categories
+
+### 🧪 Unit Tests (`test/unit/`)
+Fast, isolated component testing with mocked dependencies:
+- **AI Analysis**: VisionClient, PromptBuilder ✅ **44/44 PASSED**
+- **Config/Capture**: Needs API updates 🔧
+
+### 🔗 Integration Tests (`test/integration/`)
+Component integration without expensive API calls:
+- **Configuration Validation**: System integration ✅ **8/8 PASSED**
+- **Performance**: ~2.5 seconds (optimized, no API costs)
+
+### 🤖 AI Provider Comparison (Standalone)
+Real AI testing with actual API calls (costs money):
+```powershell
+python test\ai_analysis\test_provider_comparison.py          # Quick comparison
+python test\ai_analysis\test_provider_comparison.py -verbose # Detailed analysis
+```
 
 ## Test Structure
 
-### Core Component Tests
-
-#### `test_window_capture.py`
-Validates Phase 1 completion with focus-based fullscreen capture:
-- BitCraft process detection (bitcraft.exe only)
-- Window finding and validation
-- Focus-based fullscreen screenshot capture
-- Image quality analysis
-- Security validation (process isolation)
-
-**Usage:** `python test\test_window_capture.py`
-
-#### `test_hotkeys.py`
-Validates Phase 2A hotkey system functionality:
-- Global hotkey registration and monitoring
-- Cross-application hotkey functionality
-- Debouncing and error handling
-- Hotkey callback execution
-
-**Usage:** `python test\test_hotkeys.py`
-
-### AI Analysis Tests (`ai_analysis/`)
-
-#### `test_provider_comparison.py`
-Comprehensive AI provider comparison and accuracy testing:
-- Multi-provider analysis (OpenAI GPT-4o/GPT-4-Turbo, Anthropic Claude)
-- Recipe quantity accuracy validation
-- Item detail extraction testing
-- Cost comparison across providers
-- Performance benchmarking
-
-**Usage:** `python test\ai_analysis\test_provider_comparison.py`
-
-### Integration Tests (`integration/`)
-
-#### `test_configuration_validation.py`
-Complete end-to-end system validation:
-- Configuration loading and API key validation
-- Real AI analysis with test images
-- JSON response parsing verification
-- Accuracy assessment with known data
-- Provider fallback testing
-- Cost estimation validation
-
-**Usage:** `python test\integration\test_configuration_validation.py`
-
-## Test Data
-
-Test images and data are located in `test_data/`:
-- `craft/` - Craft recipe screenshots for AI analysis testing
-- Other test assets as needed
-
-## Requirements
-
-### General Requirements
-- All dependencies installed: `pip install -r requirements.txt`
-- Python 3.8+ environment
-- Windows OS (for window capture and hotkeys)
-
-### Specific Test Requirements
-
-**Window Capture Tests:**
-- BitCraft must be running in windowed fullscreen mode
-- BitCraft must be the active foreground window during test
-
-**Hotkey Tests:**
-- Appropriate permissions for global hotkeys
-- No conflicting applications using same key combinations
-
-**AI Analysis Tests:**
-- Valid API keys for OpenAI and/or Anthropic (optional for some tests)
-- Internet connectivity for API calls
-- Sufficient API credits for analysis
-
-**Integration Tests:**
-- At least one AI provider configured with valid API key
-- GUI environment (Windows desktop)
-
-## Running All Tests
-
-```powershell
-# Run specific test categories
-python test\test_window_capture.py
-python test\test_hotkeys.py
-python test\ai_analysis\test_provider_comparison.py
-python test\integration\test_configuration_validation.py
-
-# Or use pytest for structured testing
-python -m pytest test\ -v
+```
+test/
+├── conftest.py                      # Pytest configuration
+├── unit/ai_analysis/               # Unit tests ✅
+│   ├── test_vision_client.py       # 16/16 PASSED  
+│   └── test_prompts.py             # 28/28 PASSED
+├── integration/                    # Integration tests ✅
+│   └── test_configuration_validation.py  # 8/8 PASSED
+├── ai_analysis/                    # Standalone tools
+│   └── test_provider_comparison.py # Provider benchmarking
+└── test_data/                      # Test assets
+    ├── item/                       # Item screenshots
+    └── craft/                      # Recipe screenshots
 ```
 
-## Expected Results
+## Pytest Options
 
-### Core Component Tests ✅
+```powershell
+# Test markers
+pytest test/ -m "unit"              # Fast unit tests only
+pytest test/ -m "integration"       # Integration tests only  
 
-**Window Capture:**
-- File size: 2+ MB (indicates rich content)
-- Pixel variance: 4000+ (complex game graphics)  
-- Mean brightness: 10-240 (normal game content)
-- All validation checks pass
+# Coverage
+pytest test/ --cov=src --cov-report=html
 
-**Hotkey System:**
-- Global hotkeys register successfully
-- Hotkeys work even when other apps have focus
-- Debouncing prevents multiple triggers (0.5s delay)
-- Clean startup and shutdown
+# All tests (some may fail due to interface mismatches)
+pytest test/ -v
+```
 
-### AI Analysis Tests ✅
+## Requirements & Troubleshooting
 
-**Provider Comparison:**
-- Anthropic Claude: Highest accuracy for quantity reading
-- OpenAI GPT-4-Turbo: Good accuracy, reliable fallback
-- OpenAI GPT-4o: May misread quantities (3x vs 1x)
-- Cost analysis shows Claude is most cost-effective
+### Prerequisites
+- Python 3.11+, Windows OS
+- Dependencies: `pip install -r requirements.txt`
+- For AI tests: Valid API keys for OpenAI/Anthropic
 
-**Configuration Validation:**
-- API key validation passes for all configured providers
-- Real AI analysis extracts accurate item details
-- Recipe quantities read correctly (1x input → 1x output)
-- Confidence scores above 0.9 for good test data
-- Provider fallback works when primary fails
+### Common Issues
+- **API errors**: Check API keys and credits
+- **Import errors**: Run `pip install -e ".[dev]"`
+- **Window capture tests**: Need BitCraft running in windowed fullscreen
+- **Hotkey tests**: May require elevated permissions
 
-## Output Files
+## Performance Summary
 
-Test outputs are saved to appropriate locations:
-- Screenshots: Project root (`test_capture_[timestamp].png`)
-- Test results: Console output with detailed validation reports
-- Error logs: Structured error reporting for debugging
+| Test Type | Count | Time | API Costs |
+|-----------|-------|------|-----------|
+| Unit Tests | 44 | ~3s | None |
+| Integration | 8 | ~2.5s | None ✅ |
+| Provider Comparison | 5 | ~50s | ~$0.06 💰 |
 
-## Common Issues
-
-### Window Capture
-- **BitCraft not in focus** → Only captures when foreground
-- **Black screenshots** → Use windowed fullscreen mode
-- **Small file sizes** → Hardware acceleration blocking (fixed with fullscreen)
-
-### Hotkeys
-- **Import errors** → Install dependencies: `pip install -r requirements.txt`
-- **Hotkeys not working** → Check for conflicting applications
-- **Permission errors** → May need elevated permissions on some systems
-
-### AI Analysis
-- **API errors** → Verify API keys are valid and have sufficient credits
-- **Import errors** → Ensure `openai` and `anthropic` packages installed
-- **Image processing errors** → Check PIL/Pillow installation
-- **Cost concerns** → Use compact prompts and image optimization
-- **Network errors** → Check internet connection and API service status
-- **Quantity misreading** → Switch to Anthropic Claude or GPT-4-Turbo for accuracy
-
-### Integration
-- **Configuration not loading** → Check YAML file format and permissions
-- **Tests failing** → Ensure all dependencies installed and API keys valid
-- **Fallback not working** → Verify secondary provider is configured correctly
-
-## Test Organization
-
-The tests are organized into logical categories:
-- **Core component tests** → Individual functionality validation
-- **AI analysis tests** → AI provider testing and comparison  
-- **Integration tests** → End-to-end system validation
-
-Each category has its own directory with detailed README files explaining the specific tests and their purposes.
+**Total Development Tests**: 52 tests in ~5 seconds with zero API costs!

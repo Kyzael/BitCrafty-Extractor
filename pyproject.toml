@@ -47,6 +47,7 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
+    "pytest-asyncio>=0.21.0",
     "black>=23.7.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
@@ -127,11 +128,12 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "vision: marks tests that require computer vision libraries",
     "focus: marks tests that require BitCraft window focus",
+    "ai_analysis: marks tests as AI analysis tests",
+    "asyncio: marks tests as async tests",
 ]
 
 [tool.coverage.run]
