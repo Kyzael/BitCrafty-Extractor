@@ -2,31 +2,33 @@
 
 Comprehensive test suite with **pytest framework** (modern) and **standalone scripts** (legacy support).
 
-## ✅ Quick Start (52/52 Working Tests)
+## ✅ Quick Start
 
 ```powershell
 # Install test dependencies
 pip install -e ".[dev]"
 
-# Run all working tests (~5 seconds, no API costs)
-pytest test/unit/ai_analysis/ test/integration/ -v
+# Run all working tests (~6 seconds, no API costs)
+pytest test/unit/ai_analysis/ test/integration/ test/unit/config/test_config_validation.py -v
 
 # Run by component
-pytest test/unit/ai_analysis/test_vision_client.py -v    # 16 tests
-pytest test/unit/ai_analysis/test_prompts.py -v         # 28 tests  
-pytest test/integration/test_configuration_validation.py -v  # 8 tests
+pytest test/unit/ai_analysis/test_vision_client.py -v    # VisionClient tests
+pytest test/unit/ai_analysis/test_prompts.py -v         # PromptBuilder tests  
+pytest test/integration/test_configuration_validation.py -v  # Integration tests
+pytest test/unit/config/test_config_validation.py -v     # Config validation tests
 ```
 
 ## Test Categories
 
 ### 🧪 Unit Tests (`test/unit/`)
 Fast, isolated component testing with mocked dependencies:
-- **AI Analysis**: VisionClient, PromptBuilder ✅ **44/44 PASSED**
-- **Config/Capture**: Needs API updates 🔧
+- **AI Analysis**: VisionClient, PromptBuilder ✅ **PASSING**
+- **Config**: ConfigManager validation ✅ **PASSING**
+- **Config/Capture**: Legacy tests need API updates 🔧
 
 ### 🔗 Integration Tests (`test/integration/`)
 Component integration without expensive API calls:
-- **Configuration Validation**: System integration ✅ **8/8 PASSED**
+- **Configuration Validation**: System integration ✅ **PASSING**
 - **Performance**: ~2.5 seconds (optimized, no API costs)
 
 ### 🤖 AI Provider Comparison (Standalone)
@@ -42,10 +44,12 @@ python test\ai_analysis\test_provider_comparison.py -verbose # Detailed analysis
 test/
 ├── conftest.py                      # Pytest configuration
 ├── unit/ai_analysis/               # Unit tests ✅
-│   ├── test_vision_client.py       # 16/16 PASSED  
-│   └── test_prompts.py             # 28/28 PASSED
+│   ├── test_vision_client.py       # VisionClient tests  
+│   └── test_prompts.py             # PromptBuilder tests
+├── unit/config/                    # Config tests ✅
+│   └── test_config_validation.py   # Config validation tests
 ├── integration/                    # Integration tests ✅
-│   └── test_configuration_validation.py  # 8/8 PASSED
+│   └── test_configuration_validation.py  # System integration tests
 ├── ai_analysis/                    # Standalone tools
 │   └── test_provider_comparison.py # Provider benchmarking
 └── test_data/                      # Test assets
@@ -82,10 +86,10 @@ pytest test/ -v
 
 ## Performance Summary
 
-| Test Type | Count | Time | API Costs |
-|-----------|-------|------|-----------|
-| Unit Tests | 44 | ~3s | None |
-| Integration | 8 | ~2.5s | None ✅ |
-| Provider Comparison | 5 | ~50s | ~$0.06 💰 |
+| Test Type | Runtime | API Costs |
+|-----------|---------|-----------|
+| Unit Tests | ~4s | None |
+| Integration | ~2.5s | None ✅ |
+| Provider Comparison | ~50s | ~$0.06 💰 |
 
-**Total Development Tests**: 52 tests in ~5 seconds with zero API costs!
+**Development Tests**: Fast execution with zero API costs!
