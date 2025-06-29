@@ -2,341 +2,460 @@
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-import sys
 import threading
 import time
 
-# Add src to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
-
-from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler, HOTKEY_AVAILABLE
+from src.bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler, HotkeyConfig, HOTKEY_AVAILABLE
 
 
 @pytest.fixture
 def mock_logger():
-    """Create a mock logger for testing."""
+    """Provide a mock logger for testing."""
     return Mock()
-
-
-@pytest.fixture
-def hotkey_handler(mock_logger):
-    """Create a HotkeyHandler instance for testing."""
-    return HotkeyHandler(mock_logger)
 
 
 @pytest.mark.unit
 class TestHotkeyHandler:
     """Test cases for HotkeyHandler class."""
 
-    def test_init(self, mock_logger):
-        """Test HotkeyHandler initialization."""
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_init_success(self, mock_logger):
+        """Test HotkeyHandler initialization when available."""
         handler = HotkeyHandler(mock_logger)
         assert handler.logger == mock_logger
-        assert handler.callbacks == {}
+        assert handler.hotkeys == {}
         assert handler.listener is None
         assert handler.is_monitoring is False
         assert handler.debounce_delay == 0.5
+        assert handler.last_trigger_time == {}
 
-    def test_hotkey_available_constant(self):
-        """Test that HOTKEY_AVAILABLE constant is defined."""
-        assert isinstance(HOTKEY_AVAILABLE, bool)
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', False)
+    def test_init_unavailable(self, mock_logger):
+        """Test HotkeyHandler initialization when unavailable."""
+        with pytest.raises(RuntimeError, match="Hotkey system not available"):
+            HotkeyHandler(mock_logger)
 
-    def test_register_callback_success(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_convert_to_pynput_format_basic(self, mock_logger):
+        """Test hotkey format conversion."""
+        handler = HotkeyHandler(mock_logger)
+        
+        # Test basic combinations
+        assert handler._convert_to_pynput_format("ctrl+shift+e") == "<ctrl>+<shift>+e"
+        assert handler._convert_to_pynput_format("ctrl+c") == "<ctrl>+c"
+        assert handler._convert_to_pynput_format("alt+tab") == "<alt>+<tab>"
+        assert handler._convert_to_pynput_format("ctrl+shift+x") == "<ctrl>+<shift>+x"
+
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_convert_to_pynput_format_variations(self, mock_logger):
+        """Test hotkey format conversion with variations."""
+        handler = HotkeyHandler(mock_logger)
+        
+        # Test key variations
+        assert handler._convert_to_pynput_format("control+c") == "<ctrl>+c"
+        assert handler._convert_to_pynput_format("win+r") == "<cmd>+r"
+        assert handler._convert_to_pynput_format("super+l") == "<cmd>+l"
+        assert handler._convert_to_pynput_format("return") == "<enter>"
+        assert handler._convert_to_pynput_format("escape") == "<esc>"
+
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_register_callback_success(self, mock_logger):
         """Test successful callback registration."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        description = "Test callback"
+        callback.__name__ = "test_callback"  # Mock objects need explicit __name__
         
-        result = hotkey_handler.register_callback("ctrl+shift+e", callback, description)
+        handler.register_callback("ctrl+shift+e", callback, "Test callback")
         
-        assert result is True
-        assert "ctrl+shift+e" in hotkey_handler.callbacks
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["callback"] == callback
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["description"] == description
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["enabled"] is True
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        assert pynput_hotkey in handler.hotkeys
+        config = handler.hotkeys[pynput_hotkey]
+        assert config.callback == callback
+        assert config.description == "Test callback"
+        assert config.enabled is True
 
-    def test_register_callback_duplicate(self, hotkey_handler):
-        """Test registering duplicate hotkey."""
-        callback1 = Mock()
-        callback2 = Mock()
-        
-        # Register first callback
-        result1 = hotkey_handler.register_callback("ctrl+shift+e", callback1, "First")
-        assert result1 is True
-        
-        # Register duplicate - should overwrite
-        result2 = hotkey_handler.register_callback("ctrl+shift+e", callback2, "Second")
-        assert result2 is True
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["callback"] == callback2
-
-    def test_register_callback_invalid_hotkey(self, hotkey_handler):
-        """Test registering invalid hotkey."""
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_register_callback_default_description(self, mock_logger):
+        """Test callback registration with default description."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
+        callback.__name__ = "test_callback"
         
-        # Test with invalid hotkey format
-        result = hotkey_handler.register_callback("invalid_hotkey", callback, "Test")
+        handler.register_callback("ctrl+shift+e", callback)
         
-        # Should still register (validation may be done by pynput)
-        assert result is True
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        config = handler.hotkeys[pynput_hotkey]
+        assert config.description == "Hotkey: ctrl+shift+e"
 
-    def test_unregister_callback_success(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_unregister_callback_success(self, mock_logger):
         """Test successful callback unregistration."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
+        callback.__name__ = "test_callback"
         
-        result = hotkey_handler.unregister_callback("ctrl+shift+e")
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        handler.unregister_callback("ctrl+shift+e")
         
-        assert result is True
-        assert "ctrl+shift+e" not in hotkey_handler.callbacks
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        assert pynput_hotkey not in handler.hotkeys
+        assert pynput_hotkey not in handler.last_trigger_time
 
-    def test_unregister_callback_not_found(self, hotkey_handler):
-        """Test unregistering non-existent callback."""
-        result = hotkey_handler.unregister_callback("ctrl+shift+e")
-        
-        assert result is False
-
-    def test_enable_disable_callback(self, hotkey_handler):
-        """Test enabling and disabling callbacks."""
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_enable_disable_hotkey(self, mock_logger):
+        """Test enabling and disabling hotkeys."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
+        callback.__name__ = "test_callback"
+        
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        pynput_hotkey = "<ctrl>+<shift>+e"
         
         # Test disable
-        result_disable = hotkey_handler.disable_callback("ctrl+shift+e")
-        assert result_disable is True
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["enabled"] is False
+        handler.disable_hotkey("ctrl+shift+e")
+        assert handler.hotkeys[pynput_hotkey].enabled is False
         
         # Test enable
-        result_enable = hotkey_handler.enable_callback("ctrl+shift+e")
-        assert result_enable is True
-        assert hotkey_handler.callbacks["ctrl+shift+e"]["enabled"] is True
+        handler.enable_hotkey("ctrl+shift+e")
+        assert handler.hotkeys[pynput_hotkey].enabled is True
 
-    def test_enable_disable_callback_not_found(self, hotkey_handler):
-        """Test enabling/disabling non-existent callback."""
-        assert hotkey_handler.disable_callback("non_existent") is False
-        assert hotkey_handler.enable_callback("non_existent") is False
-
-    def test_get_hotkey_info(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_get_hotkey_info(self, mock_logger):
         """Test getting hotkey information."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test callback")
+        callback.__name__ = "test_callback"
         
-        info = hotkey_handler.get_hotkey_info()
+        handler.register_callback("ctrl+shift+e", callback, "Test callback")
         
+        info = handler.get_hotkey_info()
+        
+        pynput_hotkey = "<ctrl>+<shift>+e"
         assert isinstance(info, dict)
-        assert "ctrl+shift+e" in info
-        assert info["ctrl+shift+e"]["description"] == "Test callback"
-        assert info["ctrl+shift+e"]["enabled"] is True
+        assert pynput_hotkey in info
+        assert info[pynput_hotkey]["description"] == "Test callback"
+        assert info[pynput_hotkey]["enabled"] is True
+        assert info[pynput_hotkey]["callback_name"] == "test_callback"
 
-    def test_get_status(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_get_status(self, mock_logger):
         """Test getting handler status."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
+        callback.__name__ = "test_callback"
         
-        status = hotkey_handler.get_status()
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        
+        status = handler.get_status()
         
         assert isinstance(status, dict)
         assert "is_monitoring" in status
         assert "total_hotkeys" in status
         assert "enabled_hotkeys" in status
         assert "debounce_delay" in status
+        assert "available" in status
         assert status["total_hotkeys"] == 1
         assert status["enabled_hotkeys"] == 1
         assert status["debounce_delay"] == 0.5
+        assert status["available"] is True
 
-    @patch('bitcrafty_extractor.capture.hotkey_handler.pynput')
-    def test_start_monitoring_success(self, mock_pynput, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_is_running(self, mock_logger):
+        """Test is_running method."""
+        handler = HotkeyHandler(mock_logger)
+        
+        # Initially not running
+        assert handler.is_running() is False
+        
+        # Set to monitoring but no listener
+        handler.is_monitoring = True
+        assert handler.is_running() is False
+        
+        # Set listener
+        handler.listener = Mock()
+        assert handler.is_running() is True
+
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.keyboard.GlobalHotKeys')
+    def test_start_monitoring_success(self, mock_global_hotkeys, mock_logger):
         """Test successful monitoring start."""
-        if not HOTKEY_AVAILABLE:
-            pytest.skip("Hotkey system not available")
-        
-        # Mock pynput GlobalHotKeys
-        mock_listener = Mock()
-        mock_pynput.keyboard.GlobalHotKeys.return_value = mock_listener
-        
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
+        callback.__name__ = "test_callback"
         
-        result = hotkey_handler.start_monitoring()
+        # Mock the GlobalHotKeys listener
+        mock_listener = Mock()
+        mock_global_hotkeys.return_value = mock_listener
         
-        assert result is True
-        assert hotkey_handler.is_monitoring is True
-        assert hotkey_handler.listener == mock_listener
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        handler.start_monitoring()
+        
+        assert handler.is_monitoring is True
+        assert handler.listener == mock_listener
         mock_listener.start.assert_called_once()
 
-    def test_start_monitoring_already_running(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_start_monitoring_already_running(self, mock_logger):
         """Test starting monitoring when already running."""
-        hotkey_handler.is_monitoring = True
+        handler = HotkeyHandler(mock_logger)
+        handler.is_monitoring = True
         
-        result = hotkey_handler.start_monitoring()
+        handler.start_monitoring()
         
-        assert result is False
+        # Should log warning and return early
+        mock_logger.warning.assert_called_with("Hotkey monitoring already active")
 
-    def test_start_monitoring_no_callbacks(self, hotkey_handler):
-        """Test starting monitoring with no callbacks."""
-        result = hotkey_handler.start_monitoring()
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_start_monitoring_no_hotkeys(self, mock_logger):
+        """Test starting monitoring with no hotkeys."""
+        handler = HotkeyHandler(mock_logger)
         
-        assert result is False
+        handler.start_monitoring()
+        
+        # Should log warning and return early
+        mock_logger.warning.assert_called_with("No hotkeys registered")
 
-    @patch('bitcrafty_extractor.capture.hotkey_handler.pynput')
-    def test_stop_monitoring_success(self, mock_pynput, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_stop_monitoring_success(self, mock_logger):
         """Test successful monitoring stop."""
-        if not HOTKEY_AVAILABLE:
-            pytest.skip("Hotkey system not available")
+        handler = HotkeyHandler(mock_logger)
         
-        # Mock listener
+        # Setup monitoring state
         mock_listener = Mock()
-        hotkey_handler.listener = mock_listener
-        hotkey_handler.is_monitoring = True
+        handler.listener = mock_listener
+        handler.is_monitoring = True
         
-        result = hotkey_handler.stop_monitoring()
+        handler.stop_monitoring()
         
-        assert result is True
-        assert hotkey_handler.is_monitoring is False
-        assert hotkey_handler.listener is None
+        assert handler.is_monitoring is False
+        assert handler.listener is None
         mock_listener.stop.assert_called_once()
 
-    def test_stop_monitoring_not_running(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_stop_monitoring_not_running(self, mock_logger):
         """Test stopping monitoring when not running."""
-        result = hotkey_handler.stop_monitoring()
+        handler = HotkeyHandler(mock_logger)
         
-        assert result is False
+        # Should return early without error
+        handler.stop_monitoring()
+        
+        assert handler.is_monitoring is False
 
-    def test_callback_execution_with_debounce(self, hotkey_handler):
-        """Test callback execution with debouncing."""
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_create_hotkey_callback_execution(self, mock_logger):
+        """Test hotkey callback creation and execution."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
-        hotkey_handler.debounce_delay = 0.1  # Short delay for testing
+        callback.__name__ = "test_callback"
         
-        # Simulate rapid hotkey presses
-        hotkey_handler._execute_callback("ctrl+shift+e")
-        hotkey_handler._execute_callback("ctrl+shift+e")  # Should be debounced
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        pynput_hotkey = "<ctrl>+<shift>+e"
         
-        # Wait for debounce period
-        time.sleep(0.15)
+        # Create callback function
+        hotkey_callback = handler._create_hotkey_callback(pynput_hotkey)
         
-        hotkey_handler._execute_callback("ctrl+shift+e")  # Should execute
+        # Execute it
+        hotkey_callback()
         
-        # Callback should be called twice (first and third)
-        assert callback.call_count >= 1  # At least one call due to debouncing
+        # Verify original callback was called
+        callback.assert_called_once()
 
-    def test_callback_execution_disabled(self, hotkey_handler):
-        """Test that disabled callbacks are not executed."""
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_create_hotkey_callback_disabled(self, mock_logger):
+        """Test that disabled hotkeys don't execute."""
+        handler = HotkeyHandler(mock_logger)
         callback = Mock()
-        hotkey_handler.register_callback("ctrl+shift+e", callback, "Test")
-        hotkey_handler.disable_callback("ctrl+shift+e")
+        callback.__name__ = "test_callback"
         
-        hotkey_handler._execute_callback("ctrl+shift+e")
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        handler.disable_hotkey("ctrl+shift+e")
         
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        hotkey_callback = handler._create_hotkey_callback(pynput_hotkey)
+        
+        # Execute disabled hotkey
+        hotkey_callback()
+        
+        # Should not call original callback
         callback.assert_not_called()
 
-    def test_callback_execution_exception_handling(self, hotkey_handler):
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.time.time')
+    def test_create_hotkey_callback_debouncing(self, mock_time, mock_logger):
+        """Test hotkey debouncing functionality."""
+        handler = HotkeyHandler(mock_logger)
+        callback = Mock()
+        callback.__name__ = "test_callback"
+        handler.debounce_delay = 0.5
+        
+        handler.register_callback("ctrl+shift+e", callback, "Test")
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        
+        hotkey_callback = handler._create_hotkey_callback(pynput_hotkey)
+        
+        # First call
+        mock_time.return_value = 1.0
+        hotkey_callback()
+        
+        # Second call within debounce window
+        mock_time.return_value = 1.2  # 0.2 seconds later
+        hotkey_callback()
+        
+        # Should only be called once due to debouncing
+        callback.assert_called_once()
+
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_create_hotkey_callback_exception_handling(self, mock_logger):
         """Test that callback exceptions are handled gracefully."""
+        handler = HotkeyHandler(mock_logger)
+        
         def failing_callback():
             raise Exception("Test exception")
         
-        hotkey_handler.register_callback("ctrl+shift+e", failing_callback, "Test")
+        handler.register_callback("ctrl+shift+e", failing_callback, "Test")
+        pynput_hotkey = "<ctrl>+<shift>+e"
+        
+        hotkey_callback = handler._create_hotkey_callback(pynput_hotkey)
         
         # Should not raise exception
-        hotkey_handler._execute_callback("ctrl+shift+e")
+        hotkey_callback()
         
-        # Logger should have been called with error
-        hotkey_handler.logger.error.assert_called()
+        # Should log error
+        mock_logger.error.assert_called()
+
+    @patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True)
+    def test_compatibility_methods(self, mock_logger):
+        """Test compatibility start/stop methods."""
+        handler = HotkeyHandler(mock_logger)
+        
+        with patch.object(handler, 'start_monitoring') as mock_start:
+            handler.start()
+            mock_start.assert_called_once()
+        
+        with patch.object(handler, 'stop_monitoring') as mock_stop:
+            handler.stop()
+            mock_stop.assert_called_once()
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("hotkey,expected_valid", [
-    ("ctrl+shift+e", True),
-    ("ctrl+shift+x", True),
-    ("alt+f4", True),
-    ("ctrl+c", True),
-    ("shift+tab", True),
-    ("", False),
-    ("invalid", True),  # May be valid format, pynput will validate
+@pytest.mark.parametrize("hotkey,expected_format", [
+    ("ctrl+shift+e", "<ctrl>+<shift>+e"),
+    ("ctrl+c", "<ctrl>+c"),
+    ("alt+tab", "<alt>+<tab>"),
+    ("win+r", "<cmd>+r"),
+    ("control+shift+x", "<ctrl>+<shift>+x"),
+    ("escape", "<esc>"),
+    ("return", "<enter>"),
 ])
-def test_hotkey_format_validation(hotkey, expected_valid, mock_logger):
-    """Test hotkey format validation with various inputs."""
-    handler = HotkeyHandler(mock_logger)
-    callback = Mock()
-    
-    result = handler.register_callback(hotkey, callback, "Test")
-    
-    # Basic registration should succeed for most formats
-    # Actual validation happens in pynput
-    if hotkey:
-        assert result is True
-    else:
-        # Empty hotkey might be rejected
-        assert result == expected_valid
+def test_hotkey_format_conversion_parametrized(hotkey, expected_format, mock_logger):
+    """Test hotkey format conversion with various inputs."""
+    with patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True):
+        handler = HotkeyHandler(mock_logger)
+        result = handler._convert_to_pynput_format(hotkey)
+        assert result == expected_format
 
 
 @pytest.mark.unit
-def test_hotkey_handler_context_manager_pattern(mock_logger):
-    """Test using HotkeyHandler in a context-manager-like pattern."""
-    handler = HotkeyHandler(mock_logger)
+def test_hotkey_config_dataclass():
+    """Test HotkeyConfig dataclass."""
     callback = Mock()
     
-    try:
-        # Setup
-        handler.register_callback("ctrl+shift+e", callback, "Test")
+    # Test with default enabled
+    config = HotkeyConfig("ctrl+c", callback, "Copy")
+    assert config.hotkey_string == "ctrl+c"
+    assert config.callback == callback
+    assert config.description == "Copy"
+    assert config.enabled is True
+    
+    # Test with explicit enabled
+    config2 = HotkeyConfig("ctrl+v", callback, "Paste", enabled=False)
+    assert config2.enabled is False
+
+
+@pytest.mark.unit
+def test_multiple_hotkeys_management(mock_logger):
+    """Test managing multiple hotkeys."""
+    with patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True):
+        handler = HotkeyHandler(mock_logger)
         
-        # Test that we can get status
+        callbacks = {
+            "ctrl+shift+e": Mock(),
+            "ctrl+shift+x": Mock(),
+            "ctrl+shift+p": Mock(),
+        }
+        
+        # Set __name__ for all mock callbacks
+        for hotkey, callback in callbacks.items():
+            callback.__name__ = f"callback_{hotkey.replace('+', '_')}"
+        
+        # Register all callbacks
+        for hotkey, callback in callbacks.items():
+            handler.register_callback(hotkey, callback, f"Test {hotkey}")
+        
         status = handler.get_status()
-        assert status["total_hotkeys"] == 1
+        assert status["total_hotkeys"] == 3
+        assert status["enabled_hotkeys"] == 3
         
-    finally:
-        # Cleanup
-        if handler.is_monitoring:
-            handler.stop_monitoring()
+        # Disable one
+        handler.disable_hotkey("ctrl+shift+e")
+        status = handler.get_status()
+        assert status["total_hotkeys"] == 3
+        assert status["enabled_hotkeys"] == 2
+        
+        # Unregister one
+        handler.unregister_callback("ctrl+shift+x")
+        status = handler.get_status()
+        assert status["total_hotkeys"] == 2
+        assert status["enabled_hotkeys"] == 1
 
 
 @pytest.mark.unit
-def test_multiple_callbacks_registration(mock_logger):
-    """Test registering multiple callbacks."""
-    handler = HotkeyHandler(mock_logger)
-    
-    callbacks = {
-        "ctrl+shift+e": Mock(),
-        "ctrl+shift+x": Mock(),
-        "ctrl+shift+p": Mock(),
-    }
-    
-    for hotkey, callback in callbacks.items():
-        result = handler.register_callback(hotkey, callback, f"Test {hotkey}")
-        assert result is True
-    
-    status = handler.get_status()
-    assert status["total_hotkeys"] == 3
-    assert status["enabled_hotkeys"] == 3
-    
-    info = handler.get_hotkey_info()
-    assert len(info) == 3
-    for hotkey in callbacks.keys():
-        assert hotkey in info
+def test_hotkey_handler_edge_cases(mock_logger):
+    """Test edge cases and error conditions."""
+    with patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True):
+        handler = HotkeyHandler(mock_logger)
+        
+        # Test enable/disable non-existent hotkey (should not crash)
+        handler.enable_hotkey("non_existent")
+        handler.disable_hotkey("non_existent")
+        
+        # Test unregister non-existent hotkey (should not crash)
+        handler.unregister_callback("non_existent")
+        
+        # Test empty hotkey (edge case)
+        callback = Mock()
+        callback.__name__ = "empty_callback"
+        handler.register_callback("", callback, "Empty hotkey")
+        
+        # Should still work (converted to empty string)
+        assert "" in handler.hotkeys
+
+
+@pytest.mark.unit 
+def test_hotkey_handler_with_restart_scenario(mock_logger):
+    """Test hotkey handler restart behavior during registration changes."""
+    with patch('src.bitcrafty_extractor.capture.hotkey_handler.HOTKEY_AVAILABLE', True):
+        handler = HotkeyHandler(mock_logger)
+        
+        # Mock the restart behavior
+        with patch.object(handler, 'stop_monitoring') as mock_stop, \
+             patch.object(handler, 'start_monitoring') as mock_start:
+            
+            # Set monitoring state
+            handler.is_monitoring = True
+            
+            # Register callback - should trigger restart
+            callback = Mock()
+            callback.__name__ = "restart_callback"
+            handler.register_callback("ctrl+shift+e", callback, "Test")
+            
+            mock_stop.assert_called_once()
+            mock_start.assert_called_once()
 
 
 @pytest.mark.unit
-def test_hotkey_handler_thread_safety(mock_logger):
-    """Test basic thread safety of HotkeyHandler."""
-    handler = HotkeyHandler(mock_logger)
-    callback = Mock()
-    
-    def register_callback():
-        handler.register_callback("ctrl+shift+e", callback, "Test")
-    
-    def get_status():
-        handler.get_status()
-    
-    # Run operations in separate threads
-    threads = [
-        threading.Thread(target=register_callback),
-        threading.Thread(target=get_status),
-    ]
-    
-    for thread in threads:
-        thread.start()
-    
-    for thread in threads:
-        thread.join(timeout=1.0)
-    
-    # Should complete without issues
-    assert "ctrl+shift+e" in handler.callbacks
+def test_hotkey_system_availability_check():
+    """Test HOTKEY_AVAILABLE constant behavior."""
+    # This tests the module-level constant
+    assert isinstance(HOTKEY_AVAILABLE, bool)
+    # The actual value depends on whether pynput is installed

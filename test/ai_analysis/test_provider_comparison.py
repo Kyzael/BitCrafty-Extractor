@@ -2,6 +2,9 @@
 """
 Test AI provider comparison with unit test framework.
 
+IMPORTANT: This file is excluded from `pytest test/` runs because it makes real API calls
+that cost money. Run this separately when you want to test AI providers.
+
 Usage:
     python test_provider_comparison.py           # Run as unit test (minimal output)
     python test_provider_comparison.py -verbose  # Run with detailed output

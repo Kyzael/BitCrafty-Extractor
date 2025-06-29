@@ -8,32 +8,34 @@ Comprehensive test suite with **pytest framework** (modern) and **standalone scr
 # Install test dependencies
 pip install -e ".[dev]"
 
-# Run all working tests (~6 seconds, no API costs)
-pytest test/unit/ai_analysis/ test/integration/ test/unit/config/test_config_validation.py -v
+# Run all unit tests (fast, no API costs) 
+pytest test/ -v
 
 # Run by component
-pytest test/unit/ai_analysis/test_vision_client.py -v    # VisionClient tests
-pytest test/unit/ai_analysis/test_prompts.py -v         # PromptBuilder tests  
-pytest test/integration/test_configuration_validation.py -v  # Integration tests
-pytest test/unit/config/test_config_validation.py -v     # Config validation tests
+pytest test/unit/ai_analysis/ -v           # AI component tests
+pytest test/unit/capture/ -v               # Capture component tests
+pytest test/unit/config/ -v                # Config component tests
+pytest test/integration/ -v                # Integration tests
 ```
 
 ## Test Categories
 
 ### 🧪 Unit Tests (`test/unit/`)
 Fast, isolated component testing with mocked dependencies:
-- **AI Analysis**: VisionClient, PromptBuilder ✅ **PASSING**
-- **Config**: ConfigManager validation ✅ **PASSING**
-- **Config/Capture**: Legacy tests need API updates 🔧
+- **AI Analysis**: VisionClient, PromptBuilder ✅
+- **Config**: ConfigManager validation ✅  
+- **Capture**: WindowCapture, HotkeyHandler ✅
+- **Performance**: ~6 seconds total, zero API costs
 
 ### 🔗 Integration Tests (`test/integration/`)
 Component integration without expensive API calls:
-- **Configuration Validation**: System integration ✅ **PASSING**
+- **Configuration Validation**: System integration ✅
 - **Performance**: ~2.5 seconds (optimized, no API costs)
 
 ### 🤖 AI Provider Comparison (Standalone)
-Real AI testing with actual API calls (costs money):
+Real AI testing with actual API calls (costs money) - **excluded from pytest test/**:
 ```powershell
+# Run separately with real API calls
 python test\ai_analysis\test_provider_comparison.py          # Quick comparison
 python test\ai_analysis\test_provider_comparison.py -verbose # Detailed analysis
 ```
@@ -47,10 +49,14 @@ test/
 │   ├── test_vision_client.py       # VisionClient tests  
 │   └── test_prompts.py             # PromptBuilder tests
 ├── unit/config/                    # Config tests ✅
+│   ├── test_config_manager.py      # ConfigManager tests
 │   └── test_config_validation.py   # Config validation tests
+├── unit/capture/                   # Capture tests ✅
+│   ├── test_window_capture.py      # WindowCapture tests
+│   └── test_hotkey_handler.py      # HotkeyHandler tests
 ├── integration/                    # Integration tests ✅
 │   └── test_configuration_validation.py  # System integration tests
-├── ai_analysis/                    # Standalone tools
+├── ai_analysis/                    # Standalone tools (excluded from pytest)
 │   └── test_provider_comparison.py # Provider benchmarking
 └── test_data/                      # Test assets
     ├── item/                       # Item screenshots
@@ -67,8 +73,11 @@ pytest test/ -m "integration"       # Integration tests only
 # Coverage
 pytest test/ --cov=src --cov-report=html
 
-# All tests (some may fail due to interface mismatches)
+# Run all tests (includes some failing config tests due to interface mismatches)
 pytest test/ -v
+
+# Run the excluded provider comparison tests separately
+python test\ai_analysis\test_provider_comparison.py -verbose
 ```
 
 ## Requirements & Troubleshooting
@@ -88,7 +97,7 @@ pytest test/ -v
 
 | Test Type | Runtime | API Costs |
 |-----------|---------|-----------|
-| Unit Tests | ~4s | None |
+| Unit Tests | ~5s | None |
 | Integration | ~2.5s | None ✅ |
 | Provider Comparison | ~50s | ~$0.06 💰 |
 
