@@ -33,6 +33,7 @@ bitcrafty-extractor
    - **OpenAI**: Get from [platform.openai.com](https://platform.openai.com/api-keys)
    - **Anthropic**: Get from [console.anthropic.com](https://console.anthropic.com/)
 2. Choose primary provider (/test/ai_analysis/test_provider_comparison.py)
+```
 ================================================================================
 🏆 Provider Performance Ranking
 ================================================================================
@@ -44,6 +45,7 @@ OpenAI GPT-4 Turbo        ✅ PASS   0.80        $0.0694  11.8s  ✅ PASS
 OpenAI GPT-4o             ✅ PASS   0.80        $0.0694  7.6s   ✅ PASS
 ================================================================================
 🏆 Best Provider: Anthropic Claude 3 Haiku ($0.0555, 4.6s)
+```
 3. Configure hotkeys (defaults work for most users)
 
 ### Usage
