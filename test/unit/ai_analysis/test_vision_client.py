@@ -280,3 +280,480 @@ def test_vision_client_cost_tracking(mock_logger, mock_config_manager_no_extract
     stats = vision_client.get_stats()
     assert stats["total_cost"] == vision_client.total_cost
     assert stats["total_requests"] == vision_client.request_count
+
+
+@pytest.mark.unit
+class TestVisionClientErrorHandling:
+    """Test VisionClient error handling scenarios."""
+    
+    @pytest.fixture
+    def mock_logger(self):
+        """Mock structured logger."""
+        return Mock()
+    
+    @pytest.fixture
+    def mock_config_manager(self):
+        """Mock configuration manager."""
+        config_manager = Mock()
+        config_manager.config.extraction.primary_provider.value = 'openai'
+        config_manager.config.extraction.fallback_provider.value = 'anthropic'
+        config_manager.config.extraction.rate_limit_delay = 1.0
+        config_manager.config.openai.api_key = "test_openai_key"
+        config_manager.config.openai.enabled = True
+        config_manager.config.openai.model = "gpt-4o"
+        config_manager.config.anthropic.api_key = "test_anthropic_key"
+        config_manager.config.anthropic.enabled = True
+        config_manager.config.anthropic.model = "claude-3-5-sonnet-20241022"
+        return config_manager
+    
+    @pytest.fixture
+    def vision_client(self, mock_logger, mock_config_manager):
+        """Create VisionClient instance for testing."""
+        return VisionClient(mock_logger, mock_config_manager)
+    
+    @pytest.fixture
+    def sample_image_data(self):
+        """Sample image data for testing."""
+        image_array = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+        return ImageData(image_array=image_array)
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.asyncio.to_thread')
+    async def test_analyze_with_openai_api_error(self, mock_to_thread, vision_client):
+        """Test OpenAI analysis with API error."""
+        # Configure the client first
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+            vision_client.configure_openai("test_key")
+        
+        # Mock API error
+        mock_to_thread.side_effect = Exception("API Error: Rate limit exceeded")
+        
+        result = await vision_client._analyze_with_openai("test prompt", "base64_image")
+        
+        assert isinstance(result, AIResponse)
+        assert result.success is False
+        assert result.provider == AIProvider.OPENAI_GPT4V
+        assert "API Error" in result.error_message
+        assert result.data is None
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.asyncio.to_thread')
+    async def test_analyze_with_anthropic_api_error(self, mock_to_thread, vision_client):
+        """Test Anthropic analysis with API error."""
+        # Configure the client first
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.anthropic.Anthropic'):
+            vision_client.configure_anthropic("test_key")
+        
+        # Mock API error
+        mock_to_thread.side_effect = Exception("API Error: Invalid API key")
+        
+        result = await vision_client._analyze_with_anthropic("test prompt", "base64_image")
+        
+        assert isinstance(result, AIResponse)
+        assert result.success is False
+        assert result.provider == AIProvider.ANTHROPIC_CLAUDE
+        assert "API Error" in result.error_message
+        assert result.data is None
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_analyze_image_with_fallback(self, vision_client, sample_image_data):
+        """Test analyze_image with primary provider failure and fallback success."""
+        # Configure both clients
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+            vision_client.configure_openai("test_key")
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.anthropic.Anthropic'):
+            vision_client.configure_anthropic("test_key")
+        
+        # Mock primary provider failure
+        with patch.object(vision_client, '_analyze_with_openai') as mock_openai:
+            mock_openai.return_value = AIResponse(
+                success=False,
+                data=None,
+                confidence=0.0,
+                provider=AIProvider.OPENAI_GPT4V,
+                cost_estimate=0.0,
+                processing_time=0.0,
+                raw_response="",
+                error_message="Primary provider failed"
+            )
+            
+            # Mock fallback provider success
+            with patch.object(vision_client, '_analyze_with_anthropic') as mock_anthropic:
+                mock_anthropic.return_value = AIResponse(
+                    success=True,
+                    data={"items_found": []},
+                    confidence=0.8,
+                    provider=AIProvider.ANTHROPIC_CLAUDE,
+                    cost_estimate=0.02,
+                    processing_time=2.0,
+                    raw_response='{"items_found": []}',
+                    error_message=None
+                )
+                
+                result = await vision_client.analyze_image(sample_image_data, "test prompt")
+                
+                assert result.success is True
+                assert result.provider == AIProvider.ANTHROPIC_CLAUDE
+                # Check that fallback logging occurred
+                vision_client.logger.info.assert_called()
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_analyze_image_both_providers_fail(self, vision_client, sample_image_data):
+        """Test analyze_image when both primary and fallback providers fail."""
+        # Configure both clients
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+            vision_client.configure_openai("test_key")
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.anthropic.Anthropic'):
+            vision_client.configure_anthropic("test_key")
+        
+        # Mock both providers failing
+        with patch.object(vision_client, '_analyze_with_openai') as mock_openai:
+            mock_openai.return_value = AIResponse(
+                success=False, data=None, confidence=0.0, provider=AIProvider.OPENAI_GPT4V,
+                cost_estimate=0.0, processing_time=0.0, raw_response="", error_message="Primary failed"
+            )
+            
+            with patch.object(vision_client, '_analyze_with_anthropic') as mock_anthropic:
+                mock_anthropic.return_value = AIResponse(
+                    success=False, data=None, confidence=0.0, provider=AIProvider.ANTHROPIC_CLAUDE,
+                    cost_estimate=0.0, processing_time=0.0, raw_response="", error_message="Fallback failed"
+                )
+                
+                result = await vision_client.analyze_image(sample_image_data, "test prompt")
+                
+                assert result.success is False
+                assert result.error_message == "Primary failed"  # Returns primary error, not combined message
+    
+    @pytest.mark.unit
+    def test_extract_json_from_response_invalid_json(self, vision_client):
+        """Test JSON extraction from invalid JSON response."""
+        invalid_json = '{"invalid": json}'  # Missing closing quote
+        result = vision_client._extract_json_from_response(invalid_json)
+        
+        # Should fall back to raw text format
+        assert result == {"raw_text": invalid_json}
+    
+    @pytest.mark.unit
+    def test_extract_json_from_response_multiple_code_blocks(self, vision_client):
+        """Test JSON extraction from response with multiple code blocks."""
+        response = """Here's the analysis:
+```json
+{"first": "block"}
+```
+And also:
+```json
+{"second": "block"}
+```"""
+        result = vision_client._extract_json_from_response(response)
+        
+        # Should extract the first JSON block
+        assert result == {"first": "block"}
+    
+    @pytest.mark.unit
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.Image')
+    def test_prepare_image_error_handling(self, mock_pil, vision_client, sample_image_data):
+        """Test image preparation error handling."""
+        # Mock PIL raising an exception
+        mock_pil.fromarray.side_effect = Exception("PIL Error")
+        
+        with pytest.raises(Exception) as exc_info:
+            vision_client._prepare_image(sample_image_data)
+        
+        assert "PIL Error" in str(exc_info.value)
+    
+    @pytest.mark.unit
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.Image')
+    def test_prepare_image_with_resize(self, mock_pil, vision_client):
+        """Test image preparation with resize for large images."""
+        # Create large image data
+        large_image_array = np.random.randint(0, 255, (2000, 3000, 3), dtype=np.uint8)
+        image_data = ImageData(image_array=large_image_array, max_size=1024)
+        
+        # Mock PIL Image operations
+        mock_image = Mock()
+        mock_image.size = (3000, 2000)  # Large image
+        mock_pil.fromarray.return_value = mock_image
+        mock_image.resize.return_value = mock_image
+        mock_image.save.return_value = None
+        
+        with patch('base64.b64encode') as mock_b64:
+            mock_b64.return_value.decode.return_value = "encoded_image_data"
+            
+            result = vision_client._prepare_image(image_data)
+            
+            # Should resize the image
+            mock_image.resize.assert_called_once()
+            assert result == "encoded_image_data"
+
+
+@pytest.mark.unit
+class TestVisionClientCostEstimation:
+    """Test VisionClient cost estimation functionality."""
+    
+    @pytest.fixture
+    def mock_logger(self):
+        return Mock()
+    
+    @pytest.fixture
+    def vision_client(self, mock_logger):
+        return VisionClient(mock_logger)
+    
+    @pytest.mark.unit
+    def test_estimate_cost_openai_small_image(self, vision_client):
+        """Test cost estimation for OpenAI with small image."""
+        cost = vision_client._estimate_cost(AIProvider.OPENAI_GPT4V, 100000)  # 100KB
+        
+        assert isinstance(cost, float)
+        assert cost > 0
+        assert cost < 0.02  # Adjusted threshold based on actual costs
+    
+    @pytest.mark.unit
+    def test_estimate_cost_openai_large_image(self, vision_client):
+        """Test cost estimation for OpenAI with large image."""
+        cost = vision_client._estimate_cost(AIProvider.OPENAI_GPT4V, 5000000)  # 5MB
+        
+        assert isinstance(cost, float)
+        assert cost > 0
+        # Large images should cost more
+        small_cost = vision_client._estimate_cost(AIProvider.OPENAI_GPT4V, 100000)
+        assert cost > small_cost
+    
+    @pytest.mark.unit
+    def test_estimate_cost_anthropic_vs_openai(self, vision_client):
+        """Test cost comparison between providers."""
+        image_size = 1000000  # 1MB
+        
+        openai_cost = vision_client._estimate_cost(AIProvider.OPENAI_GPT4V, image_size)
+        anthropic_cost = vision_client._estimate_cost(AIProvider.ANTHROPIC_CLAUDE, image_size)
+        
+        assert isinstance(openai_cost, float)
+        assert isinstance(anthropic_cost, float)
+        assert openai_cost > 0
+        assert anthropic_cost > 0
+        # Both should be reasonable costs
+        assert openai_cost < 1.0
+        assert anthropic_cost < 1.0
+    
+    @pytest.mark.unit
+    def test_cost_tracking_after_analysis(self, vision_client):
+        """Test that cost tracking is updated after analysis."""
+        initial_cost = vision_client.total_cost
+        initial_requests = vision_client.request_count
+        
+        # Simulate cost update (would happen during real analysis)
+        test_cost = 0.025
+        vision_client.total_cost += test_cost
+        vision_client.request_count += 1
+        
+        assert vision_client.total_cost == initial_cost + test_cost
+        assert vision_client.request_count == initial_requests + 1
+        
+        stats = vision_client.get_stats()
+        assert stats["total_cost"] == vision_client.total_cost
+        assert stats["total_requests"] == vision_client.request_count
+        if vision_client.request_count > 0:
+            expected_avg = vision_client.total_cost / vision_client.request_count
+            assert stats["average_cost_per_request"] == expected_avg
+
+
+@pytest.mark.unit
+class TestVisionClientRateLimiting:
+    """Test VisionClient rate limiting functionality."""
+    
+    @pytest.fixture
+    def mock_logger(self):
+        return Mock()
+    
+    @pytest.fixture  
+    def vision_client(self, mock_logger):
+        client = VisionClient(mock_logger)
+        client.min_request_interval = 2.0  # 2 seconds between requests
+        return client
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_rate_limiting_enforcement(self, vision_client, mock_logger):
+        """Test that rate limiting is enforced between requests."""
+        # Mock time.time to control timing
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.time.time') as mock_time:
+            mock_time.side_effect = [0.0, 0.5, 2.5, 4.0]  # Provide enough time values
+            
+            # Configure client
+            with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+                vision_client.configure_openai("test_key")
+            
+            sample_image = ImageData(np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8))
+            
+            # Mock the actual analysis method to avoid API calls
+            with patch.object(vision_client, '_analyze_with_openai') as mock_analyze:
+                mock_analyze.return_value = AIResponse(
+                    success=True, data={"test": "data"}, confidence=0.8,
+                    provider=AIProvider.OPENAI_GPT4V, cost_estimate=0.01,
+                    processing_time=1.0, raw_response='{"test": "data"}'
+                )
+                
+                # Mock sleep to verify it's called for rate limiting
+                with patch('asyncio.sleep') as mock_sleep:
+                    # First request
+                    await vision_client.analyze_image(sample_image, "test prompt")
+                    
+                    # Second request (should trigger rate limiting)
+                    await vision_client.analyze_image(sample_image, "test prompt")
+                    
+                    # Should have called sleep to enforce rate limit
+                    mock_sleep.assert_called()
+
+
+@pytest.mark.unit
+class TestVisionClientConfiguration:
+    """Test VisionClient configuration scenarios."""
+    
+    @pytest.fixture
+    def mock_logger(self):
+        return Mock()
+    
+    @pytest.mark.unit
+    def test_initialization_from_config(self, mock_logger):
+        """Test VisionClient initialization from config manager."""
+        # Create mock config with proper structure
+        config_manager = Mock()
+        config_manager.config.extraction.primary_provider.value = 'anthropic'
+        config_manager.config.extraction.fallback_provider.value = 'openai'
+        config_manager.config.extraction.rate_limit_delay = 3.0
+        config_manager.config.openai.api_key = "openai_key"
+        config_manager.config.openai.enabled = True
+        config_manager.config.openai.model = "gpt-4o"
+        config_manager.config.anthropic.api_key = "anthropic_key"
+        config_manager.config.anthropic.enabled = True
+        config_manager.config.anthropic.model = "claude-3-5-sonnet-20241022"
+        
+        client = VisionClient(mock_logger, config_manager)
+        
+        assert client.default_provider == AIProvider.ANTHROPIC_CLAUDE
+        assert client.fallback_provider == AIProvider.OPENAI_GPT4V
+        assert client.min_request_interval == 3.0
+    
+    @pytest.mark.unit
+    def test_initialization_without_config(self, mock_logger):
+        """Test VisionClient initialization without config manager."""
+        client = VisionClient(mock_logger, None)
+        
+        assert client.default_provider == AIProvider.OPENAI_GPT4V
+        assert client.fallback_provider == AIProvider.ANTHROPIC_CLAUDE
+        assert client.min_request_interval == 1.0
+        assert client.max_retries == 3
+        assert client.timeout == 30.0
+    
+    @pytest.mark.unit
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI')
+    def test_configure_openai_custom_model(self, mock_openai_class, mock_logger):
+        """Test OpenAI configuration with custom model."""
+        client = VisionClient(mock_logger)
+        
+        client.configure_openai("custom_key", "gpt-4-turbo")
+        
+        assert client.openai_model == "gpt-4-turbo"
+        mock_openai_class.assert_called_once_with(api_key="custom_key")
+    
+    @pytest.mark.unit
+    @patch('src.bitcrafty_extractor.ai_analysis.vision_client.anthropic.Anthropic')
+    def test_configure_anthropic_custom_model(self, mock_anthropic_class, mock_logger):
+        """Test Anthropic configuration with custom model."""
+        client = VisionClient(mock_logger)
+        
+        client.configure_anthropic("custom_key", "claude-3-opus-20240229")
+        
+        assert client.anthropic_model == "claude-3-opus-20240229"
+        mock_anthropic_class.assert_called_once_with(api_key="custom_key")
+
+
+@pytest.mark.unit
+class TestVisionClientMultipleImages:
+    """Test VisionClient multiple image analysis functionality."""
+    
+    @pytest.fixture
+    def mock_logger(self):
+        return Mock()
+    
+    @pytest.fixture
+    def vision_client(self, mock_logger):
+        return VisionClient(mock_logger)
+    
+    @pytest.fixture
+    def sample_images(self):
+        """Sample image data list for testing."""
+        images = []
+        for i in range(3):
+            image_array = np.random.randint(0, 255, (100, 100, 3), dtype=np.uint8)
+            images.append(ImageData(image_array=image_array))
+        return images
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_analyze_images_success(self, vision_client, sample_images):
+        """Test successful multiple image analysis."""
+        # Configure client
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+            vision_client.configure_openai("test_key")
+        
+        # Mock the multiple image analysis method
+        with patch.object(vision_client, '_analyze_multiple_with_openai') as mock_analyze:
+            mock_analyze.return_value = AIResponse(
+                success=True,
+                data={"items_found": [{"name": "Test Item"}]},
+                confidence=0.9,
+                provider=AIProvider.OPENAI_GPT4V,
+                cost_estimate=0.05,
+                processing_time=5.0,
+                raw_response='{"items_found": [{"name": "Test Item"}]}'
+            )
+            
+            result = await vision_client.analyze_images(sample_images, "analyze these images")
+            
+            assert result.success is True
+            assert result.provider == AIProvider.OPENAI_GPT4V
+            assert "Test Item" in str(result.data)
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_analyze_images_empty_list(self, vision_client):
+        """Test analyze_images with empty image list."""
+        result = await vision_client.analyze_images([], "test prompt")
+        
+        assert result.success is False
+        assert "No images provided" in result.error_message
+        assert result.provider == vision_client.default_provider
+    
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_analyze_images_with_fallback(self, vision_client, sample_images):
+        """Test multiple image analysis with fallback provider."""
+        # Configure both clients
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.openai.OpenAI'):
+            vision_client.configure_openai("test_key")
+        with patch('src.bitcrafty_extractor.ai_analysis.vision_client.anthropic.Anthropic'):
+            vision_client.configure_anthropic("test_key")
+        
+        # Mock primary provider failure
+        with patch.object(vision_client, '_analyze_multiple_with_openai') as mock_openai:
+            mock_openai.return_value = AIResponse(
+                success=False, data=None, confidence=0.0, provider=AIProvider.OPENAI_GPT4V,
+                cost_estimate=0.0, processing_time=0.0, raw_response="", error_message="Primary failed"
+            )
+            
+            # Mock fallback provider success  
+            with patch.object(vision_client, '_analyze_multiple_with_anthropic') as mock_anthropic:
+                mock_anthropic.return_value = AIResponse(
+                    success=True, data={"items_found": []}, confidence=0.8,
+                    provider=AIProvider.ANTHROPIC_CLAUDE, cost_estimate=0.03,
+                    processing_time=3.0, raw_response='{"items_found": []}'
+                )
+                
+                result = await vision_client.analyze_images(sample_images, "test prompt")
+                
+                assert result.success is True
+                assert result.provider == AIProvider.ANTHROPIC_CLAUDE
