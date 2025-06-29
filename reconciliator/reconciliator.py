@@ -179,7 +179,10 @@ def normalize_name(name):
 
 
 def extract_profession_from_crafts(crafts_export):
-    """Build mapping of item names to professions from craft data."""
+    """Build mapping of item names to professions from craft data.
+    Only maps items that are OUTPUTS of crafts to the craft's profession.
+    Input materials should keep their original profession from where they are produced.
+    """
     item_to_profession = {}
     
     if not crafts_export or 'crafts' not in crafts_export:
@@ -190,11 +193,13 @@ def extract_profession_from_crafts(crafts_export):
         if not profession:
             continue
             
-        # Map all output items to this profession
+        # ONLY map output items to this profession (items that this craft creates)
+        # Do NOT map input materials - they belong to whatever profession creates them
         for output in craft.get('outputs', []):
             item_name = output.get('item')
             if item_name:
                 item_to_profession[item_name] = profession
+                print(f"[DEBUG] Mapped output item '{item_name}' to profession '{profession}'")
     
     return item_to_profession
 
@@ -222,10 +227,13 @@ def normalize_extractor_data(items_export, crafts_export):
     normalized_items = {}
     normalized_crafts = {}
     
-    # Build profession mapping from crafts
+    # Build profession mapping from crafts (only for OUTPUT items)
     item_to_profession = extract_profession_from_crafts(crafts_export)
     
-    # Normalize items
+    # Create item name to ID mapping
+    item_name_to_id = {}
+    
+    # Normalize items - match BitCrafty format exactly
     if items_export and 'items' in items_export:
         for item in items_export['items']:
             name = item.get('name')
@@ -234,23 +242,27 @@ def normalize_extractor_data(items_export, crafts_export):
                 
             profession = item_to_profession.get(name)
             if not profession:
-                print(f"[WARN] No profession found for item: {name}")
-                continue
+                # Item has no profession mapping (not produced by any craft in our data)
+                # Try to infer profession from name or skip for now
+                inferred_profession = infer_profession_from_item_name(name)
+                if inferred_profession:
+                    profession = inferred_profession
+                    print(f"[INFO] Inferred profession '{profession}' for item: {name}")
+                else:
+                    print(f"[WARN] No profession found for item: {name} - skipping")
+                    continue
                 
             bitcrafty_id = transform_to_bitcrafty_id('item', name, profession)
+            # Match BitCrafty items.json format exactly
             normalized_items[bitcrafty_id] = {
                 'id': bitcrafty_id,
                 'name': name,
-                'description': item.get('description', ''),
                 'tier': item.get('tier', 1),
-                'rarity': item.get('rarity', 'common'),
-                'uses': item.get('uses', []),
-                'confidence': item.get('confidence', 0.0),
-                'extracted_at': item.get('extracted_at'),
-                'extraction_source': item.get('extraction_source', 'bitcrafty-extractor')
+                'rank': item.get('rarity', 'Common').title()  # Use 'rank' not 'rarity', capitalize
             }
+            item_name_to_id[name] = bitcrafty_id
     
-    # Normalize crafts
+    # Normalize crafts - match BitCrafty format exactly
     if crafts_export and 'crafts' in crafts_export:
         for craft in crafts_export['crafts']:
             name = craft.get('name')
@@ -263,18 +275,117 @@ def normalize_extractor_data(items_export, crafts_export):
             print(f"[DEBUG] Craft name: '{name}' -> '{cleaned_name}'")
                 
             bitcrafty_id = transform_to_bitcrafty_id('craft', cleaned_name, profession)
+            
+            # Transform materials to use item IDs
+            materials = []
+            for material in craft.get('materials', []):
+                item_name = material.get('item')
+                if item_name in item_name_to_id:
+                    materials.append({
+                        'item': item_name_to_id[item_name],
+                        'qty': material.get('qty', 1)
+                    })
+                else:
+                    # For input materials, try to find existing ID in BitCrafty data
+                    # or infer profession, but DON'T use the current craft's profession
+                    inferred_profession = infer_profession_from_item_name(item_name)
+                    if inferred_profession:
+                        item_id = transform_to_bitcrafty_id('item', item_name, inferred_profession)
+                    else:
+                        # Fallback: use foraging for raw materials, current profession otherwise
+                        fallback_profession = get_fallback_profession_for_material(item_name, profession)
+                        item_id = transform_to_bitcrafty_id('item', item_name, fallback_profession)
+                        print(f"[WARN] Using fallback profession '{fallback_profession}' for material: {item_name}")
+                    
+                    materials.append({
+                        'item': item_id,
+                        'qty': material.get('qty', 1)
+                    })
+                    # Also create the missing item entry
+                    if item_id not in normalized_items:
+                        normalized_items[item_id] = {
+                            'id': item_id,
+                            'name': item_name,
+                            'tier': 1,
+                            'rank': 'Common'
+                        }
+                        item_name_to_id[item_name] = item_id
+                        print(f"[INFO] Created missing material item: {item_id}")
+            
+            # Transform outputs to use item IDs (these should already be mapped)
+            outputs = []
+            for output in craft.get('outputs', []):
+                item_name = output.get('item')
+                if item_name in item_name_to_id:
+                    outputs.append({
+                        'item': item_name_to_id[item_name],
+                        'qty': output.get('qty', 1)
+                    })
+                else:
+                    # Output should use the craft's profession
+                    item_id = transform_to_bitcrafty_id('item', item_name, profession)
+                    outputs.append({
+                        'item': item_id,
+                        'qty': output.get('qty', 1)
+                    })
+                    # Also create the missing item entry
+                    if item_id not in normalized_items:
+                        normalized_items[item_id] = {
+                            'id': item_id,
+                            'name': item_name,
+                            'tier': 1,
+                            'rank': 'Common'
+                        }
+                        item_name_to_id[item_name] = item_id
+                        print(f"[INFO] Created missing output item: {item_id}")
+            
+            # Match BitCrafty crafts.json format exactly
             normalized_crafts[bitcrafty_id] = {
                 'id': bitcrafty_id,
-                'name': cleaned_name,  # Use cleaned name
-                'requirements': craft.get('requirements', {}),
-                'inputs': craft.get('materials', []),
-                'outputs': craft.get('outputs', []),
-                'confidence': craft.get('confidence', 0.0),
-                'extracted_at': craft.get('extracted_at'),
-                'extraction_source': craft.get('extraction_source', 'bitcrafty-extractor')
+                'name': cleaned_name,
+                'materials': materials,
+                'outputs': outputs,
+                'requirements': craft.get('requirements', {})  # Keep for now, will be replaced with requirement ID
             }
     
     return normalized_items, normalized_crafts
+
+
+def infer_profession_from_item_name(item_name):
+    """Infer profession from item name based on common patterns."""
+    name_lower = item_name.lower()
+    
+    # Common patterns for different professions
+    if any(word in name_lower for word in ['wood', 'log', 'trunk', 'stripped', 'plank']):
+        return 'carpentry'
+    elif any(word in name_lower for word in ['thread', 'spool', 'cloth', 'fabric']):
+        return 'tailoring'  
+    elif any(word in name_lower for word in ['mushroom', 'berry', 'fruit', 'vegetable']):
+        return 'foraging'
+    elif any(word in name_lower for word in ['clay', 'stone', 'ore', 'metal']):
+        return 'mining'
+    elif any(word in name_lower for word in ['sap', 'resin']):
+        return 'forestry'
+    elif any(word in name_lower for word in ['seed', 'fertilizer', 'grain']):
+        return 'farming'
+    
+    return None
+
+
+def get_fallback_profession_for_material(item_name, current_craft_profession):
+    """Get fallback profession for materials that can't be inferred."""
+    # Try to infer first
+    inferred = infer_profession_from_item_name(item_name)
+    if inferred:
+        return inferred
+    
+    # Common fallbacks for raw materials
+    name_lower = item_name.lower()
+    if any(word in name_lower for word in ['basic', 'raw', 'rough']):
+        return 'foraging'  # Most basic items come from foraging
+    
+    # If all else fails, use current craft profession
+    return current_craft_profession
 
 
 def load_bitcrafty_data(items_data, crafts_data):
@@ -415,25 +526,24 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
                     changes['items']['identical'][item_id] = item
             else:
                 # Completely new item
-                changes['items']['new'][item_id] = item
-    
-    # Compare crafts
-    for craft_id, craft in normalized_crafts.items():
-        if craft_id in bitcrafty_crafts:
-            existing = bitcrafty_crafts[craft_id]
-            # Simple comparison - in real implementation, do deep comparison
-            if (craft.get('name') != existing.get('name') or 
-                craft.get('inputs') != existing.get('materials') or
-                craft.get('outputs') != existing.get('outputs')):
-                changes['crafts']['updated'][craft_id] = {
-                    'existing': existing,
-                    'new': craft,
-                    'changes': []
-                }
+                changes['items']['new'][item_id] = item        # Compare crafts
+        for craft_id, craft in normalized_crafts.items():
+            if craft_id in bitcrafty_crafts:
+                existing = bitcrafty_crafts[craft_id]
+                # Compare using BitCrafty craft format
+                if (craft.get('name') != existing.get('name') or 
+                    craft.get('materials') != existing.get('materials') or
+                    craft.get('outputs') != existing.get('outputs') or
+                    craft.get('requirement') != existing.get('requirement')):
+                    changes['crafts']['updated'][craft_id] = {
+                        'existing': existing,
+                        'new': craft,
+                        'changes': []
+                    }
+                else:
+                    changes['crafts']['identical'][craft_id] = craft
             else:
-                changes['crafts']['identical'][craft_id] = craft
-        else:
-            changes['crafts']['new'][craft_id] = craft
+                changes['crafts']['new'][craft_id] = craft
     
     return changes
 
@@ -448,15 +558,15 @@ def update_craft_item_references(normalized_crafts, id_updates):
     for craft_id, craft in normalized_crafts.items():
         updated_craft = deepcopy(craft)
         
-        # Update input materials
-        if 'inputs' in updated_craft:
-            for material in updated_craft['inputs']:
+        # Update materials (BitCrafty uses 'materials' not 'inputs')
+        if 'materials' in updated_craft:
+            for material in updated_craft['materials']:
                 item_ref = material.get('item', '')
                 if item_ref in old_to_new_id:
                     old_ref = item_ref
                     new_ref = old_to_new_id[item_ref]
                     material['item'] = new_ref
-                    print(f"[INFO] Updated craft input: {old_ref} -> {new_ref} in {craft_id}")
+                    print(f"[INFO] Updated craft material: {old_ref} -> {new_ref} in {craft_id}")
         
         # Update outputs
         if 'outputs' in updated_craft:
@@ -497,9 +607,21 @@ def extract_metadata_from_crafts(normalized_crafts):
         # Extract building
         building = requirements.get('building')
         if building and building != 'null' and building is not None:
-            # Clean building name
+            # Clean building name and extract the actual building name
             clean_building = building.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
-            buildings.add(clean_building)
+            
+            # Extract building type (e.g., "carpentry station" -> "station", "kiln" -> "kiln")
+            if 'station' in clean_building:
+                buildings.add('station')  # Generic station
+            elif 'kiln' in clean_building:
+                buildings.add('kiln')
+            elif 'well' in clean_building:
+                buildings.add('well')
+            elif 'loom' in clean_building:
+                buildings.add('loom')
+            else:
+                # Use the whole building name if no special handling
+                buildings.add(clean_building)
     
     return professions, tools, buildings
 
@@ -513,7 +635,8 @@ def compare_metadata(extracted_professions, extracted_tools, extracted_buildings
         'tools': {'new': [], 'existing': []},
         'buildings': {'new': [], 'existing': []}
     }
-      # Compare professions
+    
+    # Compare professions
     existing_professions = set()
     if professions_meta:
         for prof in professions_meta:
@@ -541,14 +664,28 @@ def compare_metadata(extracted_professions, extracted_tools, extracted_buildings
             metadata_changes['tools']['new'].append(tool)
             print(f"[INFO] New tool found: {tool}")
 
-    # Compare buildings
-    existing_buildings = set()
+    # Compare buildings - check by building type and profession context
+    existing_building_ids = set()
     if buildings_meta:
         for building in buildings_meta:
-            existing_buildings.add(building.get('name', '').lower())
+            existing_building_ids.add(building.get('id', ''))
 
     for building in extracted_buildings:
-        if building.lower() in existing_buildings:
+        building_exists = False
+        
+        if building == 'station':
+            # For stations, check if profession-specific stations exist
+            # We'll need to check this during requirements processing
+            building_exists = False  # Will be checked per profession later
+        elif building == 'kiln':
+            # Check if any kiln exists (regardless of profession)
+            kiln_exists = any('kiln' in bid for bid in existing_building_ids)
+            building_exists = kiln_exists
+        else:
+            # For other buildings, check generically
+            building_exists = any(building.lower() in bid.lower() for bid in existing_building_ids)
+        
+        if building_exists:
             metadata_changes['buildings']['existing'].append(building)
             print(f"[DEBUG] Building already exists: {building}")
         else:
@@ -558,7 +695,7 @@ def compare_metadata(extracted_professions, extracted_tools, extracted_buildings
     return metadata_changes
 
 
-def create_new_metadata_entries(metadata_changes):
+def create_new_metadata_entries(metadata_changes, normalized_crafts):
     """Create new metadata entries for professions, tools, and buildings."""
     
     new_metadata = {
@@ -584,14 +721,16 @@ def create_new_metadata_entries(metadata_changes):
             'description': f"Auto-generated tool: {tool.title()}"
         })
     
-    # Create new building entries
-    for building in metadata_changes['buildings']['new']:
-        building_id = f"building:{normalize_name(building)}"
-        new_metadata['buildings'].append({
-            'id': building_id,
-            'name': building.title(),
-            'description': f"Auto-generated building: {building.title()}"
-        })
+    # Create new building entries based on actual missing building IDs
+    missing_building_ids = metadata_changes.get('missing_building_ids', [])
+    for building_id in missing_building_ids:
+        if ':' in building_id:
+            building_name = building_id.split(':')[-1].replace('-', ' ').title()
+            new_metadata['buildings'].append({
+                'id': building_id,
+                'name': building_name
+            })
+            print(f"[DEBUG] Will create building: {building_id} -> {building_name}")
     
     return new_metadata
 
@@ -688,6 +827,28 @@ def print_comparison_summary(changes, metadata_changes=None, new_metadata=None, 
                 print(f"      {Colors.colorize('+', Colors.GREEN)} {Colors.highlight(building['id'])}: {building['name']}")
 
 
+def check_building_requirements_exist(extracted_requirements, buildings_meta):
+    """Check which building requirements are missing from BitCrafty metadata."""
+    existing_building_ids = set()
+    if buildings_meta:
+        for building in buildings_meta:
+            existing_building_ids.add(building.get('id', ''))
+    
+    missing_buildings = []
+    
+    for signature, req_data in extracted_requirements.items():
+        req_entry = req_data['entry']
+        building_ref = req_entry.get('building', {}).get('name')
+        
+        if building_ref and building_ref not in existing_building_ids:
+            missing_buildings.append(building_ref)
+            print(f"[INFO] Missing building: {building_ref}")
+        else:
+            print(f"[DEBUG] Building exists: {building_ref}")
+    
+    return missing_buildings
+
+
 def main():
     # Load all relevant data
     print_info("Loading extractor exports and BitCrafty data...")
@@ -743,9 +904,6 @@ def main():
     metadata_changes = compare_metadata(extracted_professions, extracted_tools, extracted_buildings,
                                        professions_meta, tools_meta, buildings_meta)
     
-    print_info("Creating new metadata entries...")
-    new_metadata = create_new_metadata_entries(metadata_changes)
-    
     # Step 8: Extract and compare requirements
     print_info("Extracting requirements from crafts...")
     extracted_requirements = extract_requirements_from_crafts(normalized_crafts)
@@ -754,9 +912,31 @@ def main():
     print_info("Comparing requirements with BitCrafty data...")
     requirement_changes = compare_requirements(extracted_requirements, requirements_data)
     
+    # Check for missing buildings needed by requirements (more accurate than generic metadata comparison)
+    print_info("Checking for missing buildings...")
+    missing_buildings = check_building_requirements_exist(extracted_requirements, buildings_meta)
+    
+    # Update metadata changes to only include actually missing buildings
+    metadata_changes['buildings']['new'] = []
+    metadata_changes['missing_building_ids'] = missing_buildings  # Pass the actual IDs
+    if missing_buildings:
+        for building_id in missing_buildings:
+            # Extract building name from ID for display
+            if ':' in building_id:
+                building_name = building_id.split(':')[-1].replace('-', ' ').title()
+                metadata_changes['buildings']['new'].append(building_name)
+                print(f"[INFO] Will create missing building: {building_id}")
+    
+    print_info("Creating new metadata entries...")
+    new_metadata = create_new_metadata_entries(metadata_changes, normalized_crafts)
+    
     # Step 9: Update crafts to use requirement references
     print_info("Updating crafts to use requirement references...")
     normalized_crafts = update_crafts_with_requirements(normalized_crafts, extracted_requirements)
+    
+    # Step 9.5: Ensure all item references in crafts exist
+    print_info("Ensuring all craft item references exist...")
+    normalized_items = ensure_item_references_exist(normalized_crafts, normalized_items)
     
     # Re-run craft comparison after requirement updates
     changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
@@ -787,17 +967,16 @@ def main():
             # Clean up old backups (keep 10 most recent)
             cleanup_old_backups(keep_count=10)
             
-            if apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
+            if apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requirement_changes, normalized_crafts):
                 print_success("Reconciliation completed successfully!")
                 print_info(f"Backup available at: {Colors.highlight(backup_path)}")
             else:
-                print_error("Reconciliation failed. No changes were applied.")
                 print_info(f"Backup available for rollback at: {Colors.highlight(backup_path)}")
         else:
             print_warning("Could not create backup. Do you want to continue anyway? [y/N]: ")
             response = input().strip().lower()
             if response == 'y' or response == 'yes':
-                if apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
+                if apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requirement_changes, normalized_crafts):
                     print_success("Reconciliation completed successfully!")
                 else:
                     print_error("Reconciliation failed. No changes were applied.")
@@ -1008,20 +1187,86 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
             print(f"  {Colors.colorize('+', Colors.GREEN)} {Colors.highlight(building_data['id'])}: {building_data['name']}")
 
 
-def apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
-    """Apply all changes to BitCrafty data files."""
-    print_info("Applying changes to BitCrafty data files...")
+def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requirement_changes, normalized_crafts):
+    """
+    Apply changes to BitCrafty data files in the correct order:
+    1. Metadata (professions, tools, buildings) 
+    2. Items
+    3. Requirements
+    4. Crafts
+    This ensures IDs are available for lookups in later steps.
+    """
+    print_info("Applying changes to BitCrafty data files in correct order...")
     
     try:
         # Load current BitCrafty data
         items_data = load_json(ITEMS_DATA_PATH)
         crafts_data = load_json(CRAFTS_DATA_PATH)
-        buildings_data = load_json(BUILDINGS_META_PATH)
         requirements_data = load_json(REQUIREMENTS_DATA_PATH)
+        buildings_data = load_json(BUILDINGS_META_PATH)
+        professions_data = load_json(PROFESSIONS_META_PATH)
+        tools_data = load_json(TOOLS_META_PATH)
         
         changes_applied = 0
         
-        # Apply item ID updates
+        # STEP 1: Insert metadata first (buildings, tools, professions)
+        print_header("\n1. INSERTING METADATA")
+        
+        # Add new buildings
+        if metadata_changes['buildings']['new']:
+            count = len(metadata_changes['buildings']['new'])
+            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new buildings...")
+            for building_data in new_metadata['buildings']:
+                buildings_data.append(building_data)
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added building: {Colors.highlight(building_data['id'])}")
+                changes_applied += 1
+            
+            # Handle profession-specific stations that need to be created based on craft requirements
+            station_professions = set()
+            for craft_id, craft in normalized_crafts.items():
+                requirements = craft.get('requirements', {})
+                profession = requirements.get('profession')
+                building = requirements.get('building', '').lower()
+                if profession and 'station' in building:
+                    station_professions.add(profession)
+            
+            # Create missing station buildings
+            for profession in station_professions:
+                station_id = f"building:{profession}:station"
+                if not any(b.get('id') == station_id for b in buildings_data):
+                    buildings_data.append({
+                        'id': station_id,
+                        'name': f"{profession.title()} Station"
+                    })
+                    print(f"  {Colors.colorize('✓', Colors.GREEN)} Added profession station: {Colors.highlight(station_id)}")
+                    changes_applied += 1
+        
+        # Add new tools
+        if metadata_changes['tools']['new']:
+            count = len(metadata_changes['tools']['new'])
+            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new tools...")
+            for tool_data in new_metadata['tools']:
+                tools_data.append(tool_data)
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added tool: {Colors.highlight(tool_data['id'])}")
+                changes_applied += 1
+        
+        # Add new professions
+        if metadata_changes['professions']['new']:
+            count = len(metadata_changes['professions']['new'])
+            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new professions...")
+            for prof_data in new_metadata['professions']:
+                professions_data.append({
+                    'id': f"profession:{normalize_name(prof_data['name'])}",
+                    'name': prof_data['name'],
+                    'color': prof_data['color']
+                })
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added profession: profession:{normalize_name(prof_data['name'])}")
+                changes_applied += 1
+        
+        # STEP 2: Insert/Update Items
+        print_header("\n2. INSERTING/UPDATING ITEMS")
+        
+        # Apply item ID updates first
         if changes['items']['id_updates']:
             count = len(changes['items']['id_updates'])
             print_info(f"Updating {Colors.colorize(str(count), Colors.YELLOW)} item IDs...")
@@ -1037,91 +1282,94 @@ def apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
                 
                 # Update references in crafts
                 for craft in crafts_data:
-                    # Update input materials
+                    # Update materials
                     if 'materials' in craft:
-                        for input_item in craft['materials']:
-                            if input_item.get('item') == old_id:
-                                input_item['item'] = new_id
-                                print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft input reference: {Colors.gray(old_id)} → {Colors.gray(new_id)}")
+                        for material in craft['materials']:
+                            if material.get('item') == old_id:
+                                material['item'] = new_id
+                                print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft material reference: {Colors.gray(old_id)} → {Colors.gray(new_id)}")
                     
-                    # Update output materials
+                    # Update outputs
                     if 'outputs' in craft:
-                        for output_item in craft['outputs']:
-                            if output_item.get('item') == old_id:
-                                output_item['item'] = new_id
+                        for output in craft['outputs']:
+                            if output.get('item') == old_id:
+                                output['item'] = new_id
                                 print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft output reference: {Colors.gray(old_id)} → {Colors.gray(new_id)}")
         
         # Update existing items
         if changes['items']['updated']:
             count = len(changes['items']['updated'])
             print_info(f"Updating {Colors.colorize(str(count), Colors.YELLOW)} existing items...")
-            for item_id, updated_item in changes['items']['updated'].items():
+            for item_id, update_info in changes['items']['updated'].items():
+                new_item = clean_item_for_bitcrafty(update_info['new'])
                 # Find and replace the existing item
                 for i, item in enumerate(items_data):
                     if item['id'] == item_id:
-                        items_data[i] = updated_item
-                        tier_color = Colors.get_tier_color(updated_item.get('tier'))
-                        tier_text = Colors.colorize(f"T{updated_item.get('tier', '?')}", tier_color)
+                        items_data[i] = new_item
+                        tier_color = Colors.get_tier_color(new_item.get('tier'))
+                        tier_text = Colors.colorize(f"T{new_item.get('tier', '?')}", tier_color)
                         print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated item: {Colors.highlight(item_id)} {Colors.gray(f'({tier_text})')}")
                         changes_applied += 1
                         break
-        
-        # Update existing crafts
-        if changes['crafts']['updated']:
-            count = len(changes['crafts']['updated'])
-            print_info(f"Updating {Colors.colorize(str(count), Colors.YELLOW)} existing crafts...")
-            for craft_id, updated_craft in changes['crafts']['updated'].items():
-                # Find and replace the existing craft
-                for i, craft in enumerate(crafts_data):
-                    if craft['id'] == craft_id:
-                        crafts_data[i] = updated_craft
-                        print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft: {Colors.highlight(craft_id)}")
-                        changes_applied += 1
-                        break
-        
-        # Add new requirements
-        if requirement_changes['new']:
-            count = len(requirement_changes['new'])
-            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new requirements...")
-            for req_id, req_data in requirement_changes['new'].items():
-                requirements_data.append(req_data['entry'])
-                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added new requirement: {Colors.highlight(req_id)}")
-                changes_applied += 1
         
         # Add new items
         if changes['items']['new']:
             count = len(changes['items']['new'])
             print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new items...")
             for item_id, item in changes['items']['new'].items():
-                items_data.append(item)
-                tier_color = Colors.get_tier_color(item.get('tier'))
-                tier_text = Colors.colorize(f"T{item.get('tier', '?')}", tier_color)
-                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added new item: {Colors.highlight(item_id)} {Colors.gray(f'({tier_text})')}")
+                clean_item = clean_item_for_bitcrafty(item)
+                items_data.append(clean_item)
+                tier_color = Colors.get_tier_color(clean_item.get('tier'))
+                tier_text = Colors.colorize(f"T{clean_item.get('tier', '?')}", tier_color)
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added item: {Colors.highlight(item_id)} {Colors.gray(f'({tier_text})')}")
                 changes_applied += 1
+        
+        # STEP 3: Insert Requirements
+        print_header("\n3. INSERTING REQUIREMENTS")
+        
+        if requirement_changes['new']:
+            count = len(requirement_changes['new'])
+            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new requirements...")
+            for req_id, req_data in requirement_changes['new'].items():
+                requirements_data.append(req_data['entry'])
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added requirement: {Colors.highlight(req_id)}")
+                changes_applied += 1
+        
+        # STEP 4: Insert/Update Crafts
+        print_header("\n4. INSERTING/UPDATING CRAFTS")
+        
+        # Update existing crafts
+        if changes['crafts']['updated']:
+            count = len(changes['crafts']['updated'])
+            print_info(f"Updating {Colors.colorize(str(count), Colors.YELLOW)} existing crafts...")
+            for craft_id, update_info in changes['crafts']['updated'].items():
+                new_craft = clean_craft_for_bitcrafty(update_info['new'])
+                # Find and replace the existing craft
+                for i, craft in enumerate(crafts_data):
+                    if craft['id'] == craft_id:
+                        crafts_data[i] = new_craft
+                        print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft: {Colors.highlight(craft_id)}")
+                        changes_applied += 1
+                        break
         
         # Add new crafts
         if changes['crafts']['new']:
             count = len(changes['crafts']['new'])
             print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new crafts...")
             for craft_id, craft in changes['crafts']['new'].items():
-                crafts_data.append(craft)
-                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added new craft: {Colors.highlight(craft_id)}")
+                clean_craft = clean_craft_for_bitcrafty(craft)
+                crafts_data.append(clean_craft)
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added craft: {Colors.highlight(craft_id)}: {craft['name']}")
                 changes_applied += 1
         
-        # Add new buildings
-        if metadata_changes['buildings']['new']:
-            count = len(metadata_changes['buildings']['new'])
-            print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new buildings...")
-            for building_data in new_metadata['buildings']:
-                buildings_data.append(building_data)
-                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added new building: {Colors.highlight(building_data['id'])}")
-                changes_applied += 1
-        
-        # Write updated files
+        # Write all updated files
+        print_header("\n5. SAVING FILES")
         write_json(items_data, ITEMS_DATA_PATH)
         write_json(crafts_data, CRAFTS_DATA_PATH)
-        write_json(buildings_data, BUILDINGS_META_PATH)
         write_json(requirements_data, REQUIREMENTS_DATA_PATH)
+        write_json(buildings_data, BUILDINGS_META_PATH)
+        write_json(professions_data, PROFESSIONS_META_PATH)
+        write_json(tools_data, TOOLS_META_PATH)
         
         print_success(f"Applied {Colors.colorize(str(changes_applied), Colors.BOLD)} changes successfully!")
         print_info("Updated files:")
@@ -1129,8 +1377,11 @@ def apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
         print(f"  • {Colors.highlight(CRAFTS_DATA_PATH)}")
         print(f"  • {Colors.highlight(REQUIREMENTS_DATA_PATH)}")
         print(f"  • {Colors.highlight(BUILDINGS_META_PATH)}")
+        print(f"  • {Colors.highlight(PROFESSIONS_META_PATH)}")
+        print(f"  • {Colors.highlight(TOOLS_META_PATH)}")
         
         # Run post-change validation
+        print_header("\n6. VALIDATION")
         print_info("Running post-change data integrity verification...")
         validation_passed = validate_data_integrity_post_change()
         
@@ -1145,6 +1396,91 @@ def apply_changes(changes, metadata_changes, new_metadata, requirement_changes):
     except Exception as e:
         print(f"[ERROR] Failed to apply changes: {e}")
         return False
+
+
+def clean_item_for_bitcrafty(item):
+    """Clean item data to match BitCrafty format exactly - remove extractor metadata."""
+    return {
+        'id': item['id'],
+        'name': item['name'],
+        'tier': item.get('tier', 1),
+        'rank': item.get('rank', 'Common')
+    }
+
+
+def ensure_item_references_exist(normalized_crafts, normalized_items):
+    """
+    Ensure all item references in crafts exist in normalized_items.
+    If not, create placeholder items with basic information.
+    """
+    print_info("Verifying all craft item references exist...")
+    
+    # Get all item IDs referenced in crafts
+    referenced_items = set()
+    
+    for craft_id, craft in normalized_crafts.items():
+        # Check materials
+        for material in craft.get('materials', []):
+            item_ref = material.get('item')
+            if item_ref:
+                referenced_items.add(item_ref)
+        
+        # Check outputs
+        for output in craft.get('outputs', []):
+            item_ref = output.get('item')
+            if item_ref:
+                referenced_items.add(item_ref)
+    
+    # Check which items are missing
+    missing_items = referenced_items - set(normalized_items.keys())
+    
+    if missing_items:
+        print_warning(f"Found {len(missing_items)} item references without matching items. Creating placeholder items...")
+        
+        for item_id in missing_items:
+            # Extract info from ID
+            if ':' in item_id:
+                parts = item_id.split(':')
+                if len(parts) >= 3:
+                    profession = parts[1]
+                    name_part = parts[2].replace('-', ' ').title()
+                    
+                    # Create placeholder item
+                    normalized_items[item_id] = {
+                        'id': item_id,
+                        'name': name_part,
+                        'tier': 1,
+                        'rank': 'Common'
+                    }
+                    print(f"  {Colors.colorize('✓', Colors.GREEN)} Created placeholder item: {Colors.highlight(item_id)} ({name_part})")
+    
+    return normalized_items
+
+
+def clean_item_for_bitcrafty(item):
+    """Clean item data to match BitCrafty format exactly - remove extractor metadata."""
+    return {
+        'id': item['id'],
+        'name': item['name'],
+        'tier': item.get('tier', 1),
+        'rank': item.get('rank', 'Common')
+    }
+
+
+def clean_craft_for_bitcrafty(craft):
+    """Clean craft data to match BitCrafty format exactly - remove extractor metadata."""
+    clean_craft = {
+        'id': craft['id'],
+        'name': craft['name'],
+        'materials': craft.get('materials', []),
+        'outputs': craft.get('outputs', [])
+    }
+    
+    # Only add requirement if it exists
+    if 'requirement' in craft:
+        clean_craft['requirement'] = craft['requirement']
+    
+    return clean_craft
 
 
 def write_json(data, file_path):
@@ -1310,7 +1646,9 @@ def cleanup_old_backups(keep_count=10):
 
 
 def extract_requirements_from_crafts(normalized_crafts):
-    """Extract unique requirements from normalized crafts and create requirement entries."""
+    """Extract unique requirements from normalized crafts and create requirement entries following BitCrafty convention."""
+    import re
+    
     requirements_by_signature = {}
     
     for craft_id, craft in normalized_crafts.items():
@@ -1323,59 +1661,100 @@ def extract_requirements_from_crafts(normalized_crafts):
         if not profession:
             continue
             
-        # Create a signature for the requirement (same signature = shared requirement)
+        # Extract tier information and clean names dynamically
         tool_clean = None
+        tool_tier = 1
         if tool and tool != 'null' and tool is not None:
-            tool_clean = tool.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+            tool_clean = tool.lower()
+            # Dynamic tier extraction using regex
+            tier_match = re.search(r'tier\s*(\d+)', tool_clean)
+            if tier_match:
+                tool_tier = int(tier_match.group(1))
+                tool_clean = re.sub(r'tier\s*\d+\s*', '', tool_clean).strip()
             
         building_clean = None
+        building_tier = 1
         if building and building != 'null' and building is not None:
-            building_clean = building.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+            building_clean = building.lower()
+            # Dynamic tier extraction using regex
+            tier_match = re.search(r'tier\s*(\d+)', building_clean)
+            if tier_match:
+                building_tier = int(tier_match.group(1))
+                building_clean = re.sub(r'tier\s*\d+\s*', '', building_clean).strip()
         
-        # Create requirement signature
-        signature = (profession, tool_clean, building_clean)
+        # Create requirement signature (includes tiers)
+        signature = (profession, tool_clean, tool_tier, building_clean, building_tier)
         
         if signature not in requirements_by_signature:
-            # Create requirement ID
-            req_parts = [profession]
-            if tool_clean:
-                req_parts.append(normalize_name(tool_clean))
-            if building_clean:
-                req_parts.append(normalize_name(building_clean))
-            
-            requirement_id = f"requirement:{':'.join(req_parts)}"
-            
-            # Create requirement name
-            name_parts = [profession.title()]
-            if tool_clean and building_clean:
-                name_parts.append(f"{tool_clean.title()} & {building_clean.title()}")
-            elif tool_clean:
-                name_parts.append(f"{tool_clean.title()} Tools")
+            # Create requirement ID following BitCrafty convention with dynamic tiers
+            if building_clean and tool_clean:
+                # Tool + Building = "tier{N}-{building}" pattern
+                max_tier = max(building_tier, tool_tier)
+                identifier = f"tier{max_tier}-{normalize_name(building_clean)}"
+                req_name = f"Tier {max_tier} {building_clean.title()} Requirements"
             elif building_clean:
-                name_parts.append(f"{building_clean.title()} Access")
+                # Building-only requirements
+                if building_clean == "station":
+                    # Station gets special handling
+                    identifier = f"tier{building_tier}-{profession}-station"
+                    req_name = f"Tier {building_tier} {profession.title()} Station Requirements"
+                else:
+                    # Other buildings
+                    identifier = f"tier{building_tier}-{normalize_name(building_clean)}"
+                    req_name = f"Tier {building_tier} {building_clean.title()} Requirements"
+                    
+                # Special naming for certain buildings
+                if building_clean == "well":
+                    identifier = f"tier{building_tier}-well"
+                    req_name = f"Tier {building_tier} Well Access"
+            elif tool_clean:
+                # Tool-only requirements
+                identifier = f"tier{tool_tier}-{normalize_name(tool_clean)}-tools"
+                req_name = f"Tier {tool_tier} {tool_clean.title()} Tools Requirements"
             else:
-                name_parts.append("Basic")
-                
-            requirement_name = " ".join(name_parts)
+                # Fallback to basic tools
+                identifier = "tier1-basic-tools"
+                req_name = f"Tier 1 Basic {profession.title()} Tools Requirements"
+            
+            requirement_id = f"requirement:{profession}:{identifier}"
             
             # Create requirement entry
             requirement_entry = {
                 'id': requirement_id,
-                'name': requirement_name,
+                'name': req_name,
                 'profession': {'name': f"profession:{profession}", 'level': 1}
             }
             
             if tool_clean:
-                requirement_entry['tool'] = {'name': f"tool:{normalize_name(tool_clean)}", 'level': 1}
+                requirement_entry['tool'] = {'name': f"tool:{normalize_name(tool_clean)}", 'level': tool_tier}
                 
             if building_clean:
-                requirement_entry['building'] = {'name': f"building:{normalize_name(building_clean)}", 'level': 1}
+                # Use proper building ID format
+                if 'station' in building_clean:
+                    # Handle "carpentry station" -> "building:carpentry:station"
+                    building_id = f"building:{profession}:station"
+                elif building_clean == 'kiln':
+                    # Handle specific buildings like kiln
+                    building_id = f"building:{profession}:kiln"
+                elif building_clean == 'well':
+                    # Handle specific buildings like well
+                    building_id = f"building:{profession}:well"
+                elif building_clean in ['loom', 'anvil', 'forge']:
+                    # Handle other specific buildings
+                    building_id = f"building:{profession}:{building_clean}"
+                else:
+                    # Fallback for unknown buildings
+                    building_id = f"building:{profession}:{normalize_name(building_clean)}"
+                    
+                requirement_entry['building'] = {'name': building_id, 'level': building_tier}
             
             requirements_by_signature[signature] = {
                 'id': requirement_id,
                 'entry': requirement_entry,
                 'crafts': []
             }
+            
+            print(f"[DEBUG] Created requirement: {requirement_id} -> {req_name}")
         
         # Track which crafts use this requirement
         requirements_by_signature[signature]['crafts'].append(craft_id)
@@ -1435,6 +1814,8 @@ def compare_requirements(extracted_requirements, existing_requirements):
 
 def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
     """Update normalized crafts to reference requirement IDs instead of inline requirements."""
+    import re
+    
     updated_crafts = {}
     
     for craft_id, craft in normalized_crafts.items():
@@ -1446,25 +1827,39 @@ def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
         building = requirements.get('building')
         
         if profession:
-            # Find matching requirement
+            # Extract tier information and clean names (same logic as extract_requirements_from_crafts)
             tool_clean = None
+            tool_tier = 1
             if tool and tool != 'null' and tool is not None:
-                tool_clean = tool.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+                tool_clean = tool.lower()
+                # Dynamic tier extraction using regex
+                tier_match = re.search(r'tier\s*(\d+)', tool_clean)
+                if tier_match:
+                    tool_tier = int(tier_match.group(1))
+                    tool_clean = re.sub(r'tier\s*\d+\s*', '', tool_clean).strip()
                 
             building_clean = None
+            building_tier = 1
             if building and building != 'null' and building is not None:
-                building_clean = building.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+                building_clean = building.lower()
+                # Dynamic tier extraction using regex
+                tier_match = re.search(r'tier\s*(\d+)', building_clean)
+                if tier_match:
+                    building_tier = int(tier_match.group(1))
+                    building_clean = re.sub(r'tier\s*\d+\s*', '', building_clean).strip()
             
-            signature = (profession, tool_clean, building_clean)
+            # Create signature to match with extracted requirements
+            signature = (profession, tool_clean, tool_tier, building_clean, building_tier)
             
             # Find the requirement ID for this signature
             for sig, req_data in extracted_requirements.items():
                 if sig == signature:
-                    # Replace requirements object with requirement ID reference
+                    # Replace requirements object with requirement ID reference (BitCrafty format)
                     updated_craft['requirement'] = req_data['id']
                     # Remove the old requirements object
                     if 'requirements' in updated_craft:
                         del updated_craft['requirements']
+                    print(f"[DEBUG] Updated craft {craft_id} to use requirement: {req_data['id']}")
                     break
         
         updated_crafts[craft_id] = updated_craft
