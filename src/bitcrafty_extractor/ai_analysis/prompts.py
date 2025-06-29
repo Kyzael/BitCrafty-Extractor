@@ -113,6 +113,12 @@ CRITICAL CRAFTING RECIPE VALIDATION RULES:
 5. Crafts without materials[] AND without profession AND without tools are INVALID - exclude them
 6. Item hover tooltips or information screens are NOT crafting recipes
 
+CRAFT NAME CLEANING RULES:
+- Remove recipe sequence prefixes like "1/2", "2/2", "1/3", etc. from craft names
+- Example: "1/2 Burn Pitch" should be extracted as "Burn Pitch"
+- Example: "2/3 Cook Stew" should be extracted as "Cook Stew"
+- Only extract the actual recipe name, not the sequence indicator
+
 VALID CRAFT INDICATORS:
 - Clear materials list with quantities
 - Profession requirements (tailoring, cooking, farming, etc.)
