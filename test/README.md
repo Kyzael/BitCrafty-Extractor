@@ -22,14 +22,14 @@ pytest test/integration/ -v                # Integration tests
 
 ### 🧪 Unit Tests (`test/unit/`)
 Fast, isolated component testing with mocked dependencies:
-- **AI Analysis**: VisionClient, PromptBuilder ✅
-- **Config**: ConfigManager validation ✅  
-- **Capture**: WindowCapture, HotkeyHandler ✅
+- **AI Analysis**: VisionClient, PromptBuilder 
+- **Config**: ConfigManager validation   
+- **Capture**: WindowCapture, HotkeyHandler 
 - **Performance**: ~6 seconds total, zero API costs
 
 ### 🔗 Integration Tests (`test/integration/`)
 Component integration without expensive API calls:
-- **Configuration Validation**: System integration ✅
+- **Configuration Validation**: System integration 
 - **Performance**: ~2.5 seconds (optimized, no API costs)
 
 ### 🤖 AI Provider Comparison (Standalone)
@@ -45,16 +45,16 @@ python test\ai_analysis\test_provider_comparison.py -verbose # Detailed analysis
 ```
 test/
 ├── conftest.py                      # Pytest configuration
-├── unit/ai_analysis/               # Unit tests ✅
+├── unit/ai_analysis/               # Unit tests 
 │   ├── test_vision_client.py       # VisionClient tests  
 │   └── test_prompts.py             # PromptBuilder tests
-├── unit/config/                    # Config tests ✅
+├── unit/config/                    # Config tests 
 │   ├── test_config_manager.py      # ConfigManager tests
 │   └── test_config_validation.py   # Config validation tests
-├── unit/capture/                   # Capture tests ✅
+├── unit/capture/                   # Capture tests 
 │   ├── test_window_capture.py      # WindowCapture tests
 │   └── test_hotkey_handler.py      # HotkeyHandler tests
-├── integration/                    # Integration tests ✅
+├── integration/                    # Integration tests 
 │   └── test_configuration_validation.py  # System integration tests
 ├── ai_analysis/                    # Standalone tools (excluded from pytest)
 │   └── test_provider_comparison.py # Provider benchmarking
@@ -73,7 +73,7 @@ pytest test/ -m "integration"       # Integration tests only
 # Coverage
 pytest test/ --cov=src --cov-report=html
 
-# Run all tests (includes some failing config tests due to interface mismatches)
+# Run all tests
 pytest test/ -v
 
 # Run the excluded provider comparison tests separately
@@ -92,13 +92,3 @@ python test\ai_analysis\test_provider_comparison.py -verbose
 - **Import errors**: Run `pip install -e ".[dev]"`
 - **Window capture tests**: Need BitCraft running in windowed fullscreen
 - **Hotkey tests**: May require elevated permissions
-
-## Performance Summary
-
-| Test Type | Runtime | API Costs |
-|-----------|---------|-----------|
-| Unit Tests | ~5s | None |
-| Integration | ~2.5s | None ✅ |
-| Provider Comparison | ~50s | ~$0.06 💰 |
-
-**Development Tests**: Fast execution with zero API costs!
