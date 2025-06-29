@@ -325,12 +325,36 @@ class ExportManager:
         
         return new_items
     
+    def _clean_craft_name(self, name: str) -> str:
+        """Clean craft name by removing sequence prefixes like '1/2', '2/3', etc.
+        
+        Args:
+            name: Original craft name
+            
+        Returns:
+            Cleaned craft name
+        """
+        import re
+        # Remove patterns like "1/2 ", "2/3 ", "1/4 " etc. at the start
+        cleaned = re.sub(r'^\d+/\d+\s+', '', name.strip())
+        return cleaned
+    
     def _process_crafts(self, crafts: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process crafts and add new ones to the store."""
         new_crafts = []
         rejected_crafts = 0
         
         for craft in crafts:
+            # Clean the craft name first
+            original_name = craft.get('name', '')
+            cleaned_name = self._clean_craft_name(original_name)
+            craft['name'] = cleaned_name
+            
+            if original_name != cleaned_name:
+                self.logger.info("Cleaned craft name", 
+                               original=original_name, 
+                               cleaned=cleaned_name)
+            
             # Validate craft first
             validation = self._validate_craft(craft)
             if not validation['is_valid']:
