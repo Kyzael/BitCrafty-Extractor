@@ -1,0 +1,491 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "source": "bitcrafty-extractor",
+    "last_updated": "2025-06-30T22:58:45.034746",
+    "total_crafts": 19
+  },
+  "crafts": [
+    {
+      "name": "Craft Rough Plank",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "Tier 1 Carpentry Station",
+        "tool": "Tier 1 Saw"
+      },
+      "materials": [
+        {
+          "item": "Rough Stripped Wood",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Plank",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T00:58:36.550556",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "1636c15ede38"
+    },
+    {
+      "name": "Cook Plain Mushroom Skewer",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 1 Cooking Station",
+        "tool": "Tier 1 Pot"
+      },
+      "materials": [
+        {
+          "item": "Basic Mushroom",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Mushroom Skewer",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T01:09:06.896229",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9e7306bc6858"
+    },
+    {
+      "name": "Burn Pitch",
+      "requirements": {
+        "profession": "forestry",
+        "building": "Tier 1 Kiln",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Tree Sap",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Pitch",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T01:42:10.649801",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0b8b62c6afc7"
+    },
+    {
+      "name": "Make Basic Fertilizer",
+      "requirements": {
+        "profession": "farming",
+        "building": "Tier 1 Farming Station",
+        "tool": "Hoe"
+      },
+      "materials": [
+        {
+          "item": "Basic Berry",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Basic Fertilizer",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-29T07:52:41.665486",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "2e2a25527474"
+    },
+    {
+      "name": "Craft Training Shortsword",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Stick",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Training Shortsword",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:02:47.103217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "73cbbadad567"
+    },
+    {
+      "name": "Craft Flint Tool Bundle",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Knapped Flint",
+          "qty": 1
+        },
+        {
+          "item": "Stick",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Flint Tool Bundle",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:02:47.103217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "799982ee9a26"
+    },
+    {
+      "name": "Craft Depleted Automata's Heart",
+      "requirements": {
+        "profession": "any",
+        "building": "Tier 1 Heart Workshop",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Knapped Flint",
+          "qty": 10
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Depleted Automata's Heart",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T14:04:42.827369",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4ef283b59411"
+    },
+    {
+      "name": "Craft Flint Bow",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Knapped Flint",
+          "qty": 1
+        },
+        {
+          "item": "Stick",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Flint Bow",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:05:05.508788",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "633934c66abe",
+      "last_seen": "2025-06-30T14:06:08.505312"
+    },
+    {
+      "name": "Crush Basic Flower into Basic Pigment",
+      "requirements": {
+        "profession": "Scholar",
+        "building": "Scholar Station",
+        "tool": "Quill"
+      },
+      "materials": [
+        {
+          "item": "Basic Flower",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Basic Pigment",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-06-30T17:37:38.950827",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9ba8292b0f2c"
+    },
+    {
+      "name": "Husk into Basic Starbulb Products",
+      "requirements": {
+        "profession": "farming",
+        "building": "Farming Station",
+        "tool": "Hoe"
+      },
+      "materials": [
+        {
+          "item": "Basic Starbulb Plant",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Basic Starbulb",
+          "qty": 10
+        },
+        {
+          "item": "Basic Starbulb Seeds",
+          "qty": 10
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T17:42:38.122319",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "cbaa756bffd7"
+    },
+    {
+      "name": "Cook Plain Fish and Bulbs",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 1 Cooking Station",
+        "tool": "Tier 1 Pot"
+      },
+      "materials": [
+        {
+          "item": "Fish",
+          "qty": 1
+        },
+        {
+          "item": "Bulbs",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Fish and Bulbs",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T17:50:12.182237",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "094ca96e8260"
+    },
+    {
+      "name": "Bake Plain Berry Pie",
+      "requirements": {
+        "profession": "cooking",
+        "building": "oven",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Plain Raw Berry Pie",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Berry Pie",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T19:15:00.877908",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c818385dedad"
+    },
+    {
+      "name": "Saw Rough Stripped Wood",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "Tier 1 Carpentry Station",
+        "tool": "Tier 1 Saw"
+      },
+      "materials": [
+        {
+          "item": "Rough Wood Log",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Stripped Wood",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:03:05.355903",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "392d56579f42"
+    },
+    {
+      "name": "Split into Rough Wood Log Output",
+      "requirements": {
+        "profession": "Forestry",
+        "building": "Tier 1 Forestry Station",
+        "tool": "Tier 2 Axe"
+      },
+      "materials": [
+        {
+          "item": "Rough Wood Trunk",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Wood Log",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T21:03:56.206314",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c14d1cb833b4"
+    },
+    {
+      "name": "Split into Rough Tree Bark Output",
+      "requirements": {
+        "profession": "Forestry",
+        "building": "Tier 1 Forestry Station",
+        "tool": "Tier 2 Axe"
+      },
+      "materials": [
+        {
+          "item": "Rough Wood Trunk",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Tree Bark",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T21:03:56.206314",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "8f7981782a36"
+    },
+    {
+      "name": "Plain Berry Pie",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 2 Oven",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Plain Raw Berry Pie",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Berry Pie",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:53:03.324358",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "19678f8a682f"
+    },
+    {
+      "name": "Cook Plain Cooked Berries",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 1 Cooking Station",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Basic Berry",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Cooked Berries",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T21:55:47.907865",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4147b4abfc6f"
+    },
+    {
+      "name": "Craft Flint Pickaxe",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "Workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Knapped Flint",
+          "qty": 1
+        },
+        {
+          "item": "Stick",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Flint Pickaxe",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-06-30T21:55:47.907865",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "38bc18b36563"
+    },
+    {
+      "name": "Craft Flint Axe",
+      "requirements": {
+        "profession": "carpentry",
+        "building": "workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Knapped Flint",
+          "qty": 1
+        },
+        {
+          "item": "Stick",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Flint Axe",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T22:58:23.880661",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "8b9f7aff84ab"
+    }
+  ]
+}
