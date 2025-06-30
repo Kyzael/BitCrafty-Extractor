@@ -18,6 +18,9 @@ pywin32>=306; sys_platform == "win32"
 pynput>=1.7.6
 psutil>=5.9.0
 
+# Audio Feedback (optional dependencies)
+pyttsx3>=2.90
+
 # Configuration and Data
 PyYAML>=6.0
 structlog>=23.0.0
@@ -26,6 +29,5 @@ structlog>=23.0.0
 aiohttp>=3.8.0
 requests>=2.31.0
 
-# Data Processing
-pandas>=2.0.0
-deepdiff>=6.0.0
+# Optional dependencies (install separately if needed):
+# reconciliation tools: pip install -e ".[reconciliation]"

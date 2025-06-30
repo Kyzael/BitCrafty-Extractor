@@ -55,6 +55,16 @@ extraction:
   max_retries: 3
   rate_limit_delay: 1.0
 
+# Audio Feedback Configuration
+audio:
+  enabled: true
+  volume: 0.7
+  voice_enabled: true
+  voice_rate: 150
+  voice_volume: 0.8
+  sound_effects_enabled: true
+  sound_volume: 0.6
+
 # Application Settings
 log_level: "INFO"
 auto_save_results: true

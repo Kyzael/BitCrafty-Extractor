@@ -32,6 +32,7 @@ from bitcrafty_extractor.ai_analysis.prompts import PromptBuilder, ExtractionTyp
 from bitcrafty_extractor.capture.window_capture import WindowCapture
 from bitcrafty_extractor.capture.hotkey_handler import HotkeyHandler
 from bitcrafty_extractor.export.export_manager import ExportManager
+from bitcrafty_extractor.audio.audio_manager import AudioManager, AudioEvent
 
 
 
@@ -60,6 +61,7 @@ class BitCraftyExtractor:
         self.hotkey_handler = None
         self.prompt_builder = PromptBuilder()  # External prompt system
         self.export_manager = ExportManager(config_manager=self.config_manager)  # Export system for items/crafts
+        self.audio_manager = None  # Audio feedback system (initialized later)
         self.screenshot_queue: List[ImageData] = []
         self.queue_folder = Path("queue_screenshots")
         self.queue_folder.mkdir(exist_ok=True)
@@ -477,6 +479,9 @@ class BitCraftyExtractor:
         # Initialize hotkey handler
         self.hotkey_handler = HotkeyHandler(self.logger)
         
+        # Initialize audio manager
+        self.audio_manager = AudioManager(self.config_manager, self.logger)
+        
         # Reset session tracking for new session
         self.export_manager.reset_session_tracking()
         
@@ -677,6 +682,10 @@ class BitCraftyExtractor:
             # Add to queue
             self.screenshot_queue.append(image_data)
             
+            # Play audio feedback for successful screenshot
+            if self.audio_manager:
+                self.audio_manager.play_audio_feedback(AudioEvent.SCREENSHOT_TAKEN)
+            
             return True
             
         except Exception as e:
@@ -690,6 +699,13 @@ class BitCraftyExtractor:
             
         try:
             self.add_debug_message(f"🤖 Analyzing {len(self.screenshot_queue)} screenshots")
+            
+            # Play audio feedback for analysis start
+            if self.audio_manager:
+                self.audio_manager.play_audio_feedback(
+                    AudioEvent.ANALYSIS_START, 
+                    screenshot_count=len(self.screenshot_queue)
+                )
             
             # Create analysis prompt using external prompt system
             prompt = self.prompt_builder.get_queue_analysis_prompt(
@@ -728,6 +744,14 @@ class BitCraftyExtractor:
                 return True
             else:
                 self.add_debug_message(f"❌ Analysis failed: {result.error_message}")
+                
+                # Play error audio feedback
+                if self.audio_manager:
+                    self.audio_manager.play_audio_feedback(
+                        AudioEvent.ERROR_OCCURRED,
+                        error_type="analysis_failed"
+                    )
+                
                 self.log_error_to_file(
                     "AI Analysis failed",
                     context={
@@ -740,6 +764,14 @@ class BitCraftyExtractor:
                 
         except Exception as e:
             self.add_debug_message(f"❌ Analysis crashed: {str(e)}")
+            
+            # Play error audio feedback  
+            if self.audio_manager:
+                self.audio_manager.play_audio_feedback(
+                    AudioEvent.ERROR_OCCURRED,
+                    error_type="analysis_crashed"
+                )
+            
             self.log_error_to_file(
                 "Analysis crashed with exception",
                 exception=e,
@@ -1043,6 +1075,15 @@ class BitCraftyExtractor:
             # Show where detailed results are logged
             self.add_debug_message(f"📄 Full results: /analysis_logs/{self.analysis_log_file.name}")
             
+            # Play audio feedback for successful analysis completion
+            if self.audio_manager:
+                self.audio_manager.play_audio_feedback(
+                    AudioEvent.ANALYSIS_COMPLETE,
+                    success=True,
+                    items_count=items_count,
+                    crafts_count=crafts_count
+                )
+            
             # Return success
             return True
             
@@ -1205,6 +1246,11 @@ class BitCraftyExtractor:
             
         # Clean up
         self._stop_hotkeys()
+        
+        # Clean up audio manager
+        if self.audio_manager:
+            self.audio_manager.cleanup()
+        
         self.console.print("\n🛑 BitCrafty-Extractor stopped")
         
         # Print final session analysis summary
