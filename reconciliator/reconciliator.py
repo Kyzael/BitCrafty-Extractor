@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from copy import deepcopy
 from datetime import datetime
 import shutil
@@ -167,15 +168,27 @@ def save_json(path, data):
 
 def clean_craft_name(name):
     """Clean craft name by removing AI-generated prefixes like '1/2', '2/3', etc."""
-    import re
     # Remove patterns like "1/2 ", "2/3 ", "1/4 " at the start of craft names
     cleaned = re.sub(r'^\d+/\d+\s+', '', name.strip())
     return cleaned
 
 
 def normalize_name(name):
-    """Normalize name to BitCrafty ID format: lowercase, hyphens, no spaces."""
-    return name.lower().replace(' ', '-').replace('_', '-')
+    """Normalize name to BitCrafty ID format: lowercase, hyphens, no spaces, no apostrophes."""
+    import re
+    # Convert to lowercase first
+    normalized = name.lower()
+    # Remove apostrophes and single quotes
+    normalized = normalized.replace("'", "").replace("'", "").replace("`", "")
+    # Replace spaces and underscores with hyphens
+    normalized = normalized.replace(' ', '-').replace('_', '-')
+    # Remove any other invalid characters, keeping only letters, numbers, and hyphens
+    normalized = re.sub(r'[^a-z0-9-]', '', normalized)
+    # Remove multiple consecutive hyphens
+    normalized = re.sub(r'-+', '-', normalized)
+    # Remove leading/trailing hyphens
+    normalized = normalized.strip('-')
+    return normalized
 
 
 def extract_profession_from_crafts(crafts_export):
@@ -192,14 +205,17 @@ def extract_profession_from_crafts(crafts_export):
         profession = craft.get('requirements', {}).get('profession')
         if not profession:
             continue
+        
+        # Normalize profession name (lowercase, no apostrophes)
+        normalized_profession = normalize_name(profession)
             
         # ONLY map output items to this profession (items that this craft creates)
         # Do NOT map input materials - they belong to whatever profession creates them
         for output in craft.get('outputs', []):
             item_name = output.get('item')
             if item_name:
-                item_to_profession[item_name] = profession
-                print(f"[DEBUG] Mapped output item '{item_name}' to profession '{profession}'")
+                item_to_profession[item_name] = normalized_profession
+                print(f"[DEBUG] Mapped output item '{item_name}' to profession '{normalized_profession}'")
     
     return item_to_profession
 
@@ -209,7 +225,9 @@ def transform_to_bitcrafty_id(entity_type, name, profession=None):
     normalized_name = normalize_name(name)
     
     if entity_type in ['item', 'craft'] and profession:
-        return f"{entity_type}:{profession}:{normalized_name}"
+        # Ensure profession is also normalized (lowercase, no apostrophes)
+        normalized_profession = normalize_name(profession)
+        return f"{entity_type}:{normalized_profession}:{normalized_name}"
     elif entity_type == 'tool':
         # Tools don't use profession, extract base name (e.g., "Tier 1 Saw" -> "tool:saw")
         base_name = normalized_name.replace('tier-1-', '').replace('tier-2-', '').replace('tier-3-', '')
@@ -270,11 +288,14 @@ def normalize_extractor_data(items_export, crafts_export):
             if not name or not profession:
                 continue
             
+            # Normalize profession name (lowercase, no apostrophes)
+            normalized_profession = normalize_name(profession)
+            
             # Clean the craft name of AI-generated prefixes
             cleaned_name = clean_craft_name(name)
-            print(f"[DEBUG] Craft name: '{name}' -> '{cleaned_name}'")
+            print(f"[DEBUG] Craft name: '{name}' -> '{cleaned_name}', profession: '{profession}' -> '{normalized_profession}'")
                 
-            bitcrafty_id = transform_to_bitcrafty_id('craft', cleaned_name, profession)
+            bitcrafty_id = transform_to_bitcrafty_id('craft', cleaned_name, normalized_profession)
             
             # Transform materials to use item IDs
             materials = []
@@ -290,12 +311,14 @@ def normalize_extractor_data(items_export, crafts_export):
                     # or infer profession, but DON'T use the current craft's profession
                     inferred_profession = infer_profession_from_item_name(item_name)
                     if inferred_profession:
-                        item_id = transform_to_bitcrafty_id('item', item_name, inferred_profession)
+                        normalized_inferred = normalize_name(inferred_profession)
+                        item_id = transform_to_bitcrafty_id('item', item_name, normalized_inferred)
                     else:
                         # Fallback: use foraging for raw materials, current profession otherwise
-                        fallback_profession = get_fallback_profession_for_material(item_name, profession)
-                        item_id = transform_to_bitcrafty_id('item', item_name, fallback_profession)
-                        print(f"[WARN] Using fallback profession '{fallback_profession}' for material: {item_name}")
+                        fallback_profession = get_fallback_profession_for_material(item_name, normalized_profession)
+                        normalized_fallback = normalize_name(fallback_profession)
+                        item_id = transform_to_bitcrafty_id('item', item_name, normalized_fallback)
+                        print(f"[WARN] Using fallback profession '{normalized_fallback}' for material: {item_name}")
                     
                     materials.append({
                         'item': item_id,
@@ -323,7 +346,7 @@ def normalize_extractor_data(items_export, crafts_export):
                     })
                 else:
                     # Output should use the craft's profession
-                    item_id = transform_to_bitcrafty_id('item', item_name, profession)
+                    item_id = transform_to_bitcrafty_id('item', item_name, normalized_profession)
                     outputs.append({
                         'item': item_id,
                         'qty': output.get('qty', 1)
@@ -592,10 +615,11 @@ def extract_metadata_from_crafts(normalized_crafts):
     for craft_id, craft in normalized_crafts.items():
         requirements = craft.get('requirements', {})
         
-        # Extract profession
+        # Extract profession and normalize it
         profession = requirements.get('profession')
         if profession:
-            professions.add(profession)
+            normalized_profession = normalize_name(profession)
+            professions.add(normalized_profession)
         
         # Extract tool
         tool = requirements.get('tool')
@@ -640,10 +664,14 @@ def compare_metadata(extracted_professions, extracted_tools, extracted_buildings
     existing_professions = set()
     if professions_meta:
         for prof in professions_meta:
-            existing_professions.add(prof.get('name', '').lower())
+            prof_name = prof.get('name', '')
+            if prof_name:
+                # Use normalize_name for consistency
+                existing_professions.add(normalize_name(prof_name))
 
     for profession in extracted_professions:
-        if profession.lower() in existing_professions:
+        normalized_profession = normalize_name(profession)
+        if normalized_profession in existing_professions:
             metadata_changes['professions']['existing'].append(profession)
             print(f"[DEBUG] Profession already exists: {profession}")
         else:
@@ -1228,7 +1256,9 @@ def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requ
                 profession = requirements.get('profession')
                 building = requirements.get('building', '').lower()
                 if profession and 'station' in building:
-                    station_professions.add(profession)
+                    # Normalize profession name
+                    normalized_profession = normalize_name(profession)
+                    station_professions.add(normalized_profession)
             
             # Create missing station buildings
             for profession in station_professions:
@@ -1255,12 +1285,14 @@ def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requ
             count = len(metadata_changes['professions']['new'])
             print_info(f"Adding {Colors.colorize(str(count), Colors.YELLOW)} new professions...")
             for prof_data in new_metadata['professions']:
+                # Ensure profession name is normalized for ID creation
+                normalized_prof_name = normalize_name(prof_data['name'])
                 professions_data.append({
-                    'id': f"profession:{normalize_name(prof_data['name'])}",
-                    'name': prof_data['name'],
+                    'id': f"profession:{normalized_prof_name}",
+                    'name': prof_data['name'],  # Keep original name for display
                     'color': prof_data['color']
                 })
-                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added profession: profession:{normalize_name(prof_data['name'])}")
+                print(f"  {Colors.colorize('✓', Colors.GREEN)} Added profession: profession:{normalized_prof_name}")
                 changes_applied += 1
         
         # STEP 2: Insert/Update Items
@@ -1647,7 +1679,6 @@ def cleanup_old_backups(keep_count=10):
 
 def extract_requirements_from_crafts(normalized_crafts):
     """Extract unique requirements from normalized crafts and create requirement entries following BitCrafty convention."""
-    import re
     
     requirements_by_signature = {}
     
@@ -1660,6 +1691,9 @@ def extract_requirements_from_crafts(normalized_crafts):
         
         if not profession:
             continue
+        
+        # Normalize profession name (lowercase, no apostrophes)
+        normalized_profession = normalize_name(profession)
             
         # Extract tier information and clean names dynamically
         tool_clean = None
@@ -1682,8 +1716,8 @@ def extract_requirements_from_crafts(normalized_crafts):
                 building_tier = int(tier_match.group(1))
                 building_clean = re.sub(r'tier\s*\d+\s*', '', building_clean).strip()
         
-        # Create requirement signature (includes tiers)
-        signature = (profession, tool_clean, tool_tier, building_clean, building_tier)
+        # Create requirement signature (includes tiers and normalized profession)
+        signature = (normalized_profession, tool_clean, tool_tier, building_clean, building_tier)
         
         if signature not in requirements_by_signature:
             # Create requirement ID following BitCrafty convention with dynamic tiers
@@ -1696,8 +1730,8 @@ def extract_requirements_from_crafts(normalized_crafts):
                 # Building-only requirements
                 if building_clean == "station":
                     # Station gets special handling
-                    identifier = f"tier{building_tier}-{profession}-station"
-                    req_name = f"Tier {building_tier} {profession.title()} Station Requirements"
+                    identifier = f"tier{building_tier}-{normalized_profession}-station"
+                    req_name = f"Tier {building_tier} {normalized_profession.title()} Station Requirements"
                 else:
                     # Other buildings
                     identifier = f"tier{building_tier}-{normalize_name(building_clean)}"
@@ -1714,15 +1748,15 @@ def extract_requirements_from_crafts(normalized_crafts):
             else:
                 # Fallback to basic tools
                 identifier = "tier1-basic-tools"
-                req_name = f"Tier 1 Basic {profession.title()} Tools Requirements"
+                req_name = f"Tier 1 Basic {normalized_profession.title()} Tools Requirements"
             
-            requirement_id = f"requirement:{profession}:{identifier}"
+            requirement_id = f"requirement:{normalized_profession}:{identifier}"
             
             # Create requirement entry
             requirement_entry = {
                 'id': requirement_id,
                 'name': req_name,
-                'profession': {'name': f"profession:{profession}", 'level': 1}
+                'profession': {'name': f"profession:{normalized_profession}", 'level': 1}
             }
             
             if tool_clean:
@@ -1732,19 +1766,19 @@ def extract_requirements_from_crafts(normalized_crafts):
                 # Use proper building ID format
                 if 'station' in building_clean:
                     # Handle "carpentry station" -> "building:carpentry:station"
-                    building_id = f"building:{profession}:station"
+                    building_id = f"building:{normalized_profession}:station"
                 elif building_clean == 'kiln':
                     # Handle specific buildings like kiln
-                    building_id = f"building:{profession}:kiln"
+                    building_id = f"building:{normalized_profession}:kiln"
                 elif building_clean == 'well':
                     # Handle specific buildings like well
-                    building_id = f"building:{profession}:well"
+                    building_id = f"building:{normalized_profession}:well"
                 elif building_clean in ['loom', 'anvil', 'forge']:
                     # Handle other specific buildings
-                    building_id = f"building:{profession}:{building_clean}"
+                    building_id = f"building:{normalized_profession}:{building_clean}"
                 else:
                     # Fallback for unknown buildings
-                    building_id = f"building:{profession}:{normalize_name(building_clean)}"
+                    building_id = f"building:{normalized_profession}:{normalize_name(building_clean)}"
                     
                 requirement_entry['building'] = {'name': building_id, 'level': building_tier}
             
@@ -1814,7 +1848,6 @@ def compare_requirements(extracted_requirements, existing_requirements):
 
 def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
     """Update normalized crafts to reference requirement IDs instead of inline requirements."""
-    import re
     
     updated_crafts = {}
     
@@ -1827,6 +1860,9 @@ def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
         building = requirements.get('building')
         
         if profession:
+            # Normalize profession name (same as in extract_requirements_from_crafts)
+            normalized_profession = normalize_name(profession)
+            
             # Extract tier information and clean names (same logic as extract_requirements_from_crafts)
             tool_clean = None
             tool_tier = 1
@@ -1849,7 +1885,7 @@ def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
                     building_clean = re.sub(r'tier\s*\d+\s*', '', building_clean).strip()
             
             # Create signature to match with extracted requirements
-            signature = (profession, tool_clean, tool_tier, building_clean, building_tier)
+            signature = (normalized_profession, tool_clean, tool_tier, building_clean, building_tier)
             
             # Find the requirement ID for this signature
             for sig, req_data in extracted_requirements.items():
@@ -1943,9 +1979,12 @@ class DataIntegrityValidator:
         for prof in self.professions:
             prof_id = prof.get('id', prof.get('name', ''))
             if ':' in prof_id:
-                self.profession_names.add(prof_id.split(':')[1])
+                profession_name = prof_id.split(':')[1]
+                self.profession_names.add(profession_name)
             elif prof_id:
-                self.profession_names.add(prof_id.lower())
+                # Use normalize_name for consistency
+                normalized_prof = normalize_name(prof_id)
+                self.profession_names.add(normalized_prof)
         
         self.tool_ids = set(tool.get('id') for tool in self.tools if tool.get('id'))
         self.building_ids = set(building.get('id') for building in self.buildings if building.get('id'))
