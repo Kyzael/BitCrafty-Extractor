@@ -71,6 +71,9 @@ class BitCraftyExtractor:
         self.analysis_log_file = self.analysis_log_folder / f"analysis_session_{session_timestamp}.json"
         self.analysis_log_entries = []  # Store log entries in memory before writing
         
+        # Error log file setup
+        self.error_log_file = Path("error.log")
+        
         # Create README for analysis logs
         self._create_analysis_log_readme()
         
@@ -174,12 +177,12 @@ class BitCraftyExtractor:
             crafts_new = stats.get('crafts_found_new', 0)
             crafts_duplicates = stats.get('crafts_found_duplicates', 0)
             
-            stats_text.append(f"🍎 Items: {items_total}", style="green")
+            stats_text.append(f"🍎 New Items: {items_total}", style="green")
             if items_new < items_total:
                 stats_text.append(f" ({items_new} new)", style="cyan")
             stats_text.append("\n")
             
-            stats_text.append(f"🔨 Crafts: {crafts_total}", style="yellow")
+            stats_text.append(f"🔨 New Crafts: {crafts_total}", style="yellow")
             if crafts_new < crafts_total:
                 stats_text.append(f" ({crafts_new} new)", style="cyan")
             stats_text.append("\n")
@@ -192,11 +195,6 @@ class BitCraftyExtractor:
             stats_text.append(f"🍎 Items: {len(self.session_items_found)}\n", style="green")
             stats_text.append(f"🔨 Crafts: {len(self.session_crafts_found)}\n", style="yellow")
         
-        # Export statistics
-        export_stats = self.export_manager.get_stats()
-        stats_text.append(f"💾 Exported:\n", style="bold cyan")
-        stats_text.append(f"  Items: {export_stats['total_items']}\n", style="white")
-        stats_text.append(f"  Crafts: {export_stats['total_crafts']}\n", style="white")
         stats_text.append(f"📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
         stats_text.append(f"💰 Cost: ${self.total_cost:.3f}", style="red")
         
@@ -356,14 +354,38 @@ class BitCraftyExtractor:
                 results_text.append(f"⚠️ Low confidence rejected: {items_rejected} items, {crafts_rejected} crafts\n", style="red")
             
             # Show recent item/craft names if available
-            session_stats = self.export_manager.get_session_stats()
-            if session_stats.get('session_new_item_names'):
-                recent_items = session_stats['session_new_item_names'][-3:]  # Last 3 items
-                results_text.append(f"🆕 Recent items: {', '.join(recent_items)}\n", style="green")
-            
-            if session_stats.get('session_new_craft_names'):
-                recent_crafts = session_stats['session_new_craft_names'][-3:]  # Last 3 crafts
-                results_text.append(f"🆕 Recent crafts: {', '.join(recent_crafts)}\n", style="yellow")
+            try:
+                session_stats = self.export_manager.get_session_stats()
+                
+                if isinstance(session_stats, dict) and session_stats.get('session_new_item_names'):
+                    try:
+                        item_names = session_stats['session_new_item_names']
+                        
+                        if isinstance(item_names, list) and item_names:
+                            recent_items = item_names[-3:]  # Last 3 items
+                            
+                            # Ensure all items are strings and not empty
+                            recent_items = [str(item) for item in recent_items if item]
+                            if recent_items:
+                                results_text.append(f"🆕 Recent items: {', '.join(recent_items)}\n", style="green")
+                    except Exception as e:
+                        self.add_debug_message(f"⚠️ Error displaying recent items: {e}")
+                
+                if isinstance(session_stats, dict) and session_stats.get('session_new_craft_names'):
+                    try:
+                        craft_names = session_stats['session_new_craft_names']
+                        
+                        if isinstance(craft_names, list) and craft_names:
+                            recent_crafts = craft_names[-3:]  # Last 3 crafts
+                            
+                            # Ensure all crafts are strings and not empty
+                            recent_crafts = [str(craft) for craft in recent_crafts if craft]
+                            if recent_crafts:
+                                results_text.append(f"🆕 Recent crafts: {', '.join(recent_crafts)}\n", style="yellow")
+                    except Exception as e:
+                        self.add_debug_message(f"⚠️ Error displaying recent crafts: {e}")
+            except Exception as e:
+                self.add_debug_message(f"⚠️ Error getting session stats: {e}")
                 
         elif self.last_analysis:
             # Fallback for older analysis format without enhanced stats
@@ -373,7 +395,6 @@ class BitCraftyExtractor:
             results_text.append(f"📦 Items: {len(items)} | 🔨 Crafts: {len(crafts)}\n", style="white")
             confidence = self.last_analysis.get('total_confidence', 0)
             results_text.append(f"📈 Confidence: {confidence:.1f}%\n", style="white")
-            results_text.append("💡 Legacy analysis format", style="dim")
         
         return results_text
         
@@ -404,6 +425,27 @@ class BitCraftyExtractor:
         # Keep only recent messages
         if len(self.debug_messages) > self.max_debug_messages:
             self.debug_messages = self.debug_messages[-self.max_debug_messages:]
+    
+    def log_error_to_file(self, error_message: str, exception: Exception = None, context: dict = None):
+        """Log errors to error.log file for debugging."""
+        try:
+            timestamp = datetime.now().isoformat()
+            log_entry = {
+                "timestamp": timestamp,
+                "error_message": error_message,
+                "exception_type": type(exception).__name__ if exception else None,
+                "exception_details": str(exception) if exception else None,
+                "context": context or {}
+            }
+            
+            # Append to error log file
+            with open(self.error_log_file, 'a', encoding='utf-8') as f:
+                f.write(f"{json.dumps(log_entry, ensure_ascii=False)}\n")
+                
+        except Exception as log_error:
+            # Fallback if error logging fails
+            if self.logger:
+                self.logger.error("Failed to write to error log", error=str(log_error))
         
     def update_display(self):
         """Update the entire display."""
@@ -583,6 +625,9 @@ class BitCraftyExtractor:
                 # Clear queue and remove screenshot files
                 await self._clear_queue_and_cleanup()
                 self.add_debug_message("✅ Analysis completed - queue cleared")
+                # Force immediate display update to show cleared queue
+                if self.layout:
+                    self.update_display()
             else:
                 self.add_debug_message("❌ Analysis failed - queue retained")
         except Exception as e:
@@ -662,14 +707,47 @@ class BitCraftyExtractor:
             if result.success:
                 self.last_analysis = result.data
                 self.add_debug_message(f"✅ Analysis complete - cost: ${result.cost_estimate:.4f}")
-                self._show_analysis_results(result.data, result)
+                
+                # Log analysis result data type for debugging
+                self.log_error_to_file(
+                    "Analysis result data inspection",
+                    context={
+                        "data_type": type(result.data).__name__,
+                        "data_content": str(result.data)[:500] if result.data else "None",
+                        "result_success": result.success,
+                        "provider": str(result.provider) if hasattr(result, 'provider') else "Unknown"
+                    }
+                )
+                
+                # Process and validate the analysis results
+                processing_success = self._show_analysis_results(result.data, result)
+                if not processing_success:
+                    self.add_debug_message("❌ Analysis data processing failed")
+                    return False
+                    
                 return True
             else:
                 self.add_debug_message(f"❌ Analysis failed: {result.error_message}")
+                self.log_error_to_file(
+                    "AI Analysis failed",
+                    context={
+                        "error_message": result.error_message,
+                        "result_success": result.success,
+                        "provider": str(result.provider) if hasattr(result, 'provider') else "Unknown"
+                    }
+                )
                 return False
                 
         except Exception as e:
             self.add_debug_message(f"❌ Analysis crashed: {str(e)}")
+            self.log_error_to_file(
+                "Analysis crashed with exception",
+                exception=e,
+                context={
+                    "queue_size": len(self.screenshot_queue),
+                    "analysis_method": "analyze_queue"
+                }
+            )
             return False
             
     def clear_queue(self):
@@ -784,88 +862,205 @@ class BitCraftyExtractor:
             except Exception as e:
                 pass
                 
-    def _show_analysis_results(self, data: dict, result):
-        """Log analysis results to disk and update session tracking."""
-        # Validate that data is a proper dictionary
-        if not isinstance(data, dict):
-            self.add_debug_message(f"❌ Invalid analysis data format: {type(data).__name__}")
+    def _show_analysis_results(self, data: dict, result) -> bool:
+        """Log analysis results to disk and update session tracking.
+        
+        Returns:
+            bool: True if processing was successful, False if data validation failed
+        """
+        try:
+            # Validate that data is a proper dictionary
+            if not isinstance(data, dict):
+                error_msg = f"Invalid analysis data format: {type(data).__name__}"
+                self.add_debug_message(f"❌ {error_msg}")
+                self.log_error_to_file(
+                    error_msg,
+                    context={
+                        "data_type": type(data).__name__,
+                        "data_content": str(data)[:200] if data else "None",
+                        "expected_type": "dict"
+                    }
+                )
+                return False
+            
+            # Additional validation for required fields
+            if 'raw_text' in data and len(data) == 1:
+                error_msg = "Analysis returned raw text instead of structured data"
+                self.add_debug_message(f"❌ {error_msg}")
+                self.log_error_to_file(
+                    error_msg,
+                    context={
+                        "raw_text": data.get('raw_text', '')[:200],
+                        "data_keys": list(data.keys())
+                    }
+                )
+                return False
+            
+            # Get screenshot timestamps for export metadata
+            screenshot_times = []
+            for image_data in self.screenshot_queue:
+                if hasattr(image_data, 'timestamp'):
+                    screenshot_times.append(image_data.timestamp)
+            
+            # Use earliest screenshot time for extracted_at timestamp
+            extracted_at = min(screenshot_times) if screenshot_times else datetime.now()
+            
+            # Process and export new items/crafts with proper timestamp
+            export_stats = self.export_manager.process_extraction_results(data, extracted_at=extracted_at)
+            
+            # Validate export_stats is a dictionary
+            if not isinstance(export_stats, dict):
+                error_msg = f"Export manager returned invalid data type: {type(export_stats).__name__}"
+                self.add_debug_message(f"❌ {error_msg}")
+                self.log_error_to_file(
+                    error_msg,
+                    context={
+                        "export_stats_type": type(export_stats).__name__,
+                        "export_stats_content": str(export_stats)[:200] if export_stats else "None",
+                        "expected_type": "dict"
+                    }
+                )
+                # Use empty dict as fallback
+                export_stats = {
+                    'items_found_new': 0,
+                    'items_found_duplicates': 0,
+                    'crafts_found_new': 0,
+                    'crafts_found_duplicates': 0,
+                    'new_items_added': 0,
+                    'new_crafts_added': 0,
+                    'items_rejected': 0,
+                    'crafts_rejected': 0
+                }
+            
+            self.last_export_stats = export_stats
+            
+            # Update session tracking
+            items = data.get('items_found', [])
+            crafts = data.get('crafts_found', [])
+            screenshots_processed = data.get('screenshots_processed', len(self.screenshot_queue))
+            
+            # Validate that items and crafts are lists
+            if not isinstance(items, list):
+                self.add_debug_message(f"⚠️ Warning: items_found is not a list, got {type(items).__name__}")
+                items = []
+            if not isinstance(crafts, list):
+                self.add_debug_message(f"⚠️ Warning: crafts_found is not a list, got {type(crafts).__name__}")
+                crafts = []
+            
+            # Add to session tracking (only append valid items/crafts)
+            valid_items = []
+            for i, item in enumerate(items):
+                if isinstance(item, dict):
+                    valid_items.append(item)
+                else:
+                    self.add_debug_message(f"⚠️ Warning: item {i} is not a dict: {type(item)} = {str(item)[:50]}")
+            
+            valid_crafts = []
+            for i, craft in enumerate(crafts):
+                if isinstance(craft, dict):
+                    valid_crafts.append(craft)
+                else:
+                    self.add_debug_message(f"⚠️ Warning: craft {i} is not a dict: {type(craft)} = {str(craft)[:50]}")
+            
+            if len(valid_items) != len(items):
+                self.add_debug_message(f"⚠️ Warning: {len(items) - len(valid_items)} non-dict items filtered out")
+            if len(valid_crafts) != len(crafts):
+                self.add_debug_message(f"⚠️ Warning: {len(crafts) - len(valid_crafts)} non-dict crafts filtered out")
+            
+            self.session_items_found.extend(valid_items)
+            self.session_crafts_found.extend(valid_crafts)
+            self.total_screenshots_analyzed += screenshots_processed
+            self.total_cost += result.cost_estimate
+            
+            # Store analysis for queue panel display
+            self.last_analysis = data
+            
+            # Log analysis to disk after updating session totals
+            self._log_analysis_to_disk(data, result, export_stats, screenshot_times)
+            
+            # Show brief summary in debug messages with enhanced duplicate tracking
+            items_count = len(valid_items)
+            crafts_count = len(valid_crafts)
+            
+            # Safe access to export_stats with proper fallbacks
+            try:
+                items_new = export_stats.get('items_found_new', 0)
+                if items_new == 0:
+                    items_new = export_stats.get('new_items_added', 0)
+                    
+                crafts_new = export_stats.get('crafts_found_new', 0)
+                if crafts_new == 0:
+                    crafts_new = export_stats.get('new_crafts_added', 0)
+                    
+                items_duplicates = export_stats.get('items_found_duplicates', 0)
+                crafts_duplicates = export_stats.get('crafts_found_duplicates', 0)
+            except Exception as e:
+                self.add_debug_message(f"❌ Error accessing export_stats: {e}")
+                items_new = 0
+                crafts_new = 0
+                items_duplicates = 0
+                crafts_duplicates = 0
+            
+            # Enhanced summary message
+            summary_parts = []
+            if items_count > 0:
+                if items_new < items_count:
+                    summary_parts.append(f"{items_count} items ({items_new} new)")
+                else:
+                    summary_parts.append(f"{items_count} items")
+            
+            if crafts_count > 0:
+                if crafts_new < crafts_count:
+                    summary_parts.append(f"{crafts_count} crafts ({crafts_new} new)")
+                else:
+                    summary_parts.append(f"{crafts_count} crafts")
+            
+            summary = ", ".join(summary_parts) if summary_parts else "no data"
+            self.add_debug_message(f"✅ Analysis complete: {summary} (${result.cost_estimate:.3f})")
+            
+            # Show duplicate information if any found
+            total_duplicates = items_duplicates + crafts_duplicates
+            if total_duplicates > 0:
+                self.add_debug_message(f"🔄 Duplicates skipped: {total_duplicates} ({items_duplicates} items, {crafts_duplicates} crafts)")
+            
+            # Show validation statistics if any items were rejected
+            try:
+                items_rejected = export_stats.get('items_rejected', 0)
+                crafts_rejected = export_stats.get('crafts_rejected', 0)
+                if items_rejected > 0 or crafts_rejected > 0:
+                    self.add_debug_message(f"⚠️ Validation: {items_rejected} items, {crafts_rejected} crafts rejected (confidence < {export_stats.get('min_confidence_threshold', 0.7)})")
+            except Exception as e:
+                self.add_debug_message(f"❌ Error accessing validation stats: {e}")
+            
+            try:
+                if export_stats['new_items_added'] > 0 or export_stats['new_crafts_added'] > 0:
+                    self.add_debug_message(f"📤 Exported: {export_stats['new_items_added']} new items, {export_stats['new_crafts_added']} new crafts")
+                else:
+                    self.add_debug_message("ℹ️ No new data exported (already in database)")
+            except Exception as e:
+                self.add_debug_message(f"❌ Error accessing export counts: {e}")
+            
+            # Show where detailed results are logged
+            self.add_debug_message(f"📄 Full results: /analysis_logs/{self.analysis_log_file.name}")
+            
+            # Return success
+            return True
+            
+        except Exception as e:
+            error_msg = f"Exception in _show_analysis_results: {str(e)}"
+            self.add_debug_message(f"❌ {error_msg}")
+            self.log_error_to_file(
+                error_msg,
+                exception=e,
+                context={
+                    "data_type": type(data).__name__ if data else "None",
+                    "data_content": str(data)[:200] if data else "None",
+                    "method": "_show_analysis_results"
+                }
+            )
             if self.logger:
-                self.logger.error("Invalid analysis data", data_type=type(data).__name__, raw_data=str(data)[:200])
-            return
-        
-        # Get screenshot timestamps for export metadata
-        screenshot_times = []
-        for image_data in self.screenshot_queue:
-            if hasattr(image_data, 'timestamp'):
-                screenshot_times.append(image_data.timestamp)
-        
-        # Use earliest screenshot time for extracted_at timestamp
-        extracted_at = min(screenshot_times) if screenshot_times else datetime.now()
-            
-        # Process and export new items/crafts with proper timestamp
-        export_stats = self.export_manager.process_extraction_results(data, extracted_at=extracted_at)
-        self.last_export_stats = export_stats
-            
-        # Update session tracking
-        items = data.get('items_found', [])
-        crafts = data.get('crafts_found', [])
-        screenshots_processed = data.get('screenshots_processed', len(self.screenshot_queue))
-        
-        # Add to session tracking
-        self.session_items_found.extend(items)
-        self.session_crafts_found.extend(crafts)
-        self.total_screenshots_analyzed += screenshots_processed
-        self.total_cost += result.cost_estimate
-        
-        # Store analysis for queue panel display
-        self.last_analysis = data
-        
-        # Log analysis to disk after updating session totals
-        self._log_analysis_to_disk(data, result, export_stats, screenshot_times)
-        
-        # Show brief summary in debug messages with enhanced duplicate tracking
-        items_count = len(items)
-        crafts_count = len(crafts)
-        items_new = export_stats.get('items_found_new', export_stats.get('new_items_added', 0))
-        crafts_new = export_stats.get('crafts_found_new', export_stats.get('new_crafts_added', 0))
-        items_duplicates = export_stats.get('items_found_duplicates', 0)
-        crafts_duplicates = export_stats.get('crafts_found_duplicates', 0)
-        
-        # Enhanced summary message
-        summary_parts = []
-        if items_count > 0:
-            if items_new < items_count:
-                summary_parts.append(f"{items_count} items ({items_new} new)")
-            else:
-                summary_parts.append(f"{items_count} items")
-        
-        if crafts_count > 0:
-            if crafts_new < crafts_count:
-                summary_parts.append(f"{crafts_count} crafts ({crafts_new} new)")
-            else:
-                summary_parts.append(f"{crafts_count} crafts")
-        
-        summary = ", ".join(summary_parts) if summary_parts else "no data"
-        self.add_debug_message(f"✅ Analysis complete: {summary} (${result.cost_estimate:.3f})")
-        
-        # Show duplicate information if any found
-        total_duplicates = items_duplicates + crafts_duplicates
-        if total_duplicates > 0:
-            self.add_debug_message(f"🔄 Duplicates skipped: {total_duplicates} ({items_duplicates} items, {crafts_duplicates} crafts)")
-        
-        # Show validation statistics if any items were rejected
-        items_rejected = export_stats.get('items_rejected', 0)
-        crafts_rejected = export_stats.get('crafts_rejected', 0)
-        if items_rejected > 0 or crafts_rejected > 0:
-            self.add_debug_message(f"⚠️ Validation: {items_rejected} items, {crafts_rejected} crafts rejected (confidence < {export_stats.get('min_confidence_threshold', 0.7)})")
-        
-        if export_stats['new_items_added'] > 0 or export_stats['new_crafts_added'] > 0:
-            self.add_debug_message(f"📤 Exported: {export_stats['new_items_added']} new items, {export_stats['new_crafts_added']} new crafts")
-        else:
-            self.add_debug_message("ℹ️ No new data exported (already in database)")
-        
-        # Show where detailed results are logged
-        self.add_debug_message(f"📄 Full results: /analysis_logs/{self.analysis_log_file.name}")
+                self.logger.error("Exception in _show_analysis_results", error=str(e))
+            return False
         
     def _log_analysis_to_disk(self, data: dict, result, export_stats: dict, screenshot_times: List[datetime]):
         """Log analysis results to disk instead of displaying in console."""
@@ -1110,22 +1305,32 @@ class BitCraftyExtractor:
         
         # Show names in a fixed-height format to prevent UI scrolling issues
         if session_stats['session_new_items_count'] > 0:
-            item_names = session_stats['session_new_item_names']
-            # Limit to first 3 items to maintain consistent height
-            display_items = item_names[:3]
-            if len(item_names) > 3:
-                summary_text.append(f"  Items: {', '.join(display_items)}... (+{len(item_names)-3} more)\n", style="dim")
-            else:
-                summary_text.append(f"  Items: {', '.join(display_items)}\n", style="dim")
+            try:
+                item_names = session_stats['session_new_item_names']
+                # Ensure all items are strings and filter out empty ones
+                item_names = [str(name) for name in item_names if name]
+                # Limit to first 3 items to maintain consistent height
+                display_items = item_names[:3]
+                if len(item_names) > 3:
+                    summary_text.append(f"  Items: {', '.join(display_items)}... (+{len(item_names)-3} more)\n", style="dim")
+                else:
+                    summary_text.append(f"  Items: {', '.join(display_items)}\n", style="dim")
+            except Exception as e:
+                summary_text.append(f"  Items: Error displaying names ({e})\n", style="dim")
         
         if session_stats['session_new_crafts_count'] > 0:
-            craft_names = session_stats['session_new_craft_names']
-            # Limit to first 3 crafts to maintain consistent height
-            display_crafts = craft_names[:3]
-            if len(craft_names) > 3:
-                summary_text.append(f"  Crafts: {', '.join(display_crafts)}... (+{len(craft_names)-3} more)\n", style="dim")
-            else:
-                summary_text.append(f"  Crafts: {', '.join(display_crafts)}\n", style="dim")
+            try:
+                craft_names = session_stats['session_new_craft_names']
+                # Ensure all crafts are strings and filter out empty ones
+                craft_names = [str(name) for name in craft_names if name]
+                # Limit to first 3 crafts to maintain consistent height
+                display_crafts = craft_names[:3]
+                if len(craft_names) > 3:
+                    summary_text.append(f"  Crafts: {', '.join(display_crafts)}... (+{len(craft_names)-3} more)\n", style="dim")
+                else:
+                    summary_text.append(f"  Crafts: {', '.join(display_crafts)}\n", style="dim")
+            except Exception as e:
+                summary_text.append(f"  Crafts: Error displaying names ({e})\n", style="dim")
         
         # Always show this line to maintain consistent height
         if session_stats['session_new_items_count'] == 0 and session_stats['session_new_crafts_count'] == 0:

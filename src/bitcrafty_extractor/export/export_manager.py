@@ -2,6 +2,7 @@
 
 import json
 import hashlib
+import re
 from pathlib import Path
 from typing import Dict, List, Any, Set
 from datetime import datetime
@@ -101,7 +102,14 @@ class ExportManager:
         new_name = new_item.get('name', '').lower().strip()
         similar_items = []
         
-        for existing_item in self.existing_items:
+        for existing_item in self.existing_items.values():  # Use .values() to get the actual items
+            # Handle non-dictionary items safely
+            if not isinstance(existing_item, dict):
+                self.logger.warning("Non-dict existing item in _find_similar_items", 
+                                  item_type=type(existing_item).__name__, 
+                                  item_value=str(existing_item)[:100])
+                continue
+                
             existing_name = existing_item.get('name', '').lower().strip()
             if new_name == existing_name:
                 similar_items.append(existing_item)
@@ -140,6 +148,14 @@ class ExportManager:
         Uses primarily the item name for duplicate detection, as descriptions
         may have minor variations while referring to the same item.
         """
+        # Handle non-dictionary items safely
+        if not isinstance(item, dict):
+            self.logger.warning("_generate_item_hash called with non-dict", 
+                              item_type=type(item).__name__, 
+                              item_value=str(item)[:100])
+            # Generate hash from string representation
+            return hashlib.md5(str(item).encode('utf-8')).hexdigest()[:12]
+        
         # Use primarily name for hashing (core identifying feature)
         name = item.get('name', '').lower().strip()
         
@@ -157,6 +173,14 @@ class ExportManager:
     
     def _generate_craft_hash(self, craft: Dict[str, Any]) -> str:
         """Generate a unique hash for a craft based on key properties."""
+        # Handle non-dictionary crafts safely
+        if not isinstance(craft, dict):
+            self.logger.warning("_generate_craft_hash called with non-dict", 
+                              craft_type=type(craft).__name__, 
+                              craft_value=str(craft)[:100])
+            # Generate hash from string representation
+            return hashlib.md5(str(craft).encode('utf-8')).hexdigest()[:12]
+        
         # Use name, materials, and outputs for hashing
         name = craft.get('name', '').lower().strip()
         
@@ -166,10 +190,10 @@ class ExportManager:
         
         # Create sorted string representation for consistent hashing
         materials_str = "|".join(sorted([
-            f"{m.get('item', '')}:{m.get('qty', 1)}" for m in materials
+            f"{m.get('item', '') if isinstance(m, dict) else str(m)}:{m.get('qty', 1) if isinstance(m, dict) else 1}" for m in materials
         ]))
         outputs_str = "|".join(sorted([
-            f"{o.get('item', '')}:{o.get('qty', 1)}" for o in outputs
+            f"{o.get('item', '') if isinstance(o, dict) else str(o)}:{o.get('qty', 1) if isinstance(o, dict) else 1}" for o in outputs
         ]))
         
         hash_string = f"{name}|{materials_str}|{outputs_str}"
@@ -188,6 +212,13 @@ class ExportManager:
         duplicates_count = 0
         
         for item in items:
+            # Skip non-dictionary items safely
+            if not isinstance(item, dict):
+                self.logger.warning("Non-dict item in duplicate analysis", 
+                                  item_type=type(item).__name__, 
+                                  item_value=str(item)[:100])
+                continue
+                
             item_hash = self._generate_item_hash(item)
             
             if item_hash in self.existing_items:
@@ -226,6 +257,13 @@ class ExportManager:
         duplicates_count = 0
         
         for craft in crafts:
+            # Skip non-dictionary crafts safely
+            if not isinstance(craft, dict):
+                self.logger.warning("Non-dict craft in duplicate analysis", 
+                                  craft_type=type(craft).__name__, 
+                                  craft_value=str(craft)[:100])
+                continue
+                
             # Clean craft name first (same as in processing)
             craft_copy = craft.copy()
             craft_copy['name'] = self._clean_craft_name(craft.get('name', ''))
@@ -265,6 +303,16 @@ class ExportManager:
         Returns:
             Dict with validation results
         """
+        # Handle non-dictionary items
+        if not isinstance(item, dict):
+            self.logger.warning("_validate_item called with non-dict", 
+                              item_type=type(item).__name__, 
+                              item_value=str(item)[:100])
+            return {
+                'is_valid': False,
+                'reasons': [f"Item is not a dictionary: {type(item).__name__}"]
+            }
+        
         name = item.get('name', '').strip()
         confidence = item.get('confidence', 0)
         
@@ -302,6 +350,16 @@ class ExportManager:
         Returns:
             Dict with validation results
         """
+        # Handle non-dictionary crafts
+        if not isinstance(craft, dict):
+            self.logger.warning("_validate_craft called with non-dict",
+                              craft_type=type(craft).__name__,
+                              craft_value=str(craft)[:100])
+            return {
+                'is_valid': False,
+                'reasons': [f"Craft is not a dictionary: {type(craft).__name__}"]
+            }
+        
         name = craft.get('name', '').strip()
         confidence = craft.get('confidence', 0)
         requirements = craft.get('requirements', {})
@@ -378,6 +436,47 @@ class ExportManager:
         items = data.get('items_found', [])
         crafts = data.get('crafts_found', [])
         
+        # Debug and validate items/crafts data types
+        self.logger.debug("Processing extraction results", 
+                         items_type=type(items).__name__, 
+                         crafts_type=type(crafts).__name__,
+                         items_count=len(items) if hasattr(items, '__len__') else 'no len',
+                         crafts_count=len(crafts) if hasattr(crafts, '__len__') else 'no len')
+        
+        # Filter out any non-dictionary items/crafts and log them
+        valid_items = []
+        invalid_items = []
+        for i, item in enumerate(items):
+            if isinstance(item, dict):
+                valid_items.append(item)
+            else:
+                invalid_items.append((i, type(item).__name__, str(item)[:100]))
+                self.logger.warning("Invalid item type found", 
+                                  index=i, 
+                                  item_type=type(item).__name__, 
+                                  item_value=str(item)[:100])
+        
+        valid_crafts = []
+        invalid_crafts = []
+        for i, craft in enumerate(crafts):
+            if isinstance(craft, dict):
+                valid_crafts.append(craft)
+            else:
+                invalid_crafts.append((i, type(craft).__name__, str(craft)[:100]))
+                self.logger.warning("Invalid craft type found",
+                                  index=i,
+                                  craft_type=type(craft).__name__,
+                                  craft_value=str(craft)[:100])
+        
+        # Use filtered lists for processing
+        items = valid_items
+        crafts = valid_crafts
+        
+        if invalid_items:
+            self.logger.warning("Filtered out invalid items", count=len(invalid_items), details=invalid_items)
+        if invalid_crafts:
+            self.logger.warning("Filtered out invalid crafts", count=len(invalid_crafts), details=invalid_crafts)
+        
         # Analyze duplicates before processing
         items_duplicate_analysis = self._analyze_items_for_duplicates(items)
         crafts_duplicate_analysis = self._analyze_crafts_for_duplicates(crafts)
@@ -386,9 +485,32 @@ class ExportManager:
         new_items = self._process_items(items, extracted_at)
         new_crafts = self._process_crafts(crafts, extracted_at)
         
-        # Calculate validation statistics
-        items_rejected = len(items) - len([i for i in items if self._validate_item(i)['is_valid']])
-        crafts_rejected = len(crafts) - len([c for c in crafts if self._validate_craft(c)['is_valid']])
+        # Calculate validation statistics safely - items and crafts now only contain dicts
+        valid_items_count = 0
+        valid_crafts_count = 0
+        
+        # Count valid items
+        for item in items:
+            try:
+                if isinstance(item, dict) and self._validate_item(item)['is_valid']:
+                    valid_items_count += 1
+            except Exception as e:
+                self.logger.warning("Error validating item during stats calculation", 
+                                  item_type=type(item).__name__, 
+                                  error=str(e))
+        
+        # Count valid crafts
+        for craft in crafts:
+            try:
+                if isinstance(craft, dict) and self._validate_craft(craft)['is_valid']:
+                    valid_crafts_count += 1
+            except Exception as e:
+                self.logger.warning("Error validating craft during stats calculation", 
+                                  craft_type=type(craft).__name__, 
+                                  error=str(e))
+        
+        items_rejected = len(items) - valid_items_count
+        crafts_rejected = len(crafts) - valid_crafts_count
         
         # Save if we have new data
         if new_items or new_crafts:
@@ -412,7 +534,10 @@ class ExportManager:
             'crafts_found_new': len(new_crafts),
             'crafts_found_duplicates': crafts_duplicate_analysis['duplicates_count'],
             'duplicate_items_details': items_duplicate_analysis['duplicates'],
-            'duplicate_crafts_details': crafts_duplicate_analysis['duplicates']
+            'duplicate_crafts_details': crafts_duplicate_analysis['duplicates'],
+            # Include info about invalid data
+            'invalid_items_filtered': len(invalid_items),
+            'invalid_crafts_filtered': len(invalid_crafts)
         }
         
         self.logger.info("Processed extraction results", **stats)
@@ -563,6 +688,13 @@ class ExportManager:
         similar_crafts = []
         
         for existing_craft in self.existing_crafts.values():
+            # Handle non-dictionary crafts safely
+            if not isinstance(existing_craft, dict):
+                self.logger.warning("Non-dict existing craft in _find_similar_crafts", 
+                                  craft_type=type(existing_craft).__name__, 
+                                  craft_value=str(existing_craft)[:100])
+                continue
+                
             existing_name = existing_craft.get('name', '').lower().strip()
             if new_name == existing_name:
                 similar_crafts.append(existing_craft)
@@ -600,7 +732,6 @@ class ExportManager:
         Returns:
             Cleaned craft name
         """
-        import re
         # Remove patterns like "1/2 ", "2/3 ", "1/4 " etc. at the start
         cleaned = re.sub(r'^\d+/\d+\s+', '', name.strip())
         return cleaned
@@ -751,13 +882,37 @@ class ExportManager:
     
     def get_session_stats(self) -> Dict[str, Any]:
         """Get session-specific statistics for new discoveries."""
+        # Safely extract item names with type checking
+        item_names = []
+        for item in self.session_new_items:
+            if isinstance(item, dict):
+                item_names.append(item.get('name', 'Unknown'))
+            else:
+                # Handle unexpected data types
+                self.logger.warning("Unexpected item type in session", 
+                                  item_type=type(item).__name__, 
+                                  item_value=str(item)[:100])
+                item_names.append(str(item) if item else 'Unknown')
+        
+        # Safely extract craft names with type checking  
+        craft_names = []
+        for craft in self.session_new_crafts:
+            if isinstance(craft, dict):
+                craft_names.append(craft.get('name', 'Unknown'))
+            else:
+                # Handle unexpected data types
+                self.logger.warning("Unexpected craft type in session",
+                                  craft_type=type(craft).__name__,
+                                  craft_value=str(craft)[:100])
+                craft_names.append(str(craft) if craft else 'Unknown')
+        
         return {
             'session_new_items': self.session_new_items,
             'session_new_crafts': self.session_new_crafts,
             'session_new_items_count': len(self.session_new_items),
             'session_new_crafts_count': len(self.session_new_crafts),
-            'session_new_item_names': [item.get('name', 'Unknown') for item in self.session_new_items],
-            'session_new_craft_names': [craft.get('name', 'Unknown') for craft in self.session_new_crafts]
+            'session_new_item_names': item_names,
+            'session_new_craft_names': craft_names
         }
     
     def reset_session_tracking(self):
