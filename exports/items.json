@@ -1,0 +1,341 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "source": "bitcrafty-extractor",
+    "last_updated": "2025-06-30T21:53:21.134143",
+    "total_items": 33
+  },
+  "items": [
+    {
+      "name": "Rough Spool of Thread",
+      "description": "A spool of thread made from fibers. Can be used to make cloth strips.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T00:17:52.307773",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "a35913a3624f"
+    },
+    {
+      "name": "Rough Stripped Wood",
+      "description": "Strips of wood taken from a log from a tree. A skilled carpenter could form these into a plank to be used in construction or other crafting recipes.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T01:42:36.823386",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c37b9e204d12"
+    },
+    {
+      "name": "Rough Plank",
+      "description": "A plank of wood crafted from stripped wood",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T00:58:36.546561",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "5eba152a834c",
+      "last_seen": "2025-06-29T01:43:06.091992"
+    },
+    {
+      "name": "Basic Mushroom",
+      "description": "A plump mushroom that looks edible and quite hearty. Probably better cooked.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T01:09:06.896229",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0c69b27dfe4b"
+    },
+    {
+      "name": "Plain Mushroom Skewer",
+      "description": "Mushrooms roasted on a fire skewered on a stick",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T01:09:06.896229",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "7285c6f9c006"
+    },
+    {
+      "name": "Basic Clay Lump",
+      "description": "A lump of clay. Could be used to build or craft something, or even pave the ground.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T01:57:19.442302",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "b882c3dd8bcd"
+    },
+    {
+      "name": "Tree Sap",
+      "description": "A small amount of sticky tree resin",
+      "rarity": "common",
+      "tier": null,
+      "confidence": 0.98,
+      "extracted_at": "2025-06-29T01:42:10.649801",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "155aecfe1679"
+    },
+    {
+      "name": "Pitch",
+      "description": "A sticky material made by processing tree sap in a kiln",
+      "rarity": "common",
+      "tier": null,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T01:42:10.649801",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "b662fedcec01"
+    },
+    {
+      "name": "Basic Berry",
+      "description": "A juicy edible berry. Probably better cooked.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T07:52:41.665486",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "41751d76886f"
+    },
+    {
+      "name": "Basic Fertilizer",
+      "description": "A basic fertilizer made at a farming station.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-29T07:52:41.665486",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "deb82d6fecd7"
+    },
+    {
+      "name": "Training Shortsword",
+      "description": "A flimsy wooden sword. Could be discarded if you could find something better.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:02:47.103217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "49e32248074c"
+    },
+    {
+      "name": "Knapped Flint",
+      "description": "A small shard of flint rock. Brittle but sharp.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:04:42.827369",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d3fcd2519dfc"
+    },
+    {
+      "name": "Flint Tool Bundle",
+      "description": "A bundle that contains all the tools you'll need to get started.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:02:47.103217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9dc551efddfa"
+    },
+    {
+      "name": "Depleted Automata's Heart",
+      "description": "A depleted Automata's Heart used by Wisp. This heart could be filled with energy to more efficiently power your body.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:04:42.827369",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "86222010c61c"
+    },
+    {
+      "name": "Flint Bow",
+      "description": "A bow made from flint.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T14:05:05.508788",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "1a49e92e2c33"
+    },
+    {
+      "name": "Stick",
+      "description": "A regular stick harvested from bushes or striplings. Could be used for crafting or building.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-06-30T14:02:47.103217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "233208b3f7e3"
+    },
+    {
+      "name": "Basic Flower",
+      "description": "A flower that could be ground up to make pigment or used to make tea",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:37:38.950827",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "a080e0969dd4"
+    },
+    {
+      "name": "Basic Pigment",
+      "description": "Pigment made from flowers. Could be used for ink or certain clothing",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:37:38.950827",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0bc87844c626"
+    },
+    {
+      "name": "Basic Starbulb Plant",
+      "description": "Can be husked into Starlight Onion to get or Starlight Onion Seeds to replant",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:42:38.122319",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "857e7d77555b"
+    },
+    {
+      "name": "Basic Starbulb Seeds",
+      "description": "Can be grown into a Basic Onion Plant in a farming field",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:42:38.122319",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "6126866d3795"
+    },
+    {
+      "name": "Basic Starbulb",
+      "description": "A Starlight Onion. Maybe a cook could make something good out of this!",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:42:38.122319",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "65d80a10cc94"
+    },
+    {
+      "name": "Basic Crop Oil",
+      "description": "Oil made from mashing starbulbs. Could be used to make equipment at a scholar station.",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:42:38.122319",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4eb8ee1920c8"
+    },
+    {
+      "name": "Plain Roasted Fish",
+      "description": "Filets from a fresh water fish roasted on a fire",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:50:12.182237",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "022b8d73eda1"
+    },
+    {
+      "name": "Plain Mashed Bulbs",
+      "description": "Mashed potatoes. Tasty and filling but not overly interesting",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:50:12.182237",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "56904a063e1f"
+    },
+    {
+      "name": "Plain Fish and Bulbs",
+      "description": "Fish arranged in a dish with salty fried potatoes. Delicious and filling",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T17:50:12.182237",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "cba8ae27a765"
+    },
+    {
+      "name": "Plain Berry Pie",
+      "description": "Smells delicious. You can hardly wait to eat it.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T19:15:00.877908",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "b3cbb1b31806"
+    },
+    {
+      "name": "Plain Raw Berry Pie",
+      "description": "An uncooked pie. Bake it in an oven to eat it!",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T19:15:00.877908",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "2a179bc8532d"
+    },
+    {
+      "name": "Rough Wood Log",
+      "description": "A cross section of a tree trunk harvested from trees or fallen trunks. Could be used to build or craft something.",
+      "rarity": "common",
+      "tier": 1,
+      "properties": [],
+      "buffs": [],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:03:05.355903",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "72b06efac6db"
+    },
+    {
+      "name": "Rough Wood Trunk",
+      "description": "Can be processed into timber or cut into logs",
+      "rarity": "common",
+      "tier": 1,
+      "properties": [],
+      "buffs": [],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:03:56.206314",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "be2a7933ff04"
+    },
+    {
+      "name": "Basic Amber Resin",
+      "description": "Pure Resin from a tree. Could be used to make wood polish.",
+      "rarity": "common",
+      "tier": 1,
+      "properties": [],
+      "buffs": [],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:03:56.206314",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "a147d952d95e"
+    },
+    {
+      "name": "Rough Tree Bark",
+      "description": "A piece of tree bark. Could be used to make brown or a leatherworking station.",
+      "rarity": "common",
+      "tier": 1,
+      "properties": [],
+      "buffs": [],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:03:56.206314",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "e4e12c551435"
+    },
+    {
+      "name": "Basic Citric Berry",
+      "description": "A berry full of citric acid. Could be used by a scholar to make a solvent for refining metal.",
+      "rarity": "common",
+      "tier": 1,
+      "properties": [],
+      "buffs": [],
+      "confidence": 0.95,
+      "extracted_at": "2025-06-30T21:52:06.322697",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "a661b15a8504"
+    }
+  ]
+}

@@ -905,6 +905,7 @@ class BitCraftyExtractor:
             if not isinstance(data, dict):
                 error_msg = f"Invalid analysis data format: {type(data).__name__}"
                 self.add_debug_message(f"❌ {error_msg}")
+                self.logger.error("Data validation failed", error=error_msg)
                 self.log_error_to_file(
                     error_msg,
                     context={
@@ -919,6 +920,7 @@ class BitCraftyExtractor:
             if 'raw_text' in data and len(data) == 1:
                 error_msg = "Analysis returned raw text instead of structured data"
                 self.add_debug_message(f"❌ {error_msg}")
+                self.logger.error("Data validation failed", error=error_msg)
                 self.log_error_to_file(
                     error_msg,
                     context={
