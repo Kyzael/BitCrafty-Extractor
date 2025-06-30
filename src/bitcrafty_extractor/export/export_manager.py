@@ -37,6 +37,10 @@ class ExportManager:
         self.existing_items: Dict[str, Dict] = self._load_existing_items()
         self.existing_crafts: Dict[str, Dict] = self._load_existing_crafts()
         
+        # Session tracking for new discoveries
+        self.session_new_items: List[Dict[str, Any]] = []
+        self.session_new_crafts: List[Dict[str, Any]] = []
+        
         self.logger.info("Export manager initialized", 
                         exports_dir=str(self.exports_dir),
                         existing_items=len(self.existing_items),
@@ -465,6 +469,8 @@ class ExportManager:
                     processed_item['id'] = item_hash
                     self.existing_items[item_hash] = processed_item
                     new_items.append(processed_item)
+                    # Track updated items for session summary
+                    self.session_new_items.append(processed_item)
                 else:
                     # Keep existing item, skip new one
                     self.logger.debug("Similar item exists with better/equal info", name=processed_item.get('name'))
@@ -474,6 +480,8 @@ class ExportManager:
             processed_item['id'] = item_hash
             self.existing_items[item_hash] = processed_item
             new_items.append(processed_item)
+            # Track new items for session summary
+            self.session_new_items.append(processed_item)
             self.logger.info("New item discovered", 
                            name=processed_item.get('name'),
                            item_id=item_hash,
@@ -582,6 +590,8 @@ class ExportManager:
             return True
         
         return False
+    
+    def _clean_craft_name(self, name: str) -> str:
         """Clean craft name by removing sequence prefixes like '1/2', '2/3', etc.
         
         Args:
@@ -661,6 +671,8 @@ class ExportManager:
                     processed_craft['id'] = craft_hash
                     self.existing_crafts[craft_hash] = processed_craft
                     new_crafts.append(processed_craft)
+                    # Track updated crafts for session summary
+                    self.session_new_crafts.append(processed_craft)
                 else:
                     # Keep existing craft, skip new one
                     self.logger.debug("Similar craft exists with better/equal info", name=processed_craft.get('name'))
@@ -670,6 +682,8 @@ class ExportManager:
             processed_craft['id'] = craft_hash
             self.existing_crafts[craft_hash] = processed_craft
             new_crafts.append(processed_craft)
+            # Track new crafts for session summary
+            self.session_new_crafts.append(processed_craft)
             
             self.logger.info("New craft discovered",
                            name=craft.get('name'),
@@ -734,6 +748,23 @@ class ExportManager:
             'crafts_file': str(self.crafts_file),
             'exports_dir': str(self.exports_dir)
         }
+    
+    def get_session_stats(self) -> Dict[str, Any]:
+        """Get session-specific statistics for new discoveries."""
+        return {
+            'session_new_items': self.session_new_items,
+            'session_new_crafts': self.session_new_crafts,
+            'session_new_items_count': len(self.session_new_items),
+            'session_new_crafts_count': len(self.session_new_crafts),
+            'session_new_item_names': [item.get('name', 'Unknown') for item in self.session_new_items],
+            'session_new_craft_names': [craft.get('name', 'Unknown') for craft in self.session_new_crafts]
+        }
+    
+    def reset_session_tracking(self):
+        """Reset session tracking for a new session."""
+        self.session_new_items = []
+        self.session_new_crafts = []
+        self.logger.info("Session tracking reset")
     
     def export_for_bitcrafty(self) -> Dict[str, str]:
         """Export data in BitCrafty-compatible format.

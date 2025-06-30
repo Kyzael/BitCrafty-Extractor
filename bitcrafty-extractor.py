@@ -96,7 +96,7 @@ class BitCraftyExtractor:
         self.last_analysis_display = None  # Store last analysis for final summary
         
     def create_layout(self):
-        """Create the three-section layout."""
+        """Create the four-section layout with dedicated session stats."""
         if not RICH_AVAILABLE:
             return None
             
@@ -105,9 +105,15 @@ class BitCraftyExtractor:
             Layout(name="main", ratio=4),
             Layout(name="debug", ratio=1)
         )
+        # Split main area into left and right
         layout["main"].split_row(
-            Layout(name="commands", ratio=1),
+            Layout(name="left_column", ratio=1),
             Layout(name="queue", ratio=1)
+        )
+        # Split left column into commands and session stats
+        layout["left_column"].split_column(
+            Layout(name="commands", ratio=3),
+            Layout(name="session_stats", ratio=1)
         )
         return layout
         
@@ -141,8 +147,21 @@ class BitCraftyExtractor:
         commands_text.append("  3. Analyze when ready\n", style="white")
         commands_text.append("  4. View results below\n\n", style="white")
         
-        # Session Statistics - Enhanced with new/duplicate tracking
-        commands_text.append("📊 Session Stats:\n", style="bold magenta")
+        # Analysis log information
+        commands_text.append("📄 Analysis Log:\n", style="bold yellow")
+        commands_text.append(f"  📝 Analyses: {len(self.analysis_log_entries)}\n", style="white")
+        commands_text.append(f"  📁 File: {self.analysis_log_file.name}\n", style="dim")
+        commands_text.append(f"  💡 Detailed results saved to disk\n", style="dim")
+        
+        return Panel(commands_text, title="[bold blue]BitCrafty-Extractor[/bold blue]", border_style="blue")
+        
+    def update_session_stats_panel(self):
+        """Update the session statistics panel (separate from commands)."""
+        if not RICH_AVAILABLE:
+            return Panel("Session stats not available")
+            
+        stats_text = Text()
+        stats_text.append("📊 Session Stats:\n", style="bold magenta")
         
         # Show last analysis details if available with new/duplicate breakdown
         if self.last_export_stats:
@@ -155,39 +174,33 @@ class BitCraftyExtractor:
             crafts_new = stats.get('crafts_found_new', 0)
             crafts_duplicates = stats.get('crafts_found_duplicates', 0)
             
-            commands_text.append(f"  🍎 Items Found: {items_total}", style="green")
+            stats_text.append(f"🍎 Items: {items_total}", style="green")
             if items_new < items_total:
-                commands_text.append(f" ({items_new} new)", style="cyan")
-            commands_text.append("\n")
+                stats_text.append(f" ({items_new} new)", style="cyan")
+            stats_text.append("\n")
             
-            commands_text.append(f"  🔨 Crafts Found: {crafts_total}", style="yellow")
+            stats_text.append(f"🔨 Crafts: {crafts_total}", style="yellow")
             if crafts_new < crafts_total:
-                commands_text.append(f" ({crafts_new} new)", style="cyan")
-            commands_text.append("\n")
+                stats_text.append(f" ({crafts_new} new)", style="cyan")
+            stats_text.append("\n")
             
             # Show duplicate details if any
             if items_duplicates > 0 or crafts_duplicates > 0:
-                commands_text.append(f"  🔄 Duplicates: {items_duplicates + crafts_duplicates} total\n", style="dim")
+                stats_text.append(f"🔄 Duplicates: {items_duplicates + crafts_duplicates}\n", style="dim")
         else:
             # Fallback for when no analysis has been done yet
-            commands_text.append(f"  🍎 Items Found: {len(self.session_items_found)}\n", style="green")
-            commands_text.append(f"  🔨 Crafts Found: {len(self.session_crafts_found)}\n", style="yellow")
+            stats_text.append(f"🍎 Items: {len(self.session_items_found)}\n", style="green")
+            stats_text.append(f"🔨 Crafts: {len(self.session_crafts_found)}\n", style="yellow")
         
         # Export statistics
         export_stats = self.export_manager.get_stats()
-        commands_text.append(f"  💾 Total Exported:\n", style="bold cyan")
-        commands_text.append(f"    Items: {export_stats['total_items']}\n", style="white")
-        commands_text.append(f"    Crafts: {export_stats['total_crafts']}\n", style="white")
-        commands_text.append(f"  📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
-        commands_text.append(f"  💰 Est. Cost: ${self.total_cost:.3f}\n", style="red")
+        stats_text.append(f"💾 Exported:\n", style="bold cyan")
+        stats_text.append(f"  Items: {export_stats['total_items']}\n", style="white")
+        stats_text.append(f"  Crafts: {export_stats['total_crafts']}\n", style="white")
+        stats_text.append(f"📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
+        stats_text.append(f"💰 Cost: ${self.total_cost:.3f}", style="red")
         
-        # Analysis log information
-        commands_text.append(f"\n📄 Analysis Log:\n", style="bold yellow")
-        commands_text.append(f"  📝 Analyses: {len(self.analysis_log_entries)}\n", style="white")
-        commands_text.append(f"  📁 File: {self.analysis_log_file.name}\n", style="dim")
-        commands_text.append(f"  💡 Detailed results saved to disk\n", style="dim")
-        
-        return Panel(commands_text, title="[bold blue]BitCrafty-Extractor[/bold blue]", border_style="blue")
+        return Panel(stats_text, title="[bold magenta]Session Statistics[/bold magenta]", border_style="magenta")
         
     def update_queue_panel(self):
         """Update the right queue panel."""
@@ -212,42 +225,14 @@ class BitCraftyExtractor:
             queue_text.append("🎯 No screenshots queued\n\n", style="yellow")
             queue_text.append("Ready for screenshots!", style="dim")
             
-            # Show last analysis results even when queue is empty
-            if self.last_analysis and self.last_export_stats:
-                queue_text.append("\n\n📊 Last Analysis Results:\n", style="bold magenta")
-                
-                # Enhanced display with new/duplicate tracking
-                stats = self.last_export_stats
-                items_total = stats.get('items_found_total', 0)
-                items_new = stats.get('items_found_new', 0)
-                crafts_total = stats.get('crafts_found_total', 0)
-                crafts_new = stats.get('crafts_found_new', 0)
-                
-                # Items line
-                queue_text.append(f"📦 Items: {items_total}", style="white")
-                if items_new < items_total:
-                    queue_text.append(f" ({items_new} new)", style="cyan")
-                queue_text.append(" | ", style="white")
-                
-                # Crafts line
-                queue_text.append(f"🔧 Crafts: {crafts_total}", style="white")
-                if crafts_new < crafts_total:
-                    queue_text.append(f" ({crafts_new} new)", style="cyan")
-                queue_text.append("\n", style="white")
-                
-                confidence = self.last_analysis.get('total_confidence', 0)
-                queue_text.append(f"📈 Confidence: {confidence:.2f}\n", style="white")
-                
-                # Show export stats from last analysis
-                if stats['new_items_added'] > 0 or stats['new_crafts_added'] > 0:
-                    queue_text.append(f"💾 Exported: {stats['new_items_added']} items, {stats['new_crafts_added']} crafts", style="green")
-                else:
-                    queue_text.append("ℹ️ No new data (duplicates skipped)", style="yellow")
+            # Create dedicated analysis results section (always visible)
+            analysis_results_text = self._create_analysis_results_panel()
             
             content = Layout()
             content.split_column(
                 Layout(Panel(header_text, border_style="dim"), ratio=1),
-                Layout(Panel(queue_text, border_style="dim"), ratio=3)
+                Layout(Panel(queue_text, border_style="dim"), ratio=3),
+                Layout(Panel(analysis_results_text, title="[bold magenta]Last Analysis Results[/bold magenta]", border_style="magenta"), ratio=2)
             )
             
             return Panel(content, title="[bold green]Live Queue Status[/bold green]", border_style="green")
@@ -259,10 +244,14 @@ class BitCraftyExtractor:
             queue_text.append(f"Processing {len(self.screenshot_queue)} screenshots with AI\n", style="white")
             queue_text.append("Please wait for response...", style="dim")
             
+            # Create dedicated analysis results section (always visible)
+            analysis_results_text = self._create_analysis_results_panel()
+            
             content = Layout()
             content.split_column(
                 Layout(Panel(header_text, border_style="dim"), ratio=1),
-                Layout(Panel(queue_text, border_style="dim"), ratio=3)
+                Layout(Panel(queue_text, border_style="dim"), ratio=3),
+                Layout(Panel(analysis_results_text, title="[bold magenta]Last Analysis Results[/bold magenta]", border_style="magenta"), ratio=2)
             )
             
             return Panel(content, title="[bold yellow]Analysis In Progress[/bold yellow]", border_style="yellow")
@@ -290,55 +279,103 @@ class BitCraftyExtractor:
             
             table.add_row(str(i), timestamp, size, status)
         
-        # Add analysis results if available
-        if self.last_analysis and self.last_export_stats:
-            analysis_text = Text()
-            analysis_text.append("📊 Last Analysis:\n", style="bold magenta")
-            
-            # Enhanced display with new/duplicate tracking
-            stats = self.last_export_stats
-            items_total = stats.get('items_found_total', 0)
-            items_new = stats.get('items_found_new', 0)
-            crafts_total = stats.get('crafts_found_total', 0)
-            crafts_new = stats.get('crafts_found_new', 0)
-            
-            # Items line
-            analysis_text.append(f"📦 Items: {items_total}", style="white")
-            if items_new < items_total:
-                analysis_text.append(f" ({items_new} new)", style="cyan")
-            analysis_text.append(" | ", style="white")
-            
-            # Crafts line
-            analysis_text.append(f"🔧 Crafts: {crafts_total}", style="white")
-            if crafts_new < crafts_total:
-                analysis_text.append(f" ({crafts_new} new)", style="cyan")
-            analysis_text.append("\n", style="white")
-            
-            confidence = self.last_analysis.get('total_confidence', 0)
-            analysis_text.append(f"📈 Confidence: {confidence:.2f}", style="white")
-        elif self.last_analysis:
-            # Fallback for older analysis format
-            analysis_text = Text()
-            analysis_text.append("📊 Last Analysis:\n", style="bold magenta")
-            items = self.last_analysis.get('items_found', [])
-            crafts = self.last_analysis.get('crafts_found', [])
-            analysis_text.append(f"📦 Items: {len(items)} | ", style="white")
-            analysis_text.append(f"🔧 Crafts: {len(crafts)}\n", style="white")
-            confidence = self.last_analysis.get('total_confidence', 0)
-            analysis_text.append(f"📈 Confidence: {confidence:.2f}", style="white")
-        else:
-            analysis_text = Text()
-            analysis_text.append("🎯 Ready to analyze!", style="bold yellow")
+        # Create dedicated analysis results section (always visible)
+        analysis_results_text = self._create_analysis_results_panel()
         
-        # Combine everything
+        # Combine everything with consistent 4:3:2 ratio (header:queue:analysis)
         content = Layout()
         content.split_column(
             Layout(Panel(header_text, border_style="dim"), ratio=1),
             Layout(table, ratio=3),
-            Layout(Panel(analysis_text, border_style="dim"), ratio=1)
+            Layout(Panel(analysis_results_text, title="[bold magenta]Last Analysis Results[/bold magenta]", border_style="magenta"), ratio=2)
         )
         
         return Panel(content, title="[bold green]Live Queue Status[/bold green]", border_style="green")
+        
+    def _create_analysis_results_panel(self):
+        """Create a consistent analysis results panel that's always visible."""
+        if not RICH_AVAILABLE:
+            return Text("Analysis results not available")
+        
+        results_text = Text()
+        
+        if not self.last_analysis and not self.last_export_stats:
+            # No analysis performed yet
+            results_text.append("🎯 No analysis performed yet\n", style="bold yellow")
+            results_text.append("Ready to analyze screenshots!", style="dim")
+            return results_text
+        
+        if self.last_analysis and self.last_export_stats:
+            # Enhanced display with comprehensive stats
+            stats = self.last_export_stats
+            items_total = stats.get('items_found_total', 0)
+            items_new = stats.get('items_found_new', 0)
+            items_duplicates = stats.get('items_found_duplicates', 0)
+            crafts_total = stats.get('crafts_found_total', 0)
+            crafts_new = stats.get('crafts_found_new', 0)
+            crafts_duplicates = stats.get('crafts_found_duplicates', 0)
+            
+            # Summary header
+            results_text.append("📊 Analysis Summary:\n", style="bold cyan")
+            
+            # Items analysis
+            if items_total > 0:
+                results_text.append(f"📦 Items Found: {items_total}", style="green")
+                if items_new < items_total:
+                    results_text.append(f" ({items_new} new, {items_duplicates} duplicates)", style="dim")
+                results_text.append("\n", style="white")
+            else:
+                results_text.append("📦 Items Found: 0\n", style="dim")
+            
+            # Crafts analysis
+            if crafts_total > 0:
+                results_text.append(f"🔨 Crafts Found: {crafts_total}", style="yellow")
+                if crafts_new < crafts_total:
+                    results_text.append(f" ({crafts_new} new, {crafts_duplicates} duplicates)", style="dim")
+                results_text.append("\n", style="white")
+            else:
+                results_text.append("🔨 Crafts Found: 0\n", style="dim")
+            
+            # Confidence and export info
+            confidence = self.last_analysis.get('total_confidence', 0)
+            results_text.append(f"📈 Confidence: {confidence:.1f}%", style="white")
+            
+            # Export status
+            new_items_added = stats.get('new_items_added', 0)
+            new_crafts_added = stats.get('new_crafts_added', 0)
+            if new_items_added > 0 or new_crafts_added > 0:
+                results_text.append(f" | 📤 Exported: {new_items_added}+{new_crafts_added}", style="cyan")
+            else:
+                results_text.append(" | ℹ️ No new exports", style="dim")
+            results_text.append("\n", style="white")
+            
+            # Quality indicators
+            items_rejected = stats.get('items_rejected', 0)
+            crafts_rejected = stats.get('crafts_rejected', 0)
+            if items_rejected > 0 or crafts_rejected > 0:
+                results_text.append(f"⚠️ Low confidence rejected: {items_rejected} items, {crafts_rejected} crafts\n", style="red")
+            
+            # Show recent item/craft names if available
+            session_stats = self.export_manager.get_session_stats()
+            if session_stats.get('session_new_item_names'):
+                recent_items = session_stats['session_new_item_names'][-3:]  # Last 3 items
+                results_text.append(f"🆕 Recent items: {', '.join(recent_items)}\n", style="green")
+            
+            if session_stats.get('session_new_craft_names'):
+                recent_crafts = session_stats['session_new_craft_names'][-3:]  # Last 3 crafts
+                results_text.append(f"🆕 Recent crafts: {', '.join(recent_crafts)}\n", style="yellow")
+                
+        elif self.last_analysis:
+            # Fallback for older analysis format without enhanced stats
+            results_text.append("📊 Analysis Summary:\n", style="bold cyan")
+            items = self.last_analysis.get('items_found', [])
+            crafts = self.last_analysis.get('crafts_found', [])
+            results_text.append(f"📦 Items: {len(items)} | 🔨 Crafts: {len(crafts)}\n", style="white")
+            confidence = self.last_analysis.get('total_confidence', 0)
+            results_text.append(f"📈 Confidence: {confidence:.1f}%\n", style="white")
+            results_text.append("💡 Legacy analysis format", style="dim")
+        
+        return results_text
         
     def update_debug_panel(self):
         """Update the bottom debug panel."""
@@ -374,6 +411,7 @@ class BitCraftyExtractor:
             return
             
         self.layout["commands"].update(self.update_command_panel())
+        self.layout["session_stats"].update(self.update_session_stats_panel())
         self.layout["queue"].update(self.update_queue_panel())
         self.layout["debug"].update(self.update_debug_panel())
         
@@ -396,6 +434,9 @@ class BitCraftyExtractor:
         
         # Initialize hotkey handler
         self.hotkey_handler = HotkeyHandler(self.logger)
+        
+        # Reset session tracking for new session
+        self.export_manager.reset_session_tracking()
         
         # Register hotkey callbacks using configuration
         hotkeys = self.config_manager.config.hotkeys
@@ -535,6 +576,7 @@ class BitCraftyExtractor:
             
     async def _hotkey_analyze_async(self):
         """Async analysis for hotkey callback."""
+        error_occurred = None
         try:
             success = await self.analyze_queue()
             if success:
@@ -544,12 +586,12 @@ class BitCraftyExtractor:
             else:
                 self.add_debug_message("❌ Analysis failed - queue retained")
         except Exception as e:
+            error_occurred = e
             self.add_debug_message(f"❌ Analysis error: {e}")
         finally:
             self.analysis_in_progress = False
-            self.add_debug_message(f"❌ Analysis error: {str(e)}")
-            if self.logger:
-                self.logger.error("Hotkey analysis error", error=str(e))
+            if error_occurred and self.logger:
+                self.logger.error("Hotkey analysis error", error=str(error_occurred))
             
     def _hotkey_quit(self):
         """Hotkey callback for graceful quit."""
@@ -744,6 +786,13 @@ class BitCraftyExtractor:
                 
     def _show_analysis_results(self, data: dict, result):
         """Log analysis results to disk and update session tracking."""
+        # Validate that data is a proper dictionary
+        if not isinstance(data, dict):
+            self.add_debug_message(f"❌ Invalid analysis data format: {type(data).__name__}")
+            if self.logger:
+                self.logger.error("Invalid analysis data", data_type=type(data).__name__, raw_data=str(data)[:200])
+            return
+        
         # Get screenshot timestamps for export metadata
         screenshot_times = []
         for image_data in self.screenshot_queue:
@@ -938,22 +987,21 @@ class BitCraftyExtractor:
         self.add_debug_message(f"📄 Analysis results will be logged to: {self.analysis_log_file.name}")
         
         try:
-            # Use a simple Live display without screen complications
+            # Use a simple Live display with reduced refresh rate to prevent scrolling issues
             with Live(
                 self.layout, 
                 console=self.console, 
-                refresh_per_second=2,
+                refresh_per_second=1,  # Reduced from 2 to prevent UI scrolling issues
                 auto_refresh=True
             ) as live:
                 self.live_display = live
                 
                 while self.running:
-                    # Update display
+                    # Update display less frequently to prevent scrolling issues
                     self.update_display()
                     
-                    # Just wait and let hotkeys do the work
-                    # No input prompts = no scrolling issues
-                    await asyncio.sleep(1.0)
+                    # Increased sleep time to reduce update frequency
+                    await asyncio.sleep(2.0)  # Increased from 1.0 to 2.0 seconds
                         
         except KeyboardInterrupt:
             self.add_debug_message("👋 Interrupted by user")
@@ -1049,69 +1097,41 @@ class BitCraftyExtractor:
         
         # Export statistics
         export_stats = self.export_manager.get_stats()
+        session_stats = self.export_manager.get_session_stats()
         summary_text.append("💾 Export Database Status:\n", style="bold cyan")
         summary_text.append(f"  📦 Total Items in Database: {export_stats['total_items']}\n", style="white")
         summary_text.append(f"  🔧 Total Crafts in Database: {export_stats['total_crafts']}\n", style="white")
         summary_text.append(f"  📁 Files: /exports/items.json, /exports/crafts.json\n\n", style="dim")
         
-        # Last analysis details (if available) - Enhanced with duplicate tracking
-        if self.last_analysis and self.last_export_stats:
-            summary_text.append("🔍 Last Analysis Details:\n", style="bold magenta")
-            
-            stats = self.last_export_stats
-            items_total = stats.get('items_found_total', 0)
-            items_new = stats.get('items_found_new', 0)
-            items_duplicates = stats.get('items_found_duplicates', 0)
-            crafts_total = stats.get('crafts_found_total', 0)
-            crafts_new = stats.get('crafts_found_new', 0)
-            crafts_duplicates = stats.get('crafts_found_duplicates', 0)
-            
-            # Items breakdown
-            summary_text.append(f"  📦 Items: {items_total}", style="white")
-            if items_new < items_total:
-                summary_text.append(f" ({items_new} new, {items_duplicates} duplicates)", style="dim")
-            summary_text.append("\n")
-            
-            # Crafts breakdown
-            summary_text.append(f"  🔧 Crafts: {crafts_total}", style="white")
-            if crafts_new < crafts_total:
-                summary_text.append(f" ({crafts_new} new, {crafts_duplicates} duplicates)", style="dim")
-            summary_text.append("\n")
-            
-            confidence = self.last_analysis.get('total_confidence', 0)
-            summary_text.append(f"  📈 Confidence: {confidence:.2f}\n", style="white")
-            
-            # Show item names
-            items = self.last_analysis.get('items_found', [])
-            if items:
-                item_names = [item.get('name', 'Unknown') for item in items]
-                summary_text.append(f"  Items: {', '.join(item_names)}\n", style="dim")
-            
-            # Show craft names  
-            crafts = self.last_analysis.get('crafts_found', [])
-            if crafts:
-                craft_names = [craft.get('name', 'Unknown') for craft in crafts]
-                summary_text.append(f"  Crafts: {', '.join(craft_names)}\n", style="dim")
-        elif self.last_analysis:
-            # Fallback for older analysis format
-            summary_text.append("🔍 Last Analysis Details:\n", style="bold magenta")
-            items = self.last_analysis.get('items_found', [])
-            crafts = self.last_analysis.get('crafts_found', [])
-            confidence = self.last_analysis.get('total_confidence', 0)
-            
-            summary_text.append(f"  📦 Items: {len(items)}\n", style="white")
-            summary_text.append(f"  🔧 Crafts: {len(crafts)}\n", style="white")
-            summary_text.append(f"  📈 Confidence: {confidence:.2f}\n", style="white")
-            
-            # Show item names
-            if items:
-                item_names = [item.get('name', 'Unknown') for item in items]
-                summary_text.append(f"  Items: {', '.join(item_names)}\n", style="dim")
-            
-            # Show craft names  
-            if crafts:
-                craft_names = [craft.get('name', 'Unknown') for craft in crafts]
-                summary_text.append(f"  Crafts: {', '.join(craft_names)}\n", style="dim")
+        # Total analysis details for the session
+        summary_text.append("🔍 Total Analysis Details:\n", style="bold magenta")
+        summary_text.append(f"  📦 New Items This Session: {session_stats['session_new_items_count']}\n", style="green")
+        summary_text.append(f"  🔧 New Crafts This Session: {session_stats['session_new_crafts_count']}\n", style="yellow")
+        
+        # Show names in a fixed-height format to prevent UI scrolling issues
+        if session_stats['session_new_items_count'] > 0:
+            item_names = session_stats['session_new_item_names']
+            # Limit to first 3 items to maintain consistent height
+            display_items = item_names[:3]
+            if len(item_names) > 3:
+                summary_text.append(f"  Items: {', '.join(display_items)}... (+{len(item_names)-3} more)\n", style="dim")
+            else:
+                summary_text.append(f"  Items: {', '.join(display_items)}\n", style="dim")
+        
+        if session_stats['session_new_crafts_count'] > 0:
+            craft_names = session_stats['session_new_craft_names']
+            # Limit to first 3 crafts to maintain consistent height
+            display_crafts = craft_names[:3]
+            if len(craft_names) > 3:
+                summary_text.append(f"  Crafts: {', '.join(display_crafts)}... (+{len(craft_names)-3} more)\n", style="dim")
+            else:
+                summary_text.append(f"  Crafts: {', '.join(display_crafts)}\n", style="dim")
+        
+        # Always show this line to maintain consistent height
+        if session_stats['session_new_items_count'] == 0 and session_stats['session_new_crafts_count'] == 0:
+            summary_text.append("  No new items or crafts discovered this session\n", style="dim")
+        
+        summary_text.append("\n")
         
         # Analysis log information
         summary_text.append("📄 Analysis Log Details:\n", style="bold cyan")

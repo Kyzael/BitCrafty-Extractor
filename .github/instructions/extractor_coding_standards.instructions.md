@@ -4,185 +4,149 @@ applyTo: '**'
 
 # BitCrafty-Extractor Coding Standards
 
-This document outlines coding standards and best practices for the BitCrafty-Extractor project. **AI agents and contributors must follow these guidelines** to ensure code quality, maintainability, and architectural consistency.
+**AI agents and contributors must follow these guidelines** to ensure code quality, maintainability, and architectural consistency.
 
-## 1. Core Commands
+## 1. Quick Reference
 
-### Development Setup
+### Development Commands
 ```powershell
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows PowerShell
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install development dependencies
+# Setup
+python -m venv venv && venv\Scripts\activate
 pip install -e ".[dev]"
 
-# Run main application
+# Quality Checks
+black . --line-length 88 && isort . --profile black
+flake8 . --max-line-length 88 && mypy src/ --strict
+
+# Testing
+pytest tests/ -v                    # All tests
+pytest tests/ --cov=src --cov-report=html  # With coverage
+
+# Run Application
 python bitcrafty-extractor.py
 ```
 
-**Note**: This project is Windows-specific and requires PowerShell syntax for terminal commands.
-
-### Code Quality & Testing
-```powershell
-# Format code
-black . --line-length 88
-isort . --profile black
-
-# Lint code
-flake8 . --max-line-length 88
-mypy src/ --strict
-
-# Run tests
-pytest tests/ -v
-pytest tests/ -m "unit" -v          # Unit tests only
-pytest tests/ -m "integration" -v   # Integration tests only
-
-# Test coverage
-pytest tests/ --cov=src --cov-report=html
+### Core Architecture
+```
+Hotkey → Screenshot → AI Analysis → Rich UI → Export
+   ↓         ↓           ↓          ↓        ↓
+pynput → Win32API → OpenAI/Claude → Rich → JSON
 ```
 
-**Note**: Use PowerShell for all terminal commands in this Windows-specific project.
-
-## 2. Architecture Overview
-
-### Core Components
-- **Main Application**: `bitcrafty-extractor.py` - Console-based extractor with Rich UI
-- **Configuration**: `src/bitcrafty_extractor/config/config_manager.py` - YAML-based configuration management
-- **Window Capture**: `src/bitcrafty_extractor/capture/window_capture.py` - Windows API game window capture
-- **Hotkey Handler**: `src/bitcrafty_extractor/capture/hotkey_handler.py` - Global hotkey system using pynput
-- **AI Vision**: `src/bitcrafty_extractor/ai_analysis/vision_client.py` - OpenAI GPT-4V/Anthropic Claude integration
-- **Prompt System**: `src/bitcrafty_extractor/ai_analysis/prompts*.py` - Structured prompts for AI analysis
-
-### Major Dependencies
-- **Rich**: Terminal UI framework for professional console interface
-- **pynput**: Global hotkey handling across applications
-- **pywin32**: Windows API integration for window capture
-- **openai**: GPT-4 Vision API client
-- **anthropic**: Claude Vision API client
-- **structlog**: Structured logging throughout application
-- **opencv-python**: Image processing and optimization
-- **PyYAML**: Configuration file management
-
-### Data Flow
-```
-Hotkey Press → Screenshot Queue → AI Analysis → Console Display → Export
-     ↓              ↓                ↓             ↓              ↓
-Global Hotkey → Window Capture → Vision Client → Rich UI → BitCrafty Format
-```
-
-### External APIs
-- **OpenAI GPT-4 Vision API**: Primary AI vision analysis
-- **Anthropic Claude Vision API**: Fallback AI provider
-- **Windows API**: Game window detection and capture
-
-## 3. Repository Structure (MANDATORY)
+## 2. Repository Structure (MANDATORY)
 
 ```
-bitcrafty-extractor.py             # Main console application entry point
-src/bitcrafty_extractor/
-├── __init__.py                    # Package initialization
-├── __main__.py                    # Package entry point
-├── config/
-│   └── config_manager.py          # YAML configuration management
-├── capture/
-│   ├── window_capture.py          # Windows game window capture
-│   └── hotkey_handler.py          # Global hotkey system
-└── ai_analysis/
-    ├── vision_client.py           # AI vision API clients
-    ├── prompts.py                 # Queue-based analysis prompts
-    ├── prompts_new.py             # Single-item analysis prompts
-    └── prompts_queue.py           # Additional queue prompts
-config/
-└── default.yaml                   # Default configuration template
+bitcrafty-extractor.py             # Main entry point
+src/bitcrafty_extractor/            # Package source
+├── config/config_manager.py       # YAML configuration
+├── capture/{window_capture,hotkey_handler}.py
+└── ai_analysis/{vision_client,prompts*}.py
+config/default.yaml                # Configuration template
 test/                              # Test suite
-pyproject.toml                     # Project configuration and dependencies
+pyproject.toml                     # Dependencies & settings
 ```
 
 **REQUIREMENTS:**
-- **Entry Point**: `bitcrafty-extractor.py` MUST be the main application launcher
-- **Package Structure**: All library code MUST be in `src/bitcrafty_extractor/` for proper packaging
-- **Modular Components**: Each module MUST have single responsibility
-- **Configuration**: MUST use YAML configuration in `config/` directory
-└── default.yaml              # Default configuration template
-bitcrafty-extractor.py        # Application entry point
-```
+- Entry point: `bitcrafty-extractor.py`
+- All code: `src/bitcrafty_extractor/` package structure
+- Configuration: YAML files in `config/`
+- Single responsibility per module
 
-**REQUIREMENTS:**
-- **Entry Point**: `bitcrafty-extractor.py` MUST handle application initialization
-- **Source Package**: All code MUST be in `src/bitcrafty_extractor/` for proper packaging
-- **Modular Components**: Each module MUST have single responsibility
-- **Configuration**: MUST use YAML configuration in `config/` directory
+## 3. Python Standards (ENFORCED)
 
-## 4. Python Standards (ENFORCED)
+### Code Quality
+- **Python 3.11+**: Required for performance and type features
+- **Type Hints**: Complete annotations on all functions/methods
+- **Black/isort**: Line length 88, automatic formatting
+- **mypy**: Strict mode required
+- **Dataclasses/Enums**: Use for data structures and constants
 
-### Version & Dependencies
-- **Python 3.11+**: Required for performance and type hinting features
-- **Type Hints**: MUST use complete type annotations on all functions/methods
-- **Dataclasses**: MUST use `@dataclass` for data structures
-- **Enums**: MUST use `Enum` classes for constants and options
-- **Async/Await**: Use for AI API calls and I/O operations
+### Error Handling & Logging
+- **structlog**: Use for all logging throughout application
+- **Try/Catch**: Handle AI API failures gracefully with fallback providers
+- **User Feedback**: Provide clear error messages in console interface
 
-### Code Style (pyproject.toml enforced)
-- **Black Formatting**: Line length 88, Python 3.11+ target
-- **Import Organization**: isort with black profile
-- **Type Checking**: mypy strict mode required
-- **Docstrings**: Google-style docstrings for all public functions
-
-### Error Handling
-- **Structured Logging**: MUST use `structlog` for all logging
-- **Try/Catch Blocks**: MUST handle AI API failures gracefully
-- **Fallback Providers**: MUST implement provider fallback for AI services
-- **User Feedback**: MUST provide clear error messages in GUI
-
-## 5. Component Guidelines (CRITICAL)
-
-### Import Patterns
+### Import Organization
 ```python
-# Standard library first
-import asyncio
-import json
+# Standard library
+import asyncio, json
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
-from enum import Enum
 
-# Third-party libraries
+# Third-party
 import structlog
 from rich.console import Console
-from rich.layout import Layout
 
-# Local relative imports (package-style)
+# Local (package-style)
 from ..capture.window_capture import WindowCapture
-from .vision_client import VisionClient
 ```
 
-### AI Vision Client Requirements
-- **Provider Abstraction**: MUST support multiple AI providers with fallback
-- **Cost Tracking**: MUST estimate and track API usage costs
-- **Image Optimization**: MUST compress images while preserving text clarity
-- **Structured Output**: MUST enforce JSON schema validation
-- **Rate Limiting**: MUST implement rate limiting and timeout handling
+## 4. Console Interface (CRITICAL)
 
-### Configuration Management
-- **YAML-Based**: All configuration MUST use YAML format
-- **Validation**: MUST validate configuration on load
-- **Hot Reload**: SHOULD support configuration updates without restart
-- **Secure Storage**: API keys MUST be stored securely
-- **Environment Override**: MUST support environment variable overrides
+### 4-Panel Layout Structure
+```python
+# REQUIRED: Hierarchical layout with fixed ratios
+layout = Layout()
+layout.split_column(Layout(name="main", ratio=4), Layout(name="debug", ratio=1))
+layout["main"].split_row(Layout(name="left_column", ratio=1), Layout(name="queue", ratio=1))
+layout["left_column"].split_column(Layout(name="commands", ratio=3), Layout(name="session_stats", ratio=1))
+```
 
-### Console Application (Rich)
-- **Three-Pane Layout**: MUST use organized layout with commands, queue, and debug panels
-- **Global Hotkeys**: MUST work while game is in focus with no alt-tabbing
-- **Live Updates**: MUST use Rich Live display for real-time interface updates
-- **Session Tracking**: MUST provide real-time statistics and cost monitoring
+### Panel Responsibilities
+- **Commands** (top-left, 3/4): Application commands, workflow, hotkeys
+- **Session Stats** (bottom-left, 1/4): Real-time statistics, costs
+- **Queue** (right, full): Screenshot queue + analysis results
+- **Debug** (bottom, full): Status messages, error logs
 
-## 6. Data Models & APIs (STRICT FORMAT)
+### UI Stability Requirements (MANDATORY)
+- **Fixed Ratios**: Panel sizes MUST NOT change during updates
+- **Content Constraints**: All content MUST fit within panel boundaries
+- **Update Isolation**: Panel updates MUST NOT affect other panels
+- **Dedicated Methods**: Each panel MUST have `update_*_panel() -> Panel`
+- **Batched Updates**: Use single `update_display()` for all panels
+- **Refresh Rate**: Maximum 1Hz to prevent UI flickering
 
-### Screenshot Queue System
+## 5. Core Systems
+
+### AI Vision Client
+- **Multi-Provider**: Support OpenAI GPT-4V and Anthropic Claude with fallback
+- **Cost Tracking**: Track and report API usage costs in real-time
+- **Image Optimization**: Compress images while preserving text clarity
+- **JSON Schema**: Enforce structured output validation
+- **Rate Limiting**: Respect API limits with exponential backoff
+
+### Configuration (YAML)
+```yaml
+ai:
+  primary_provider: "anthropic"
+  fallback_provider: "openai"
+  openai: { api_key: "", model: "gpt-4-vision-preview" }
+  anthropic: { api_key: "", model: "claude-3-sonnet" }
+hotkeys:
+  queue_screenshot: "alt+e"
+  analyze_queue: "alt+q"
+  quit_application: "alt+f"
+capture:
+  format: "PNG"
+  quality: 95
+```
+
+### Hotkey System
+- **Global Scope**: Work when game has focus (no alt-tabbing)
+- **Debouncing**: Prevent accidental triggers (500ms default)
+- **Background Thread**: Run monitoring separately from main application
+- **Configurable**: All hotkeys customizable via YAML
+
+### Windows Integration
+- **pywin32**: Use for game window detection and capture
+- **Multi-Monitor**: Support multi-monitor setups
+- **Error Handling**: Gracefully handle Windows API failures
+- **Admin Rights**: Handle elevation requirements when needed
+
+## 6. Data Models & Export
+
+### Core Data Structures
 ```python
 @dataclass
 class QueuedImage:
@@ -190,10 +154,7 @@ class QueuedImage:
     timestamp: datetime
     confidence: float
     metadata: Dict[str, Any]
-```
 
-### AI Response Format
-```python
 @dataclass 
 class AIResponse:
     success: bool
@@ -203,152 +164,65 @@ class AIResponse:
     cost_estimate: float
 ```
 
-### Export Format (BitCrafty Integration)
-- **Items**: Must include `name`, `tier`, `rarity`, `description`, `uses`, `confidence`
-- **Crafts**: Must include `requirements`, `input_materials`, `output_materials`, `confidence`
-- **Analysis**: Must include `analysis_type`, `screenshots_processed`, `total_confidence`
+### BitCrafty Export Format
+- **Items**: `name`, `tier`, `rarity`, `description`, `uses`, `confidence`
+- **Crafts**: `requirements`, `input_materials`, `output_materials`, `confidence`
+- **Analysis**: `analysis_type`, `screenshots_processed`, `total_confidence`
 
-## 7. Hotkey System (SPECIFIC REQUIREMENTS)
-
-### Default Bindings
-- **Ctrl+Shift+E**: Queue screenshot for later analysis
-- **Ctrl+Shift+X**: Analyze entire screenshot queue with AI
-- **Configurable**: All hotkeys MUST be customizable in configuration
-
-### Implementation Requirements
-- **Global Scope**: MUST work when game has focus
-- **Debouncing**: MUST prevent accidental multiple triggers (500ms default)
-- **Background Monitoring**: MUST run in separate thread
-- **Error Handling**: MUST gracefully handle hotkey conflicts
-
-## 8. AI Analysis Standards (CRITICAL)
-
-### Prompt Engineering
-- **Structured Output**: MUST enforce JSON schema in prompts
-- **Context-Aware**: MUST include game-specific context and examples
-- **Error Recovery**: MUST handle malformed AI responses gracefully
-- **Cost Optimization**: MUST use efficient prompts to minimize token usage
-
-### Queue-Based Analysis
-- **Batch Processing**: MUST analyze multiple screenshots together
-- **Smart Detection**: AI MUST automatically identify items vs crafts
-- **Confidence Scoring**: MUST provide confidence scores for all extractions
-- **Data Merging**: MUST combine related data from multiple screenshots
-
-### Provider Management
-- **Primary/Fallback**: MUST support configurable primary and fallback providers
-- **Cost Tracking**: MUST track and report API usage costs
-- **Rate Limiting**: MUST respect API rate limits and implement backoff
-
-## 9. Testing Standards (MANDATORY)
+## 7. Testing Standards (MANDATORY)
 
 ### Test Framework
-- **pytest**: Primary testing framework with fixtures
-- **pytest-mock**: For mocking external dependencies
-- **pytest-cov**: Code coverage tracking
-- **Test Markers**: Use markers for `unit`, `integration`, `vision` tests
+- **pytest**: Primary framework with fixtures and markers
+- **pytest-mock**: Mock external dependencies (APIs, file system)
+- **pytest-cov**: Code coverage tracking and reporting
+- **Test Categories**: `unit`, `integration`, `vision` test markers
 
-### Required Test Categories
-- **Unit Tests**: Component isolation, mocking external dependencies
-- **Integration Tests**: AI API integration, configuration loading
-- **Vision Tests**: Screenshot processing, image optimization
-- **Console Tests**: Rich interface behavior, hotkey interactions
+### Required Tests
+- **Unit Tests**: Component isolation with mocked dependencies
+- **Integration Tests**: Real API integration with test accounts
+- **Vision Tests**: Screenshot processing and image optimization
+- **Console Tests**: Rich interface behavior and layout stability
 
-### Mock Requirements
-- **AI APIs**: MUST mock OpenAI/Anthropic API calls in unit tests
-- **Windows API**: MUST mock win32 calls for cross-platform testing
-- **File System**: MUST mock file operations for deterministic tests
+### Mock Strategy
+- **AI APIs**: Mock OpenAI/Anthropic calls in unit tests
+- **Windows API**: Mock win32 calls for cross-platform testing
+- **File Operations**: Mock file system for deterministic tests
 
-## 10. Windows Platform Requirements (CRITICAL)
-
-### Windows API Integration
-- **pywin32**: MUST use for window detection and capture
-- **Error Handling**: MUST handle Windows API failures gracefully
-- **Administrator Rights**: SHOULD handle elevation requirements
-- **Multi-Monitor**: MUST support multi-monitor setups
-
-### Game Window Detection
-- **Pattern Matching**: MUST support configurable window title patterns
-- **Auto-Detection**: MUST automatically find game windows
-- **Validation**: MUST verify window accessibility before capture
-
-## 11. Configuration Management (ENFORCED)
-
-### YAML Structure
-```yaml
-ai:
-  default_provider: "openai_gpt4v"
-  fallback_provider: "anthropic_claude"
-  openai:
-    api_key: ""
-    model: "gpt-4-vision-preview"
-    timeout: 30.0
-  anthropic:
-    api_key: ""
-    model: "claude-3-sonnet-20240229" 
-    timeout: 30.0
-
-hotkeys:
-  queue_screenshot: "ctrl+shift+e"
-  analyze_queue: "ctrl+shift+x"
-  enabled: true
-
-capture:
-  format: "PNG"
-  quality: 95
-  auto_detect_game_window: true
-```
-
-### Validation Requirements
-- **Schema Validation**: MUST validate all configuration on load
-- **Type Checking**: MUST validate data types and ranges
-- **API Key Validation**: MUST verify API keys before use
-- **Hotkey Validation**: MUST validate hotkey format and availability
-
-## 12. Development Workflow (MANDATORY)
+## 8. Development Workflow (MANDATORY)
 
 ### Code Quality Pipeline
-1. **Pre-commit Hooks**: black, isort, flake8, mypy
-2. **Testing**: Run appropriate test suites for changes
-3. **Type Checking**: mypy strict mode compliance
-4. **Documentation**: Update docstrings and README as needed
+1. **Format & Lint**: `black . && isort . && flake8 . && mypy src/`
+2. **Test**: Run appropriate test suites for changes
+3. **Documentation**: Update docstrings and README as needed
 
 ### AI Integration Testing
-- **Mock Testing**: Use mocked API responses for unit tests
-- **Integration Testing**: Test with real APIs using test accounts
-- **Cost Monitoring**: Track API usage during development
-- **Fallback Testing**: Verify provider fallback mechanisms
+- **Mock Development**: Use mocked responses for fast iteration
+- **Real API Testing**: Test with actual APIs using test accounts
+- **Cost Monitoring**: Track and limit API usage during development
+- **Fallback Verification**: Test provider fallback scenarios
 
 ### Release Process
-- **Version Bumping**: Update version in pyproject.toml
-- **Dependency Updates**: Verify compatibility with latest versions
+- **Version Update**: Bump version in `pyproject.toml`
+- **Dependency Check**: Verify compatibility with latest versions
 - **Platform Testing**: Test on target Windows versions
-- **Documentation**: Update README with new features/changes
+- **Documentation**: Update README and coding standards
 
-## 13. Performance & Cost Optimization (CRITICAL)
+## 9. Security & Performance
 
-### Image Processing
-- **Compression**: MUST optimize images while preserving text clarity
-- **Format Selection**: Use PNG for text-heavy images, JPEG for screenshots
-- **Size Limits**: Enforce maximum image dimensions (1024px default)
-- **Batch Processing**: Process multiple images efficiently
+### API Key Security
+- **No Commits**: Never commit API keys to version control
+- **Environment Support**: Load API keys from environment variables
+- **User Warnings**: Alert users about API key security practices
+- **Key Validation**: Test API keys before use
 
-### API Cost Management
-- **Provider Selection**: Choose cost-effective providers for routine tasks
-- **Token Optimization**: Minimize prompt tokens while maintaining accuracy
-- **Caching**: Cache similar analysis results when appropriate
-- **Usage Tracking**: Monitor and report real-time API costs
+### Performance Optimization
+- **Image Compression**: Optimize images while preserving text clarity
+- **Token Efficiency**: Minimize prompt tokens for cost reduction
+- **Batch Processing**: Process multiple screenshots efficiently
+- **Rate Limiting**: Respect API limits with intelligent backoff
 
-## 14. Security & Privacy (IMPORTANT)
-
-### API Key Management
-- **Secure Storage**: Never commit API keys to version control
-- **Environment Variables**: Support API key loading from environment
-- **Configuration Protection**: Warn users about API key security
-- **Key Validation**: Verify API keys before making requests
-
-### Data Handling
-- **Local Processing**: Keep screenshots local unless explicitly sent to AI
-- **Temporary Files**: Clean up temporary screenshot files
-- **User Consent**: Make AI analysis opt-in with clear cost implications
+### Data Privacy
+- **Local Processing**: Keep screenshots local unless sent to AI
+- **Temporary Cleanup**: Remove temporary files after processing
+- **User Consent**: Make AI analysis opt-in with cost transparency
 - **Data Retention**: Don't store analysis results longer than necessary

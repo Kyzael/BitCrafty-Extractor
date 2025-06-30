@@ -2,6 +2,8 @@
 
 AI-powered tool that extracts game data from BitCraft with 95%+ accuracy using GPT-4 Vision and Claude 3. Features global hotkeys, queue-based screenshot analysis, and automatic export to BitCrafty format.
 
+[![BitCrafty-Extractor CI](https://github.com/Kyzael/BitCrafty-Extractor/actions/workflows/ci.yml/badge.svg)](https://github.com/Kyzael/BitCrafty-Extractor/actions/workflows/ci.yml)
+
 ## Quick Start (Barebones Machine)
 
 ### Prerequisites
