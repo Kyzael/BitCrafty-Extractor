@@ -26,9 +26,6 @@ venv\Scripts\activate
 pip install -r requirements.txt
 pip install -e .
 
-# Optional: Install reconciliation tools (for data comparison)
-pip install -e ".[reconciliation]"
-
 # 4. Run application
 bitcrafty-extractor
 ```
@@ -55,7 +52,7 @@ OpenAI GPT-4o             ✅ PASS   0.80        $0.0694  7.6s   ✅ PASS
 
 ### Optional Features
 
-**Reconciliation Tools**: For comparing extracted data with existing datasets
+**Reconciliation Tools**: For comparing extracted data with existing datasets using  [reconciliator](reconciliator/README.md)
 ```powershell
 pip install -e ".[reconciliation]"
 ```
@@ -65,19 +62,12 @@ pip install -e ".[reconciliation]"
 pip install -e ".[dev]"
 ```
 
-### Usage
-- **📸 Alt+E**: Screenshot → Queue (camera shutter sound)
-- **🤖 Alt+Q**: Analyze Queue → Extract Data (voice: "Analyzing")
-- **🔔 Analysis Complete**: Two medium tones when results are ready
-- **🚪 Ctrl+Z**: Quit Application
-
 ## Key Features
 
 - **🎯 Queue-Based Workflow**: Capture multiple screenshots, analyze in batch
 - **⌨️ Global Hotkeys**: Work while playing - no alt-tabbing
 - **🤖 AI-Powered**: 95%+ accuracy with GPT-4 Vision and Claude 3
-- **� Audio Feedback**: Voice and sound notifications for queue operations
-- **�💾 Auto-Export**: Saves to BitCrafty-compatible JSON format
+- **💾 Auto-Export**: Saves to BitCrafty-compatible JSON format
 - **📊 Live Interface**: Three-pane console with real-time statistics
 - **💰 Cost Efficient**: ~$0.008-0.03 per extraction with optimization
 
