@@ -141,10 +141,37 @@ class BitCraftyExtractor:
         commands_text.append("  3. Analyze when ready\n", style="white")
         commands_text.append("  4. View results below\n\n", style="white")
         
-        # Session Statistics
+        # Session Statistics - Enhanced with new/duplicate tracking
         commands_text.append("📊 Session Stats:\n", style="bold magenta")
-        commands_text.append(f"  🍎 Items Found: {len(self.session_items_found)}\n", style="green")
-        commands_text.append(f"  🔨 Crafts Found: {len(self.session_crafts_found)}\n", style="yellow")
+        
+        # Show last analysis details if available with new/duplicate breakdown
+        if self.last_export_stats:
+            stats = self.last_export_stats
+            items_total = stats.get('items_found_total', len(self.session_items_found))
+            items_new = stats.get('items_found_new', 0)
+            items_duplicates = stats.get('items_found_duplicates', 0)
+            
+            crafts_total = stats.get('crafts_found_total', len(self.session_crafts_found))
+            crafts_new = stats.get('crafts_found_new', 0)
+            crafts_duplicates = stats.get('crafts_found_duplicates', 0)
+            
+            commands_text.append(f"  🍎 Items Found: {items_total}", style="green")
+            if items_new < items_total:
+                commands_text.append(f" ({items_new} new)", style="cyan")
+            commands_text.append("\n")
+            
+            commands_text.append(f"  🔨 Crafts Found: {crafts_total}", style="yellow")
+            if crafts_new < crafts_total:
+                commands_text.append(f" ({crafts_new} new)", style="cyan")
+            commands_text.append("\n")
+            
+            # Show duplicate details if any
+            if items_duplicates > 0 or crafts_duplicates > 0:
+                commands_text.append(f"  🔄 Duplicates: {items_duplicates + crafts_duplicates} total\n", style="dim")
+        else:
+            # Fallback for when no analysis has been done yet
+            commands_text.append(f"  🍎 Items Found: {len(self.session_items_found)}\n", style="green")
+            commands_text.append(f"  🔨 Crafts Found: {len(self.session_crafts_found)}\n", style="yellow")
         
         # Export statistics
         export_stats = self.export_manager.get_stats()
@@ -186,22 +213,36 @@ class BitCraftyExtractor:
             queue_text.append("Ready for screenshots!", style="dim")
             
             # Show last analysis results even when queue is empty
-            if self.last_analysis:
+            if self.last_analysis and self.last_export_stats:
                 queue_text.append("\n\n📊 Last Analysis Results:\n", style="bold magenta")
-                items = self.last_analysis.get('items_found', [])
-                crafts = self.last_analysis.get('crafts_found', [])
-                queue_text.append(f"📦 Items: {len(items)} | ", style="white")
-                queue_text.append(f"🔧 Recipes: {len(crafts)}\n", style="white")
+                
+                # Enhanced display with new/duplicate tracking
+                stats = self.last_export_stats
+                items_total = stats.get('items_found_total', 0)
+                items_new = stats.get('items_found_new', 0)
+                crafts_total = stats.get('crafts_found_total', 0)
+                crafts_new = stats.get('crafts_found_new', 0)
+                
+                # Items line
+                queue_text.append(f"📦 Items: {items_total}", style="white")
+                if items_new < items_total:
+                    queue_text.append(f" ({items_new} new)", style="cyan")
+                queue_text.append(" | ", style="white")
+                
+                # Crafts line
+                queue_text.append(f"🔧 Crafts: {crafts_total}", style="white")
+                if crafts_new < crafts_total:
+                    queue_text.append(f" ({crafts_new} new)", style="cyan")
+                queue_text.append("\n", style="white")
+                
                 confidence = self.last_analysis.get('total_confidence', 0)
                 queue_text.append(f"📈 Confidence: {confidence:.2f}\n", style="white")
                 
                 # Show export stats from last analysis
-                if self.last_export_stats:
-                    stats = self.last_export_stats
-                    if stats['new_items_added'] > 0 or stats['new_crafts_added'] > 0:
-                        queue_text.append(f"💾 Exported: {stats['new_items_added']} items, {stats['new_crafts_added']} crafts", style="green")
-                    else:
-                        queue_text.append("ℹ️ No new data (already in database)", style="yellow")
+                if stats['new_items_added'] > 0 or stats['new_crafts_added'] > 0:
+                    queue_text.append(f"💾 Exported: {stats['new_items_added']} items, {stats['new_crafts_added']} crafts", style="green")
+                else:
+                    queue_text.append("ℹ️ No new data (duplicates skipped)", style="yellow")
             
             content = Layout()
             content.split_column(
@@ -250,13 +291,39 @@ class BitCraftyExtractor:
             table.add_row(str(i), timestamp, size, status)
         
         # Add analysis results if available
-        if self.last_analysis:
+        if self.last_analysis and self.last_export_stats:
+            analysis_text = Text()
+            analysis_text.append("📊 Last Analysis:\n", style="bold magenta")
+            
+            # Enhanced display with new/duplicate tracking
+            stats = self.last_export_stats
+            items_total = stats.get('items_found_total', 0)
+            items_new = stats.get('items_found_new', 0)
+            crafts_total = stats.get('crafts_found_total', 0)
+            crafts_new = stats.get('crafts_found_new', 0)
+            
+            # Items line
+            analysis_text.append(f"📦 Items: {items_total}", style="white")
+            if items_new < items_total:
+                analysis_text.append(f" ({items_new} new)", style="cyan")
+            analysis_text.append(" | ", style="white")
+            
+            # Crafts line
+            analysis_text.append(f"🔧 Crafts: {crafts_total}", style="white")
+            if crafts_new < crafts_total:
+                analysis_text.append(f" ({crafts_new} new)", style="cyan")
+            analysis_text.append("\n", style="white")
+            
+            confidence = self.last_analysis.get('total_confidence', 0)
+            analysis_text.append(f"📈 Confidence: {confidence:.2f}", style="white")
+        elif self.last_analysis:
+            # Fallback for older analysis format
             analysis_text = Text()
             analysis_text.append("📊 Last Analysis:\n", style="bold magenta")
             items = self.last_analysis.get('items_found', [])
             crafts = self.last_analysis.get('crafts_found', [])
             analysis_text.append(f"📦 Items: {len(items)} | ", style="white")
-            analysis_text.append(f"🔧 Recipes: {len(crafts)}\n", style="white")
+            analysis_text.append(f"🔧 Crafts: {len(crafts)}\n", style="white")
             confidence = self.last_analysis.get('total_confidence', 0)
             analysis_text.append(f"📈 Confidence: {confidence:.2f}", style="white")
         else:
@@ -707,10 +774,35 @@ class BitCraftyExtractor:
         # Log analysis to disk after updating session totals
         self._log_analysis_to_disk(data, result, export_stats, screenshot_times)
         
-        # Show brief summary in debug messages
+        # Show brief summary in debug messages with enhanced duplicate tracking
         items_count = len(items)
         crafts_count = len(crafts)
-        self.add_debug_message(f"✅ Analysis complete: {items_count} items, {crafts_count} crafts (${result.cost_estimate:.3f})")
+        items_new = export_stats.get('items_found_new', export_stats.get('new_items_added', 0))
+        crafts_new = export_stats.get('crafts_found_new', export_stats.get('new_crafts_added', 0))
+        items_duplicates = export_stats.get('items_found_duplicates', 0)
+        crafts_duplicates = export_stats.get('crafts_found_duplicates', 0)
+        
+        # Enhanced summary message
+        summary_parts = []
+        if items_count > 0:
+            if items_new < items_count:
+                summary_parts.append(f"{items_count} items ({items_new} new)")
+            else:
+                summary_parts.append(f"{items_count} items")
+        
+        if crafts_count > 0:
+            if crafts_new < crafts_count:
+                summary_parts.append(f"{crafts_count} crafts ({crafts_new} new)")
+            else:
+                summary_parts.append(f"{crafts_count} crafts")
+        
+        summary = ", ".join(summary_parts) if summary_parts else "no data"
+        self.add_debug_message(f"✅ Analysis complete: {summary} (${result.cost_estimate:.3f})")
+        
+        # Show duplicate information if any found
+        total_duplicates = items_duplicates + crafts_duplicates
+        if total_duplicates > 0:
+            self.add_debug_message(f"🔄 Duplicates skipped: {total_duplicates} ({items_duplicates} items, {crafts_duplicates} crafts)")
         
         # Show validation statistics if any items were rejected
         items_rejected = export_stats.get('items_rejected', 0)
@@ -962,8 +1054,46 @@ class BitCraftyExtractor:
         summary_text.append(f"  🔧 Total Crafts in Database: {export_stats['total_crafts']}\n", style="white")
         summary_text.append(f"  📁 Files: /exports/items.json, /exports/crafts.json\n\n", style="dim")
         
-        # Last analysis details (if available)
-        if self.last_analysis:
+        # Last analysis details (if available) - Enhanced with duplicate tracking
+        if self.last_analysis and self.last_export_stats:
+            summary_text.append("🔍 Last Analysis Details:\n", style="bold magenta")
+            
+            stats = self.last_export_stats
+            items_total = stats.get('items_found_total', 0)
+            items_new = stats.get('items_found_new', 0)
+            items_duplicates = stats.get('items_found_duplicates', 0)
+            crafts_total = stats.get('crafts_found_total', 0)
+            crafts_new = stats.get('crafts_found_new', 0)
+            crafts_duplicates = stats.get('crafts_found_duplicates', 0)
+            
+            # Items breakdown
+            summary_text.append(f"  📦 Items: {items_total}", style="white")
+            if items_new < items_total:
+                summary_text.append(f" ({items_new} new, {items_duplicates} duplicates)", style="dim")
+            summary_text.append("\n")
+            
+            # Crafts breakdown
+            summary_text.append(f"  🔧 Crafts: {crafts_total}", style="white")
+            if crafts_new < crafts_total:
+                summary_text.append(f" ({crafts_new} new, {crafts_duplicates} duplicates)", style="dim")
+            summary_text.append("\n")
+            
+            confidence = self.last_analysis.get('total_confidence', 0)
+            summary_text.append(f"  📈 Confidence: {confidence:.2f}\n", style="white")
+            
+            # Show item names
+            items = self.last_analysis.get('items_found', [])
+            if items:
+                item_names = [item.get('name', 'Unknown') for item in items]
+                summary_text.append(f"  Items: {', '.join(item_names)}\n", style="dim")
+            
+            # Show craft names  
+            crafts = self.last_analysis.get('crafts_found', [])
+            if crafts:
+                craft_names = [craft.get('name', 'Unknown') for craft in crafts]
+                summary_text.append(f"  Crafts: {', '.join(craft_names)}\n", style="dim")
+        elif self.last_analysis:
+            # Fallback for older analysis format
             summary_text.append("🔍 Last Analysis Details:\n", style="bold magenta")
             items = self.last_analysis.get('items_found', [])
             crafts = self.last_analysis.get('crafts_found', [])
