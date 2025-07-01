@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "source": "bitcrafty-extractor",
-    "last_updated": "2025-07-01T22:12:43.846705",
-    "total_crafts": 72
+    "last_updated": "2025-07-01T22:26:43.694140",
+    "total_crafts": 86
   },
   "crafts": [
     {
@@ -1878,6 +1878,354 @@
       "extracted_at": "2025-07-01T22:12:20.652213",
       "extraction_source": "bitcrafty-extractor",
       "id": "92c872065d3a"
+    },
+    {
+      "name": "Extract Ferralith Ore Concentrate",
+      "requirements": {
+        "profession": "smithing",
+        "building": "Tier 1 Smithing Station",
+        "tool": "hammer"
+      },
+      "materials": [
+        {
+          "item": "Ferralith Ore Piece",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Ferralith Ore Concentrate",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-07-01T22:19:15.720118",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0751a6da0cd2"
+    },
+    {
+      "name": "Extract Ferralith Ore Piece",
+      "requirements": {
+        "profession": "Mining",
+        "building": "Tier 1 Mining Station",
+        "tool": "Tier 1 Pickaxe"
+      },
+      "materials": [
+        {
+          "item": "Ferralith Ore Chunk",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Ferralith Ore Piece",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-07-01T22:19:53.724047",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "da1e87e3106f"
+    },
+    {
+      "name": "Basic Potter's Mix",
+      "requirements": {
+        "profession": "masonry",
+        "building": "Tier 1 Masonry Station",
+        "tool": "Tier 1 Chisel"
+      },
+      "materials": [
+        {
+          "item": "Clay Lump",
+          "qty": 1
+        },
+        {
+          "item": "Rough Pebbles",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Basic Potter's Mix",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:20:28.801323",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "7053255cbf93"
+    },
+    {
+      "name": "Stitch Refined Simple Leather",
+      "requirements": {
+        "profession": "Leatherworking",
+        "building": null,
+        "tool": "Tier II Knife"
+      },
+      "materials": [
+        {
+          "item": "Simple Leather",
+          "qty": 4
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Refined Simple Leather",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:21:01.147174",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "fd2483f59637"
+    },
+    {
+      "name": "Craft Expanded Automata's Heart I",
+      "requirements": {
+        "profession": "ANY",
+        "building": "Tier 1 Workbench",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Insulating Wires",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Expanded Automata's Heart I",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:22:04.754021",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "3764be8d8f37"
+    },
+    {
+      "name": "Craft Rough Textile",
+      "requirements": {
+        "profession": "Leatherworking",
+        "building": null,
+        "tool": "Tier 1 Knife"
+      },
+      "materials": [
+        {
+          "item": "Rough Material",
+          "qty": 2
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Textile",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:22:33.040575",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4e1279122368"
+    },
+    {
+      "name": "Husk into Basic Embergrain Products",
+      "requirements": {
+        "profession": "farming",
+        "building": "Farming Station",
+        "tool": "Hoe"
+      },
+      "materials": [
+        {
+          "item": "Basic Embergrain Plant",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Basic Embergrain",
+          "qty": "varied"
+        },
+        {
+          "item": "Basic Embergrain Seeds",
+          "qty": "varied"
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:23:05.722338",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "39179d9dbb64"
+    },
+    {
+      "name": "Plain Berry Pie",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 1 Oven",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Plain Raw Berry Pie",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Berry Pie",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:23:42.114811",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "b9249450848b"
+    },
+    {
+      "name": "Cook Plain Ground Meat and Mashed Bulbs",
+      "requirements": {
+        "profession": "cooking",
+        "building": "Tier 1 Cooking Station",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Ground Meat",
+          "qty": 1
+        },
+        {
+          "item": "Mashed Bulbs",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Ground Meat and Mashed Bulbs",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:24:05.029337",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "95496efbabcb"
+    },
+    {
+      "name": "Prepare Plain Deluxe Bulb Rolls",
+      "requirements": {
+        "profession": "cooking",
+        "building": null,
+        "tool": "tool"
+      },
+      "materials": [
+        {
+          "item": "Unknown",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Deluxe Bulb Rolls",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.85,
+      "extracted_at": "2025-07-01T22:24:34.334798",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "22e3a4960419"
+    },
+    {
+      "name": "Plain Bulb Rolls",
+      "requirements": {
+        "profession": "cooking",
+        "building": "oven",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Onion",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Plain Bulb Rolls",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:25:12.089952",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4190a1a3edaa"
+    },
+    {
+      "name": "Burn Sugar",
+      "requirements": {
+        "profession": "forestry",
+        "building": "Tier 1 Oven",
+        "tool": null
+      },
+      "materials": [
+        {
+          "item": "Tree Sap",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Sugar",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:25:35.042327",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "e527f348aa5f"
+    },
+    {
+      "name": "Weave Refined Rough Cloth",
+      "requirements": {
+        "profession": "tailoring",
+        "building": null,
+        "tool": "Tier 1 Scissors"
+      },
+      "materials": [
+        {
+          "item": "Rough Cloth",
+          "qty": 2
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Refined Rough Cloth",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.9,
+      "extracted_at": "2025-07-01T22:25:55.673586",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "af4df30fef27"
+    },
+    {
+      "name": "Craft Rough Woven Belt",
+      "requirements": {
+        "profession": "tailoring",
+        "building": null,
+        "tool": "Tier 1 Scissors"
+      },
+      "materials": [
+        {
+          "item": "Rough Cloth",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item": "Rough Woven Belt",
+          "qty": 1
+        }
+      ],
+      "confidence": 0.98,
+      "extracted_at": "2025-07-01T22:26:22.317351",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c3ee8b8dea21"
     }
   ]
 }

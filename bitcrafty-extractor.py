@@ -93,6 +93,10 @@ class BitCraftyExtractor:
         # Session tracking
         self.session_items_found = []  # All items found this session
         self.session_crafts_found = []  # All crafts found this session
+        self.session_items_new = 0  # Running total of new items added
+        self.session_crafts_new = 0  # Running total of new crafts added
+        self.session_items_duplicates = 0  # Running total of duplicate items
+        self.session_crafts_duplicates = 0  # Running total of duplicate crafts
         self.total_screenshots_analyzed = 0
         self.total_cost = 0.0
         self.is_analyzing = False
@@ -168,34 +172,24 @@ class BitCraftyExtractor:
         stats_text = Text()
         stats_text.append("📊 Session Stats:\n", style="bold magenta")
         
-        # Show last analysis details if available with new/duplicate breakdown
-        if self.last_export_stats:
-            stats = self.last_export_stats
-            items_total = stats.get('items_found_total', len(self.session_items_found))
-            items_new = stats.get('items_found_new', 0)
-            items_duplicates = stats.get('items_found_duplicates', 0)
-            
-            crafts_total = stats.get('crafts_found_total', len(self.session_crafts_found))
-            crafts_new = stats.get('crafts_found_new', 0)
-            crafts_duplicates = stats.get('crafts_found_duplicates', 0)
-            
-            stats_text.append(f"🍎 Items: {items_total}", style="green")
-            if items_new < items_total:
-                stats_text.append(f" ({items_new} new)", style="cyan")
-            stats_text.append("\n")
-            
-            stats_text.append(f"🔨 Crafts: {crafts_total}", style="yellow")
-            if crafts_new < crafts_total:
-                stats_text.append(f" ({crafts_new} new)", style="cyan")
-            stats_text.append("\n")
-            
-            # Show duplicate details if any
-            if items_duplicates > 0 or crafts_duplicates > 0:
-                stats_text.append(f"🔄 Duplicates: {items_duplicates + crafts_duplicates}\n", style="dim")
-        else:
-            # Fallback for when no analysis has been done yet
-            stats_text.append(f"🍎 Items: {len(self.session_items_found)}\n", style="green")
-            stats_text.append(f"🔨 Crafts: {len(self.session_crafts_found)}\n", style="yellow")
+        # Use cumulative session totals instead of last analysis only
+        total_items = len(self.session_items_found)
+        total_crafts = len(self.session_crafts_found)
+        
+        stats_text.append(f"🍎 Items: {total_items}", style="green")
+        if self.session_items_new > 0:
+            stats_text.append(f" ({self.session_items_new} new)", style="cyan")
+        stats_text.append("\n")
+        
+        stats_text.append(f"🔨 Crafts: {total_crafts}", style="yellow")
+        if self.session_crafts_new > 0:
+            stats_text.append(f" ({self.session_crafts_new} new)", style="cyan")
+        stats_text.append("\n")
+        
+        # Show duplicate details if any
+        total_duplicates = self.session_items_duplicates + self.session_crafts_duplicates
+        if total_duplicates > 0:
+            stats_text.append(f"🔄 Duplicates: {total_duplicates}\n", style="dim")
         
         stats_text.append(f"📸 Screenshots: {self.total_screenshots_analyzed}\n", style="cyan")
         stats_text.append(f"💰 Cost: ${self.total_cost:.3f}", style="red")
@@ -503,6 +497,12 @@ class BitCraftyExtractor:
         
         # Reset session tracking for new session
         self.export_manager.reset_session_tracking()
+        
+        # Reset UI session tracking variables
+        self.session_items_new = 0
+        self.session_crafts_new = 0
+        self.session_items_duplicates = 0
+        self.session_crafts_duplicates = 0
         
         # Register hotkey callbacks using configuration
         hotkeys = self.config_manager.config.hotkeys
@@ -1024,6 +1024,17 @@ class BitCraftyExtractor:
             self.session_crafts_found.extend(valid_crafts)
             self.total_screenshots_analyzed += screenshots_processed
             self.total_cost += result.cost_estimate
+            
+            # Update cumulative session stats for UI display
+            items_new_this_analysis = export_stats.get('new_items_added', 0)
+            crafts_new_this_analysis = export_stats.get('new_crafts_added', 0)
+            items_duplicates_this_analysis = export_stats.get('items_found_duplicates', 0)
+            crafts_duplicates_this_analysis = export_stats.get('crafts_found_duplicates', 0)
+            
+            self.session_items_new += items_new_this_analysis
+            self.session_crafts_new += crafts_new_this_analysis
+            self.session_items_duplicates += items_duplicates_this_analysis
+            self.session_crafts_duplicates += crafts_duplicates_this_analysis
             
             # Store analysis for queue panel display
             self.last_analysis = data

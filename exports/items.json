@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "source": "bitcrafty-extractor",
-    "last_updated": "2025-07-01T22:12:43.845704",
-    "total_items": 100
+    "last_updated": "2025-07-01T22:26:43.693139",
+    "total_items": 116
   },
   "items": [
     {
@@ -66,16 +66,6 @@
       "extracted_at": "2025-06-29T01:57:19.442302",
       "extraction_source": "bitcrafty-extractor",
       "id": "b882c3dd8bcd"
-    },
-    {
-      "name": "Tree Sap",
-      "description": "A small amount of sticky tree resin",
-      "rarity": "common",
-      "tier": null,
-      "confidence": 0.98,
-      "extracted_at": "2025-06-29T01:42:10.649801",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "155aecfe1679"
     },
     {
       "name": "Pitch",
@@ -1016,6 +1006,176 @@
       "extracted_at": "2025-07-01T22:11:18.219118",
       "extraction_source": "bitcrafty-extractor",
       "id": "a657aba462aa"
+    },
+    {
+      "name": "Ferralith Ore Piece",
+      "description": "A piece of rock with exposed bits of ore. Could be processed at a Smithing Station.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:19:15.720118",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "34eb1d66241b"
+    },
+    {
+      "name": "Ferralith Ore Chunk",
+      "description": "A chunk of ore. Could be processed into ore pieces.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:19:53.724047",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "8a9309c3a3eb"
+    },
+    {
+      "name": "Tattered Automata's Heart Wiring",
+      "description": "Damaged wires that could be used to repair an Automata's heart",
+      "rarity": "common",
+      "tier": null,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:21:01.147174",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9e4ca359f580"
+    },
+    {
+      "name": "Simple Cloth",
+      "description": "A thick weave of cloth made by a tailor",
+      "rarity": "common",
+      "tier": 2,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:21:01.147174",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "64c8f9541a52"
+    },
+    {
+      "name": "Pyrelite Ingot",
+      "description": "A rectangular ingot of metal forged at a smithing station",
+      "rarity": "common",
+      "tier": 2,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:21:01.147174",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "f7002a364e5e"
+    },
+    {
+      "name": "Refined Simple Leather",
+      "description": "A large piece of high quality leather used for outfitting or building",
+      "rarity": "common",
+      "tier": 2,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:21:01.147174",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "cead57b01f39"
+    },
+    {
+      "name": "Insulating Wires",
+      "description": "A component that could be used to expand the capacity of your Automata's Heart",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:22:04.754021",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c6d9f87a3d22"
+    },
+    {
+      "name": "Charged Automata's Heart I",
+      "description": "An Automata's Heart filled to the brim with energy. Could be upgraded to accept more energy.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:22:04.754021",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "33b4481c95d3"
+    },
+    {
+      "name": "Expanded Automata's Heart I",
+      "description": "An Automata's Heart that's been expanded. Could be filled with more energy.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:22:04.754021",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "29a18e72b9a7"
+    },
+    {
+      "name": "Rough Straw",
+      "description": "Straw that comes from undergrain. Can be used to make textiles to refine cloth.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:22:33.040575",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "2553c266bd43"
+    },
+    {
+      "name": "Rough Textile",
+      "description": "A textile made by a leatherworker to refine cloth.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:22:33.040575",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "89a0653f1546"
+    },
+    {
+      "name": "Plain Ground Meat and Mashed Bulbs",
+      "description": "Ground meat served with a side of potatoes with onions. Delicious and filling.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:24:05.029337",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "cf5a31609c76"
+    },
+    {
+      "name": "Sugar",
+      "description": "Sugar made from boiled sap. Could be used to cook something tasty.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:24:34.334798",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "3cdff21af5f1"
+    },
+    {
+      "name": "Plain Bulb Rolls",
+      "description": "Warm, tasty onion rolls",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:24:34.334798",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "dd6a959b1e03"
+    },
+    {
+      "name": "Plain Deluxe Bulb Rolls",
+      "description": "Warm, tasty onion rolls",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:24:34.334798",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "abeb8c41841e"
+    },
+    {
+      "name": "Tree Sap",
+      "description": "A small amount of sticky tree resin",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:25:35.042327",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d02105cb4dc6"
+    },
+    {
+      "name": "Refined Rough Cloth",
+      "description": "A thick weave of refined cloth embroidered with animal hairs",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-01T22:25:55.673586",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "823093bc2f17"
     }
   ]
 }
