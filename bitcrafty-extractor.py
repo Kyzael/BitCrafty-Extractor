@@ -179,12 +179,12 @@ class BitCraftyExtractor:
             crafts_new = stats.get('crafts_found_new', 0)
             crafts_duplicates = stats.get('crafts_found_duplicates', 0)
             
-            stats_text.append(f"🍎 New Items: {items_total}", style="green")
+            stats_text.append(f"🍎 Items: {items_total}", style="green")
             if items_new < items_total:
                 stats_text.append(f" ({items_new} new)", style="cyan")
             stats_text.append("\n")
             
-            stats_text.append(f"🔨 New Crafts: {crafts_total}", style="yellow")
+            stats_text.append(f"🔨 Crafts: {crafts_total}", style="yellow")
             if crafts_new < crafts_total:
                 stats_text.append(f" ({crafts_new} new)", style="cyan")
             stats_text.append("\n")
@@ -349,45 +349,48 @@ class BitCraftyExtractor:
                 results_text.append(" | ℹ️ No new exports", style="dim")
             results_text.append("\n", style="white")
             
-            # Quality indicators
-            items_rejected = stats.get('items_rejected', 0)
-            crafts_rejected = stats.get('crafts_rejected', 0)
-            if items_rejected > 0 or crafts_rejected > 0:
-                results_text.append(f"⚠️ Low confidence rejected: {items_rejected} items, {crafts_rejected} crafts\n", style="red")
-            
-            # Show recent item/craft names if available
+            # Show items and crafts from the last analysis queue only
             try:
-                session_stats = self.export_manager.get_session_stats()
+                # Get items and crafts from the last analysis
+                last_items = self.last_analysis.get('items_found', [])
+                last_crafts = self.last_analysis.get('crafts_found', [])
                 
-                if isinstance(session_stats, dict) and session_stats.get('session_new_item_names'):
-                    try:
-                        item_names = session_stats['session_new_item_names']
-                        
-                        if isinstance(item_names, list) and item_names:
-                            recent_items = item_names[-3:]  # Last 3 items
-                            
-                            # Ensure all items are strings and not empty
-                            recent_items = [str(item) for item in recent_items if item]
-                            if recent_items:
-                                results_text.append(f"🆕 Recent items: {', '.join(recent_items)}\n", style="green")
-                    except Exception as e:
-                        self.add_debug_message(f"⚠️ Error displaying recent items: {e}")
+                # Show items from last queue
+                if isinstance(last_items, list) and last_items:
+                    item_names = []
+                    for item in last_items:
+                        if isinstance(item, dict) and 'name' in item:
+                            item_name = str(item['name']).strip()
+                            if item_name:
+                                item_names.append(item_name)
+                    
+                    if item_names:
+                        # Show up to 5 items from last queue
+                        display_items = item_names[:5]
+                        results_text.append(f"📦 Last queue items: {', '.join(display_items)}", style="green")
+                        if len(item_names) > 5:
+                            results_text.append(f" (+{len(item_names)-5} more)", style="dim")
+                        results_text.append("\n")
                 
-                if isinstance(session_stats, dict) and session_stats.get('session_new_craft_names'):
-                    try:
-                        craft_names = session_stats['session_new_craft_names']
+                # Show crafts from last queue
+                if isinstance(last_crafts, list) and last_crafts:
+                    craft_names = []
+                    for craft in last_crafts:
+                        if isinstance(craft, dict) and 'name' in craft:
+                            craft_name = str(craft['name']).strip()
+                            if craft_name:
+                                craft_names.append(craft_name)
+                    
+                    if craft_names:
+                        # Show up to 5 crafts from last queue
+                        display_crafts = craft_names[:5]
+                        results_text.append(f"🔨 Last queue crafts: {', '.join(display_crafts)}", style="yellow")
+                        if len(craft_names) > 5:
+                            results_text.append(f" (+{len(craft_names)-5} more)", style="dim")
+                        results_text.append("\n")
                         
-                        if isinstance(craft_names, list) and craft_names:
-                            recent_crafts = craft_names[-3:]  # Last 3 crafts
-                            
-                            # Ensure all crafts are strings and not empty
-                            recent_crafts = [str(craft) for craft in recent_crafts if craft]
-                            if recent_crafts:
-                                results_text.append(f"🆕 Recent crafts: {', '.join(recent_crafts)}\n", style="yellow")
-                    except Exception as e:
-                        self.add_debug_message(f"⚠️ Error displaying recent crafts: {e}")
             except Exception as e:
-                self.add_debug_message(f"⚠️ Error getting session stats: {e}")
+                self.add_debug_message(f"⚠️ Error displaying last queue results: {e}")
                 
         elif self.last_analysis:
             # Fallback for older analysis format without enhanced stats
@@ -401,7 +404,7 @@ class BitCraftyExtractor:
         return results_text
         
     def update_debug_panel(self):
-        """Update the bottom debug panel."""
+        """Update the bottom debug panel with fixed height."""
         if not RICH_AVAILABLE:
             return Panel("Debug not available")
         
@@ -409,12 +412,28 @@ class BitCraftyExtractor:
         debug_text.append("🔧 Debug Log", style="bold magenta")
         debug_text.append("\n" + "=" * 50 + "\n", style="dim")
         
+        # Fixed number of lines to maintain consistent height
+        max_lines = 3
+        
         if not self.debug_messages:
-            debug_text.append("🎮 Hotkeys active - take screenshots while playing!", style="cyan")
+            # Fill with default message and empty lines to maintain height
+            debug_text.append("🎮 Hotkeys active - take screenshots while playing!\n", style="cyan")
+            # Add empty lines to maintain consistent height
+            for _ in range(max_lines - 1):
+                debug_text.append("\n")
         else:
-            # Show last few debug messages
-            for msg in self.debug_messages[-5:]:  # Show last 5 messages
-                debug_text.append(f"{msg}\n", style="white")
+            # Show last few debug messages, exactly max_lines
+            recent_messages = self.debug_messages[-max_lines:]
+            
+            # Pad with empty lines if we have fewer messages than max_lines
+            while len(recent_messages) < max_lines:
+                recent_messages.insert(0, "")
+            
+            for msg in recent_messages:
+                if msg:
+                    debug_text.append(f"{msg}\n", style="white")
+                else:
+                    debug_text.append("\n")
         
         return Panel(debug_text, title="[bold magenta]Status & Debug[/bold magenta]", border_style="magenta")
         

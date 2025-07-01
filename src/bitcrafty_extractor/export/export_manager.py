@@ -172,7 +172,12 @@ class ExportManager:
         return hashlib.md5(hash_string.encode('utf-8')).hexdigest()[:12]
     
     def _generate_craft_hash(self, craft: Dict[str, Any]) -> str:
-        """Generate a unique hash for a craft based on key properties."""
+        """Generate a unique hash for a craft based on key properties.
+        
+        For true duplicate detection, includes name, materials, outputs, AND requirements.
+        This prevents flagging legitimate crafts with same name but different 
+        requirements (like Basic Fertilizer variants) as duplicates.
+        """
         # Handle non-dictionary crafts safely
         if not isinstance(craft, dict):
             self.logger.warning("_generate_craft_hash called with non-dict", 
@@ -181,12 +186,13 @@ class ExportManager:
             # Generate hash from string representation
             return hashlib.md5(str(craft).encode('utf-8')).hexdigest()[:12]
         
-        # Use name, materials, and outputs for hashing
+        # Use name, materials, outputs, and requirements for comprehensive hashing
         name = craft.get('name', '').lower().strip()
         
         # Normalize materials and outputs
         materials = craft.get('materials', [])
         outputs = craft.get('outputs', [])
+        requirements = craft.get('requirements', {})
         
         # Create sorted string representation for consistent hashing
         materials_str = "|".join(sorted([
@@ -196,7 +202,20 @@ class ExportManager:
             f"{o.get('item', '') if isinstance(o, dict) else str(o)}:{o.get('qty', 1) if isinstance(o, dict) else 1}" for o in outputs
         ]))
         
-        hash_string = f"{name}|{materials_str}|{outputs_str}"
+        # Include requirements in hash to differentiate crafts with same name/materials/outputs
+        # but different profession, building, tool requirements
+        requirements_parts = []
+        if isinstance(requirements, dict):
+            # Sort requirements for consistent hashing
+            for key in sorted(requirements.keys()):
+                value = requirements[key]
+                if value:  # Only include non-empty values
+                    requirements_parts.append(f"{key}:{str(value).lower().strip()}")
+        
+        requirements_str = "|".join(requirements_parts)
+        
+        # Combine all components for comprehensive duplicate detection
+        hash_string = f"{name}|{materials_str}|{outputs_str}|{requirements_str}"
         return hashlib.md5(hash_string.encode('utf-8')).hexdigest()[:12]
     
     def _analyze_items_for_duplicates(self, items: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -404,6 +423,33 @@ class ExportManager:
         if not outputs:
             validation['is_valid'] = False
             validation['reasons'].append("Missing or empty outputs list")
+        
+        # Check for circular recipes (input = output)
+        if materials and outputs:
+            material_items = set()
+            output_items = set()
+            
+            # Extract material item names
+            for material in materials:
+                if isinstance(material, dict) and 'item' in material:
+                    material_items.add(material['item'].strip().lower())
+            
+            # Extract output item names
+            for output in outputs:
+                if isinstance(output, dict) and 'item' in output:
+                    output_items.add(output['item'].strip().lower())
+            
+            # Check for overlap (circular recipes)
+            circular_items = material_items & output_items
+            if circular_items:
+                validation['is_valid'] = False
+                circular_list = list(circular_items)
+                validation['reasons'].append(f"Circular recipe detected: {circular_list[0]} is both input and output")
+                self.logger.warning("Circular recipe detected", 
+                                  craft_name=name,
+                                  circular_items=list(circular_items),
+                                  materials=[m.get('item') if isinstance(m, dict) else m for m in materials],
+                                  outputs=[o.get('item') if isinstance(o, dict) else o for o in outputs])
         
         if validation['is_valid']:
             self.logger.debug("Craft validation passed", 
@@ -683,7 +729,12 @@ class ExportManager:
         return craft_copy
     
     def _find_similar_crafts(self, new_craft: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Find crafts with the same name but potentially different properties."""
+        """Find crafts with the same name but potentially different properties.
+        
+        This helps identify crafts that might be variations of the same recipe
+        but should not be considered exact duplicates if they have different
+        materials, outputs, or requirements.
+        """
         new_name = new_craft.get('name', '').lower().strip()
         similar_crafts = []
         
@@ -696,18 +747,103 @@ class ExportManager:
                 continue
                 
             existing_name = existing_craft.get('name', '').lower().strip()
+            
+            # Only consider crafts with identical names as "similar"
+            # The hash function will determine if they're truly duplicates
             if new_name == existing_name:
                 similar_crafts.append(existing_craft)
         
         return similar_crafts
     
+    def _are_crafts_very_similar(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
+        """Check if two crafts are very similar (beyond just having the same name).
+        
+        Returns True only if the crafts have the same name, materials, outputs, AND requirements.
+        This is used to identify crafts that are nearly identical and might warrant updating
+        rather than being added as separate entries.
+        """
+        # Must have same name (case insensitive)
+        new_name = new_craft.get('name', '').lower().strip()
+        existing_name = existing_craft.get('name', '').lower().strip()
+        if new_name != existing_name:
+            return False
+        
+        # Compare materials
+        new_materials = new_craft.get('materials', [])
+        existing_materials = existing_craft.get('materials', [])
+        if not self._materials_equal(new_materials, existing_materials):
+            return False
+        
+        # Compare outputs  
+        new_outputs = new_craft.get('outputs', [])
+        existing_outputs = existing_craft.get('outputs', [])
+        if not self._outputs_equal(new_outputs, existing_outputs):
+            return False
+        
+        # Compare requirements
+        new_reqs = new_craft.get('requirements', {})
+        existing_reqs = existing_craft.get('requirements', {})
+        if not self._requirements_equal(new_reqs, existing_reqs):
+            return False
+        
+        # If we get here, they're very similar (essentially the same craft)
+        return True
+    
+    def _materials_equal(self, materials1: List[Dict], materials2: List[Dict]) -> bool:
+        """Check if two materials lists are equal."""
+        if len(materials1) != len(materials2):
+            return False
+        
+        # Sort materials by item name for comparison
+        sorted_m1 = sorted(materials1, key=lambda x: x.get('item', '') if isinstance(x, dict) else str(x))
+        sorted_m2 = sorted(materials2, key=lambda x: x.get('item', '') if isinstance(x, dict) else str(x))
+        
+        for m1, m2 in zip(sorted_m1, sorted_m2):
+            if not isinstance(m1, dict) or not isinstance(m2, dict):
+                continue
+            if (m1.get('item', '') != m2.get('item', '') or 
+                m1.get('qty', 1) != m2.get('qty', 1)):
+                return False
+        
+        return True
+    
+    def _outputs_equal(self, outputs1: List[Dict], outputs2: List[Dict]) -> bool:
+        """Check if two outputs lists are equal."""
+        if len(outputs1) != len(outputs2):
+            return False
+        
+        # Sort outputs by item name for comparison
+        sorted_o1 = sorted(outputs1, key=lambda x: x.get('item', '') if isinstance(x, dict) else str(x))
+        sorted_o2 = sorted(outputs2, key=lambda x: x.get('item', '') if isinstance(x, dict) else str(x))
+        
+        for o1, o2 in zip(sorted_o1, sorted_o2):
+            if not isinstance(o1, dict) or not isinstance(o2, dict):
+                continue
+            if (o1.get('item', '') != o2.get('item', '') or 
+                o1.get('qty', 1) != o2.get('qty', 1)):
+                return False
+        
+        return True
+    
+    def _requirements_equal(self, reqs1: Dict, reqs2: Dict) -> bool:
+        """Check if two requirements dictionaries are equal."""
+        # Normalize requirements by removing empty values
+        norm_reqs1 = {k: v for k, v in reqs1.items() if v and str(v).strip()}
+        norm_reqs2 = {k: v for k, v in reqs2.items() if v and str(v).strip()}
+        
+        return norm_reqs1 == norm_reqs2
+    
     def _should_update_existing_craft(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
-        """Determine if an existing craft should be updated with new information."""
-        # Check if new craft has higher confidence
+        """Determine if an existing craft should be updated with new information.
+        
+        Only updates if the new craft has significantly better confidence or
+        more complete information, ensuring we don't replace good data with worse data.
+        """
+        # Check if new craft has significantly higher confidence
         new_confidence = new_craft.get('confidence', 0)
         existing_confidence = existing_craft.get('confidence', 0)
         
-        if new_confidence > existing_confidence + 0.05:  # 5% threshold
+        if new_confidence > existing_confidence + 0.1:  # 10% threshold for safety
             return True
         
         # Check if new craft has more complete requirements
@@ -715,10 +851,22 @@ class ExportManager:
         existing_reqs = existing_craft.get('requirements', {})
         
         # Count non-empty requirement fields
-        new_req_count = sum(1 for v in new_reqs.values() if v)
-        existing_req_count = sum(1 for v in existing_reqs.values() if v)
+        new_req_count = sum(1 for v in new_reqs.values() if v and str(v).strip())
+        existing_req_count = sum(1 for v in existing_reqs.values() if v and str(v).strip())
         
-        if new_req_count > existing_req_count:
+        # Only update if significantly more complete requirements
+        if new_req_count > existing_req_count + 1:
+            return True
+        
+        # Check if new craft has more complete materials/outputs data
+        new_materials = new_craft.get('materials', [])
+        existing_materials = existing_craft.get('materials', [])
+        new_outputs = new_craft.get('outputs', [])
+        existing_outputs = existing_craft.get('outputs', [])
+        
+        # Prefer craft with more detailed material/output information
+        if (len(new_materials) > len(existing_materials) or 
+            len(new_outputs) > len(existing_outputs)):
             return True
         
         return False
@@ -736,11 +884,315 @@ class ExportManager:
         cleaned = re.sub(r'^\d+/\d+\s+', '', name.strip())
         return cleaned
     
+    def _get_primary_material_name(self, materials: List[Dict[str, Any]]) -> str:
+        """Extract the primary material name for name disambiguation.
+        
+        Args:
+            materials: List of material dictionaries
+            
+        Returns:
+            Name of the primary material (cleaned and capitalized)
+        """
+        if not materials or not isinstance(materials, list):
+            return ""
+        
+        # Get the first material as primary (most recipes have one main ingredient)
+        primary_material = materials[0]
+        if not isinstance(primary_material, dict):
+            return ""
+        
+        item_name = primary_material.get('item', '')
+        if not item_name:
+            return ""
+        
+        # Extract item name from BitCrafty ID format (item:profession:name)
+        if ':' in item_name:
+            item_parts = item_name.split(':')
+            if len(item_parts) >= 3:
+                item_name = item_parts[-1]  # Get the last part (actual item name)
+        
+        # Convert from kebab-case to Title Case
+        if '-' in item_name:
+            item_name = ' '.join(word.capitalize() for word in item_name.split('-'))
+        elif '_' in item_name:
+            item_name = ' '.join(word.capitalize() for word in item_name.split('_'))
+        else:
+            item_name = item_name.title()
+        
+        return item_name
+    
+    def _get_base_craft_name(self, name: str) -> str:
+        """Extract base craft name by removing material disambiguation in parentheses.
+        
+        Args:
+            name: Full craft name potentially with material disambiguation
+            
+        Returns:
+            Base craft name without material specification
+        """
+        # Remove content in parentheses at the end
+        base_name = re.sub(r'\s*\([^)]+\)\s*$', '', name.strip())
+        return base_name
+    
+    def _disambiguate_craft_names(self, crafts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Disambiguate craft names by adding material specifications in parentheses.
+        
+        For crafts that share the same base name but have different materials,
+        append the primary material name in parentheses to distinguish them.
+        
+        Args:
+            crafts: List of craft dictionaries to process
+            
+        Returns:
+            List of crafts with disambiguated names
+        """
+        if not crafts:
+            return crafts
+        
+        # Group crafts by their base name
+        name_groups = {}
+        for i, craft in enumerate(crafts):
+            if not isinstance(craft, dict):
+                continue
+                
+            base_name = self._get_base_craft_name(craft.get('name', ''))
+            if base_name not in name_groups:
+                name_groups[base_name] = []
+            name_groups[base_name].append((i, craft))
+        
+        # Process groups that have multiple crafts
+        updated_crafts = list(crafts)  # Create a copy
+        
+        for base_name, craft_list in name_groups.items():
+            if len(craft_list) <= 1:
+                continue  # No disambiguation needed for single crafts
+            
+            # Check if crafts in this group have different materials
+            materials_differ = False
+            first_materials = None
+            
+            for _, craft in craft_list:
+                materials = craft.get('materials', [])
+                if first_materials is None:
+                    first_materials = materials
+                elif not self._materials_equal(materials, first_materials):
+                    materials_differ = True
+                    break
+            
+            if not materials_differ:
+                continue  # No disambiguation needed if materials are the same
+            
+            # Disambiguate names by adding primary material
+            for index, craft in craft_list:
+                primary_material = self._get_primary_material_name(craft.get('materials', []))
+                if primary_material:
+                    # Check if name already has disambiguation
+                    current_name = craft.get('name', '')
+                    if not re.search(r'\([^)]+\)$', current_name):
+                        # Add disambiguation
+                        new_name = f"{base_name} ({primary_material})"
+                        updated_crafts[index] = {**craft, 'name': new_name}
+                        self.logger.info("Disambiguated craft name", 
+                                       original=current_name,
+                                       disambiguated=new_name,
+                                       material=primary_material)
+        
+        return updated_crafts
+    
+    def _update_existing_craft_names(self):
+        """Update existing crafts to add name disambiguation when needed.
+        
+        This ensures that if we have 'Make Basic Fertilizer' and then add
+        'Make Basic Fertilizer (Fish)', we go back and update the first one
+        to 'Make Basic Fertilizer (Berry)' or similar.
+        """
+        if not self.existing_crafts:
+            return
+        
+        existing_crafts_list = list(self.existing_crafts.values())
+        disambiguated_crafts = self._disambiguate_craft_names(existing_crafts_list)
+        
+        # Update the existing_crafts dict with new names
+        updated_existing_crafts = {}
+        for i, craft in enumerate(disambiguated_crafts):
+            # Regenerate hash with new name if it changed
+            original_craft = existing_crafts_list[i]
+            if craft.get('name') != original_craft.get('name'):
+                # Name changed, regenerate hash
+                new_hash = self._generate_craft_hash(craft)
+                craft['id'] = new_hash
+                updated_existing_crafts[new_hash] = craft
+                self.logger.info("Updated existing craft name with disambiguation",
+                               original_name=original_craft.get('name'),
+                               new_name=craft.get('name'),
+                               new_hash=new_hash)
+            else:
+                # Name unchanged, keep original hash
+                original_hash = self._generate_craft_hash(original_craft)
+                updated_existing_crafts[original_hash] = craft
+        
+        self.existing_crafts = updated_existing_crafts
+    
+    def _disambiguate_new_craft_names(self, new_crafts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Disambiguate new craft names against existing crafts and each other.
+        
+        This handles the case where AI vision extracts generic names like "Make Basic Fertilizer"
+        but the recipe actually uses specific materials like fish. We need to:
+        1. Check if the base name conflicts with existing crafts with different materials
+        2. Disambiguate by adding primary material in parentheses
+        3. Also disambiguate within the current batch of new crafts
+        
+        Args:
+            new_crafts: List of new craft dictionaries from AI extraction
+            
+        Returns:
+            List of crafts with disambiguated names
+        """
+        if not new_crafts:
+            return new_crafts
+        
+        # Combine existing and new crafts for comprehensive disambiguation
+        all_crafts = []
+        
+        # Add existing crafts with their current names
+        for existing_craft in self.existing_crafts.values():
+            if isinstance(existing_craft, dict):
+                all_crafts.append(existing_craft)
+        
+        # Add new crafts
+        all_crafts.extend(new_crafts)
+        
+        # Group all crafts by base name
+        name_groups = {}
+        existing_indices = set()  # Track which indices are existing crafts
+        new_craft_indices = {}    # Map new craft index to all_crafts index
+        
+        for i, craft in enumerate(all_crafts):
+            if not isinstance(craft, dict):
+                continue
+                
+            base_name = self._get_base_craft_name(craft.get('name', ''))
+            if base_name not in name_groups:
+                name_groups[base_name] = []
+            name_groups[base_name].append((i, craft))
+            
+            # Track if this is an existing craft
+            if i < len(self.existing_crafts):
+                existing_indices.add(i)
+            else:
+                # This is a new craft
+                new_craft_index = i - len(self.existing_crafts)
+                new_craft_indices[new_craft_index] = i
+        
+        # Process groups that need disambiguation
+        updated_new_crafts = list(new_crafts)  # Copy to modify
+        crafts_to_update = []  # Track existing crafts that need name updates
+        
+        for base_name, craft_list in name_groups.items():
+            if len(craft_list) <= 1:
+                continue  # No disambiguation needed
+            
+            # Check if crafts have different materials
+            unique_materials = set()
+            for _, craft in craft_list:
+                materials = craft.get('materials', [])
+                materials_signature = self._get_materials_signature(materials)
+                unique_materials.add(materials_signature)
+            
+            if len(unique_materials) <= 1:
+                continue  # All crafts have same materials, no disambiguation needed
+            
+            # Need to disambiguate - add material names to all crafts in this group
+            for index, craft in craft_list:
+                primary_material = self._get_primary_material_name(craft.get('materials', []))
+                if not primary_material:
+                    continue  # Skip if we can't determine primary material
+                
+                current_name = craft.get('name', '')
+                
+                # Check if name already has disambiguation in parentheses
+                if re.search(r'\([^)]+\)$', current_name):
+                    continue  # Already disambiguated
+                
+                # Create disambiguated name
+                new_name = f"{base_name} ({primary_material})"
+                
+                if index in existing_indices:
+                    # This is an existing craft - mark for update
+                    crafts_to_update.append((craft, new_name))
+                    self.logger.info("Existing craft needs disambiguation", 
+                                   original=current_name,
+                                   disambiguated=new_name,
+                                   reason="conflict_with_new_craft")
+                else:
+                    # This is a new craft - update directly
+                    new_craft_index = index - len(self.existing_crafts)
+                    if 0 <= new_craft_index < len(updated_new_crafts):
+                        updated_new_crafts[new_craft_index] = {
+                            **updated_new_crafts[new_craft_index], 
+                            'name': new_name
+                        }
+                        self.logger.info("New craft name disambiguated", 
+                                       original=current_name,
+                                       disambiguated=new_name,
+                                       material=primary_material)
+        
+        # Update existing crafts that need disambiguation
+        for craft_to_update, new_name in crafts_to_update:
+            # Find the craft in existing_crafts and update it
+            for hash_key, existing_craft in self.existing_crafts.items():
+                if existing_craft is craft_to_update:
+                    # Update the name and regenerate hash
+                    updated_craft = {**existing_craft, 'name': new_name}
+                    new_hash = self._generate_craft_hash(updated_craft)
+                    updated_craft['id'] = new_hash
+                    
+                    # Remove old entry and add updated one
+                    del self.existing_crafts[hash_key]
+                    self.existing_crafts[new_hash] = updated_craft
+                    
+                    self.logger.info("Updated existing craft with disambiguated name",
+                                   old_name=existing_craft.get('name'),
+                                   new_name=new_name,
+                                   old_hash=hash_key,
+                                   new_hash=new_hash)
+                    break
+        
+        return updated_new_crafts
+    
+    def _get_materials_signature(self, materials: List[Dict[str, Any]]) -> str:
+        """Create a signature string for materials list for comparison.
+        
+        Args:
+            materials: List of material dictionaries
+            
+        Returns:
+            String signature representing the materials
+        """
+        if not materials:
+            return ""
+        
+        # Sort materials by item name and create signature
+        sorted_materials = sorted(materials, key=lambda x: x.get('item', '') if isinstance(x, dict) else str(x))
+        signature_parts = []
+        
+        for material in sorted_materials:
+            if isinstance(material, dict):
+                item = material.get('item', '')
+                qty = material.get('qty', 1)
+                signature_parts.append(f"{item}:{qty}")
+            else:
+                signature_parts.append(str(material))
+        
+        return "|".join(signature_parts)
+    
     def _process_crafts(self, crafts: List[Dict[str, Any]], extracted_at: datetime) -> List[Dict[str, Any]]:
         """Process crafts and add new ones to the store."""
         new_crafts = []
         rejected_crafts = 0
         
+        # First pass: clean and normalize craft names and materials
+        processed_crafts = []
         for craft in crafts:
             # Clean the craft name first
             original_name = craft.get('name', '')
@@ -754,7 +1206,13 @@ class ExportManager:
             
             # Normalize item names in materials and outputs
             craft = self._normalize_craft_materials_and_outputs(craft)
-            
+            processed_crafts.append(craft)
+        
+        # Second pass: disambiguate names by adding materials in parentheses where needed
+        processed_crafts = self._disambiguate_new_craft_names(processed_crafts)
+        
+        # Third pass: process each craft for validation and storage
+        for craft in processed_crafts:
             # Validate craft first
             validation = self._validate_craft(craft)
             if not validation['is_valid']:
@@ -780,47 +1238,65 @@ class ExportManager:
                 self.logger.debug("Exact duplicate craft found", name=craft.get('name'), hash=craft_hash)
                 continue
             
-            # Check for similar crafts (same name, different materials/outputs)
+            # For crafts with same name but different hash (different materials/requirements/outputs),
+            # we should add them as separate crafts rather than trying to update existing ones.
+            # Only update existing crafts if they have the same name AND very similar properties
+            # but the new one has significantly better confidence or completeness.
+            
             similar_crafts = self._find_similar_crafts(processed_craft)
+            should_add_as_new = True
+            
             if similar_crafts:
-                # Found crafts with same name - decide whether to update or skip
-                best_existing = max(similar_crafts, key=lambda x: x.get('confidence', 0))
+                # Check if any similar craft has nearly identical properties
+                for existing_craft in similar_crafts:
+                    existing_hash = self._generate_craft_hash(existing_craft)
+                    
+                    # If we find a very similar craft (not identical but close),
+                    # check if we should update it
+                    if self._are_crafts_very_similar(processed_craft, existing_craft):
+                        if self._should_update_existing_craft(processed_craft, existing_craft):
+                            # Update the existing craft with better information
+                            self.logger.info("Updating existing similar craft with better information", 
+                                           name=processed_craft.get('name'),
+                                           old_confidence=existing_craft.get('confidence'),
+                                           new_confidence=processed_craft.get('confidence'))
+                            
+                            # Remove old craft from existing crafts dict
+                            if existing_hash in self.existing_crafts:
+                                del self.existing_crafts[existing_hash]
+                            
+                            # Add the updated craft
+                            processed_craft['id'] = craft_hash
+                            self.existing_crafts[craft_hash] = processed_craft
+                            new_crafts.append(processed_craft)
+                            # Track updated crafts for session summary
+                            self.session_new_crafts.append(processed_craft)
+                            should_add_as_new = False
+                            break
+                        else:
+                            # Don't update, but also don't add as new if very similar
+                            self.logger.debug("Very similar craft exists with better/equal info", 
+                                            name=processed_craft.get('name'))
+                            should_add_as_new = False
+                            break
+            
+            # Add as genuinely new craft if not similar enough to any existing craft
+            if should_add_as_new:
+                processed_craft['id'] = craft_hash
+                self.existing_crafts[craft_hash] = processed_craft
+                new_crafts.append(processed_craft)
+                # Track new crafts for session summary
+                self.session_new_crafts.append(processed_craft)
                 
-                if self._should_update_existing_craft(processed_craft, best_existing):
-                    # Update the existing craft with better information
-                    old_hash = self._generate_craft_hash(best_existing)
-                    self.logger.info("Updating existing craft with better information", 
-                                   name=processed_craft.get('name'),
-                                   old_confidence=best_existing.get('confidence'),
-                                   new_confidence=processed_craft.get('confidence'))
-                    
-                    # Remove old craft from existing crafts dict
-                    if old_hash in self.existing_crafts:
-                        del self.existing_crafts[old_hash]
-                    
-                    # Add the updated craft
-                    processed_craft['id'] = craft_hash
-                    self.existing_crafts[craft_hash] = processed_craft
-                    new_crafts.append(processed_craft)
-                    # Track updated crafts for session summary
-                    self.session_new_crafts.append(processed_craft)
-                else:
-                    # Keep existing craft, skip new one
-                    self.logger.debug("Similar craft exists with better/equal info", name=processed_craft.get('name'))
-                continue
-            
-            # This is a genuinely new craft
-            processed_craft['id'] = craft_hash
-            self.existing_crafts[craft_hash] = processed_craft
-            new_crafts.append(processed_craft)
-            # Track new crafts for session summary
-            self.session_new_crafts.append(processed_craft)
-            
-            self.logger.info("New craft discovered",
-                           name=craft.get('name'),
-                           craft_id=craft_hash,
-                           confidence=craft.get('confidence'),
-                           profession=craft.get('requirements', {}).get('profession'))
+                self.logger.info("New craft discovered",
+                               name=craft.get('name'),
+                               craft_id=craft_hash,
+                               confidence=craft.get('confidence'),
+                               profession=craft.get('requirements', {}).get('profession'))
+        
+        # Fourth pass: After adding new crafts, update existing craft names for disambiguation
+        if new_crafts:
+            self._update_existing_craft_names()
         
         if rejected_crafts > 0:
             self.logger.info("Crafts validation summary", 

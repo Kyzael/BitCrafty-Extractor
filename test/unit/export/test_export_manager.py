@@ -262,14 +262,145 @@ class TestExportManagerHashing:
                     
                     craft = {
                         'name': 'Test Craft',
-                        'materials': [{'name': 'Material 1', 'quantity': 1}],
-                        'outputs': [{'name': 'Output 1', 'quantity': 1}]
+                        'materials': [{'item': 'Material 1', 'qty': 1}],
+                        'outputs': [{'item': 'Output 1', 'qty': 1}],
+                        'requirements': {'profession': 'farming'}
                     }
                     
                     craft_hash = export_manager._generate_craft_hash(craft)
                     
                     assert isinstance(craft_hash, str)
                     assert len(craft_hash) == 12
+    
+    def test_generate_craft_hash_with_requirements_different(self, temp_exports_dir):
+        """Test that crafts with same name/materials/outputs but different requirements generate different hashes."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir)
+                    
+                    # Craft with basic tools requirement
+                    craft1 = {
+                        'name': 'Make Basic Fertilizer',
+                        'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'}
+                    }
+                    
+                    # Same craft but with farming station requirement
+                    craft2 = {
+                        'name': 'Make Basic Fertilizer',
+                        'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'building': 'tier1_farming_station'}
+                    }
+                    
+                    hash1 = export_manager._generate_craft_hash(craft1)
+                    hash2 = export_manager._generate_craft_hash(craft2)
+                    
+                    # Should be different because requirements are different
+                    assert hash1 != hash2
+    
+    def test_generate_craft_hash_fertilizer_variants(self, temp_exports_dir):
+        """Test that different Basic Fertilizer recipes generate different hashes."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir)
+                    
+                    # Different fertilizer recipes should have different hashes
+                    fertilizer_fish = {
+                        'name': 'Make Basic Fertilizer (Fish)',
+                        'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'}
+                    }
+                    
+                    fertilizer_berry = {
+                        'name': 'Make Basic Fertilizer (Berry)',
+                        'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'}
+                    }
+                    
+                    fertilizer_station = {
+                        'name': 'Make Basic Fertilizer',
+                        'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'building': 'tier1_farming_station'}
+                    }
+                    
+                    hash_fish = export_manager._generate_craft_hash(fertilizer_fish)
+                    hash_berry = export_manager._generate_craft_hash(fertilizer_berry)
+                    hash_station = export_manager._generate_craft_hash(fertilizer_station)
+                    
+                    # All should be different
+                    assert hash_fish != hash_berry
+                    assert hash_fish != hash_station
+                    assert hash_berry != hash_station
+    
+    def test_generate_craft_hash_identical_crafts_same_hash(self, temp_exports_dir):
+        """Test that truly identical crafts generate the same hash."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir)
+                    
+                    craft1 = {
+                        'name': 'Test Craft',
+                        'materials': [{'item': 'Material A', 'qty': 2}],
+                        'outputs': [{'item': 'Output X', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'level': 1}
+                    }
+                    
+                    # Identical craft
+                    craft2 = {
+                        'name': 'Test Craft',
+                        'materials': [{'item': 'Material A', 'qty': 2}],
+                        'outputs': [{'item': 'Output X', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'level': 1}
+                    }
+                    
+                    hash1 = export_manager._generate_craft_hash(craft1)
+                    hash2 = export_manager._generate_craft_hash(craft2)
+                    
+                    # Should be identical
+                    assert hash1 == hash2
+    
+    def test_generate_craft_hash_missing_requirements(self, temp_exports_dir):
+        """Test craft hash generation when requirements are missing or empty."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir)
+                    
+                    craft_no_reqs = {
+                        'name': 'Test Craft',
+                        'materials': [{'item': 'Material A', 'qty': 1}],
+                        'outputs': [{'item': 'Output X', 'qty': 1}]
+                        # No requirements
+                    }
+                    
+                    craft_empty_reqs = {
+                        'name': 'Test Craft',
+                        'materials': [{'item': 'Material A', 'qty': 1}],
+                        'outputs': [{'item': 'Output X', 'qty': 1}],
+                        'requirements': {}  # Empty requirements
+                    }
+                    
+                    hash_no_reqs = export_manager._generate_craft_hash(craft_no_reqs)
+                    hash_empty_reqs = export_manager._generate_craft_hash(craft_empty_reqs)
+                    
+                    # Should be the same since both have no meaningful requirements
+                    assert hash_no_reqs == hash_empty_reqs
 
 
 @pytest.mark.unit
@@ -362,6 +493,736 @@ class TestExportManagerValidation:
                     
                     assert validation['is_valid'] is False
                     assert any('Empty or missing requirements' in reason for reason in validation['reasons'])
+    
+    def test_validate_craft_circular_recipe_detected(self, temp_exports_dir, mock_config_manager):
+        """Test craft validation detects circular recipes (input = output)."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Test circular recipe where material and output are the same
+                    craft = {
+                        'name': 'Make Basic Fertilizer',
+                        'confidence': 0.8,
+                        'requirements': {'profession': 'farming'},
+                        'materials': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                    }
+                    validation = export_manager._validate_craft(craft)
+                    
+                    assert validation['is_valid'] is False
+                    assert any('Circular recipe detected' in reason for reason in validation['reasons'])
+                    
+    def test_validate_craft_valid_non_circular(self, temp_exports_dir, mock_config_manager):
+        """Test that valid non-circular recipes pass validation."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    craft = {
+                        'name': 'Make Basic Fertilizer',
+                        'confidence': 0.8,
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],  # Input is fish
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]      # Output is fertilizer
+                    }
+                    validation = export_manager._validate_craft(craft)
+                    
+                    assert validation['is_valid'] is True
+                    assert len(validation['reasons']) == 0
+                    
+    def test_validate_craft_real_world_circular_example(self, temp_exports_dir, mock_config_manager):
+        """Test the real-world circular recipe example from analysis log."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_get_logger.return_value = Mock()
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # This is the invalid circular recipe from the analysis log
+                    circular_craft = {
+                        'name': 'Make Basic Fertilizer',
+                        'confidence': 0.85,
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'materials': [{'item': 'Basic Fertilizer', 'qty': 1}],  # Same as output!
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                    }
+                    validation = export_manager._validate_craft(circular_craft)
+                    
+                    assert validation['is_valid'] is False
+                    assert any('Circular recipe detected: basic fertilizer is both input and output' in reason for reason in validation['reasons'])
+                    assert any('basic fertilizer is both input and output' in reason.lower() for reason in validation['reasons'])
+    
+    def test_validate_craft_valid_different_materials_outputs(self, temp_exports_dir, mock_config_manager):
+        """Test craft validation passes when materials and outputs are different."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Test valid recipe with different materials and outputs
+                    craft = {
+                        'name': 'Make Basic Fertilizer',
+                        'confidence': 0.8,
+                        'requirements': {'profession': 'farming'},
+                        'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                    }
+                    validation = export_manager._validate_craft(craft)
+                    
+                    assert validation['is_valid'] is True
+                    assert len(validation['reasons']) == 0
+
+
+@pytest.mark.unit
+class TestExportManagerCraftDuplicateDetection:
+    """Test ExportManager craft duplicate detection improvements."""
+    
+    def test_fertilizer_variants_not_duplicates(self, temp_exports_dir, mock_config_manager):
+        """Test that different Basic Fertilizer recipes are not considered duplicates."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # First add a fish-based fertilizer
+                    fertilizer_fish = {
+                        'name': 'Make Basic Fertilizer (Fish)',
+                        'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'confidence': 0.85
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data1 = {'items_found': [], 'crafts_found': [fertilizer_fish]}
+                        result1 = export_manager.process_extraction_results(data1)
+                        
+                        assert result1['new_crafts_added'] == 1
+                        assert len(export_manager.existing_crafts) == 1
+                        
+                        # Now add a berry-based fertilizer with similar name
+                        fertilizer_berry = {
+                            'name': 'Make Basic Fertilizer (Berry)',
+                            'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.88
+                        }
+                        
+                        data2 = {'items_found': [], 'crafts_found': [fertilizer_berry]}
+                        result2 = export_manager.process_extraction_results(data2)
+                        
+                        # Should be added as a new craft, not considered duplicate
+                        assert result2['new_crafts_added'] == 1
+                        assert len(export_manager.existing_crafts) == 2
+                        assert result2['crafts_found_duplicates'] == 0
+    
+    def test_same_name_different_requirements_not_duplicates(self, temp_exports_dir, mock_config_manager):
+        """Test that crafts with same name but different requirements are not duplicates."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Basic fertilizer made with basic tools
+                    fertilizer_basic = {
+                        'name': 'Make Basic Fertilizer',
+                        'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'confidence': 0.85
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data1 = {'items_found': [], 'crafts_found': [fertilizer_basic]}
+                        result1 = export_manager.process_extraction_results(data1)
+                        
+                        assert result1['new_crafts_added'] == 1
+                        
+                        # Same name and materials but different building requirement
+                        fertilizer_station = {
+                            'name': 'Make Basic Fertilizer',
+                            'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'building': 'tier1_farming_station'},
+                            'confidence': 0.87
+                        }
+                        
+                        data2 = {'items_found': [], 'crafts_found': [fertilizer_station]}
+                        result2 = export_manager.process_extraction_results(data2)
+                        
+                        # Should be added as new, not duplicate
+                        assert result2['new_crafts_added'] == 1
+                        assert len(export_manager.existing_crafts) == 2
+                        assert result2['crafts_found_duplicates'] == 0
+    
+    def test_identical_crafts_are_duplicates(self, temp_exports_dir, mock_config_manager):
+        """Test that truly identical crafts are correctly identified as duplicates."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    craft = {
+                        'name': 'Make Test Item',
+                        'materials': [{'item': 'Material A', 'qty': 2}],
+                        'outputs': [{'item': 'Test Item', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'level': 1},
+                        'confidence': 0.85
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data1 = {'items_found': [], 'crafts_found': [craft]}
+                        result1 = export_manager.process_extraction_results(data1)
+                        
+                        assert result1['new_crafts_added'] == 1
+                        
+                        # Add the exact same craft again
+                        identical_craft = craft.copy()
+                        data2 = {'items_found': [], 'crafts_found': [identical_craft]}
+                        result2 = export_manager.process_extraction_results(data2)
+                        
+                        # Should be identified as duplicate
+                        assert result2['new_crafts_added'] == 0
+                        assert result2['crafts_found_duplicates'] == 1
+                        assert len(export_manager.existing_crafts) == 1
+    
+    def test_different_materials_not_duplicates(self, temp_exports_dir, mock_config_manager):
+        """Test that crafts with same name but different materials are not duplicates."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    craft1 = {
+                        'name': 'Make Test Tool',
+                        'materials': [{'item': 'Wood', 'qty': 2}, {'item': 'Stone', 'qty': 1}],
+                        'outputs': [{'item': 'Test Tool', 'qty': 1}],
+                        'requirements': {'profession': 'tool_making'},
+                        'confidence': 0.85
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data1 = {'items_found': [], 'crafts_found': [craft1]}
+                        result1 = export_manager.process_extraction_results(data1)
+                        
+                        assert result1['new_crafts_added'] == 1
+                        
+                        # Same name and output but different materials
+                        craft2 = {
+                            'name': 'Make Test Tool',
+                            'materials': [{'item': 'Metal', 'qty': 1}],  # Different materials
+                            'outputs': [{'item': 'Test Tool', 'qty': 1}],
+                            'requirements': {'profession': 'tool_making'},
+                            'confidence': 0.87
+                        }
+                        
+                        data2 = {'items_found': [], 'crafts_found': [craft2]}
+                        result2 = export_manager.process_extraction_results(data2)
+                        
+                        # Should be different crafts
+                        assert result2['new_crafts_added'] == 1
+                        assert result2['crafts_found_duplicates'] == 0
+                        assert len(export_manager.existing_crafts) == 2
+    
+    def test_different_quantities_not_duplicates(self, temp_exports_dir, mock_config_manager):
+        """Test that crafts with same materials but different quantities are not duplicates."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    craft1 = {
+                        'name': 'Make Test Food',
+                        'materials': [{'item': 'Ingredient A', 'qty': 1}],
+                        'outputs': [{'item': 'Test Food', 'qty': 1}],
+                        'requirements': {'profession': 'cooking'},
+                        'confidence': 0.85
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data1 = {'items_found': [], 'crafts_found': [craft1]}
+                        result1 = export_manager.process_extraction_results(data1)
+                        
+                        assert result1['new_crafts_added'] == 1
+                        
+                        # Same materials but different quantity
+                        craft2 = {
+                            'name': 'Make Test Food',
+                            'materials': [{'item': 'Ingredient A', 'qty': 2}],  # Different quantity
+                            'outputs': [{'item': 'Test Food', 'qty': 1}],
+                            'requirements': {'profession': 'cooking'},
+                            'confidence': 0.87
+                        }
+                        
+                        data2 = {'items_found': [], 'crafts_found': [craft2]}
+                        result2 = export_manager.process_extraction_results(data2)
+                        
+                        # Should be different crafts
+                        assert result2['new_crafts_added'] == 1
+                        assert result2['crafts_found_duplicates'] == 0
+                        assert len(export_manager.existing_crafts) == 2
+    
+    def test_bitcrafty_fertilizer_scenario(self, temp_exports_dir, mock_config_manager):
+        """Test the exact BitCrafty fertilizer scenario that prompted this improvement."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Simulate extracting all BitCrafty fertilizer recipes
+                    fertilizer_recipes = [
+                        {
+                            'name': 'Make Basic Fertilizer (Fish)',
+                            'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.85
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer (Berry)',
+                            'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.88
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer (Flower)',
+                            'materials': [{'item': 'Basic Flower', 'qty': 5}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.87
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer (Food Waste)',
+                            'materials': [{'item': 'Food Waste', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.82
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer',
+                            'materials': [{'item': 'Basic Berry', 'qty': 1}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'building': 'tier1_farming_station'},
+                            'confidence': 0.90
+                        }
+                    ]
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        # Process all fertilizer recipes in a single extraction
+                        data = {'items_found': [], 'crafts_found': fertilizer_recipes}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # All 5 recipes should be added as unique crafts
+                        assert result['new_crafts_added'] == 5
+                        assert result['crafts_found_duplicates'] == 0
+                        assert len(export_manager.existing_crafts) == 5
+                        
+                        # Verify all recipes have different hashes
+                        craft_hashes = set()
+                        for craft in export_manager.existing_crafts.values():
+                            craft_hashes.add(craft['id'])
+                        assert len(craft_hashes) == 5  # All unique hashes
+                        
+                        # Verify names are handled correctly by disambiguation
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        # The generic "Make Basic Fertilizer" should be disambiguated to include material
+                        expected_names = {
+                            'Make Basic Fertilizer (Fish)',
+                            'Make Basic Fertilizer (Berry)', 
+                            'Make Basic Fertilizer (Flower)',
+                            'Make Basic Fertilizer (Food Waste)',
+                            'Make Basic Fertilizer (Basic Berry)'  # Generic name disambiguated
+                        }
+                        
+                        assert set(craft_names) == expected_names
+
+
+@pytest.mark.unit
+class TestExportManagerNameDisambiguation:
+    """Test ExportManager craft name disambiguation functionality."""
+    
+    def test_disambiguate_generic_craft_name_with_existing(self, temp_exports_dir, mock_config_manager):
+        """Test that generic craft names get disambiguated when they conflict with existing crafts."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            # Start with existing fertilizer craft using fish
+            existing_fertilizer = {
+                'name': 'Make Basic Fertilizer',
+                'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                'confidence': 0.85,
+                'id': 'existing_hash'
+            }
+            
+            existing_crafts = {'existing_hash': existing_fertilizer}
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value=existing_crafts):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Add new generic fertilizer craft using berries
+                    new_fertilizer = {
+                        'name': 'Make Basic Fertilizer',  # Generic name from AI
+                        'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'confidence': 0.88
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data = {'items_found': [], 'crafts_found': [new_fertilizer]}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # Should add new craft and disambiguate both names
+                        assert result['new_crafts_added'] == 1
+                        assert len(export_manager.existing_crafts) == 2
+                        
+                        # Check that names were disambiguated
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        # Should have disambiguated names based on materials
+                        expected_names = {
+                            'Make Basic Fertilizer (Breezy Fin Darter)',
+                            'Make Basic Fertilizer (Basic Berry)'
+                        }
+                        
+                        assert set(craft_names) == expected_names
+    
+    def test_multiple_new_crafts_same_base_name_disambiguation(self, temp_exports_dir, mock_config_manager):
+        """Test disambiguation when multiple new crafts have the same base name."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Add multiple fertilizer crafts with same base name but different materials
+                    new_crafts = [
+                        {
+                            'name': 'Make Basic Fertilizer',
+                            'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.85
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer', 
+                            'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.88
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer',
+                            'materials': [{'item': 'Basic Flower', 'qty': 5}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.82
+                        }
+                    ]
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data = {'items_found': [], 'crafts_found': new_crafts}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # Should add all crafts with disambiguated names
+                        assert result['new_crafts_added'] == 3
+                        assert len(export_manager.existing_crafts) == 3
+                        
+                        # Check that all names were disambiguated
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        expected_names = {
+                            'Make Basic Fertilizer (Breezy Fin Darter)',
+                            'Make Basic Fertilizer (Basic Berry)',
+                            'Make Basic Fertilizer (Basic Flower)'
+                        }
+                        
+                        assert set(craft_names) == expected_names
+    
+    def test_no_disambiguation_needed_for_unique_names(self, temp_exports_dir, mock_config_manager):
+        """Test that crafts with unique names don't get unnecessarily disambiguated."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Add crafts with unique names
+                    new_crafts = [
+                        {
+                            'name': 'Craft Stone Axe',
+                            'materials': [{'item': 'Stone', 'qty': 2}, {'item': 'Wood', 'qty': 1}],
+                            'outputs': [{'item': 'Stone Axe', 'qty': 1}],
+                            'requirements': {'profession': 'tool_making'},
+                            'confidence': 0.85
+                        },
+                        {
+                            'name': 'Weave Cloth Strip',
+                            'materials': [{'item': 'Thread', 'qty': 1}],
+                            'outputs': [{'item': 'Cloth Strip', 'qty': 1}],
+                            'requirements': {'profession': 'tailoring'},
+                            'confidence': 0.88
+                        }
+                    ]
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data = {'items_found': [], 'crafts_found': new_crafts}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # Should add all crafts without changing names
+                        assert result['new_crafts_added'] == 2
+                        assert len(export_manager.existing_crafts) == 2
+                        
+                        # Names should remain unchanged
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        expected_names = {'Craft Stone Axe', 'Weave Cloth Strip'}
+                        assert set(craft_names) == expected_names
+    
+    def test_already_disambiguated_names_preserved(self, temp_exports_dir, mock_config_manager):
+        """Test that craft names already containing material disambiguation are preserved."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Add crafts where AI already extracted specific names
+                    new_crafts = [
+                        {
+                            'name': 'Make Basic Fertilizer (Fish)',  # Already specific
+                            'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.85
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer (Berry)',  # Already specific
+                            'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.88
+                        }
+                    ]
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data = {'items_found': [], 'crafts_found': new_crafts}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # Should add both crafts without changing names
+                        assert result['new_crafts_added'] == 2
+                        assert len(export_manager.existing_crafts) == 2
+                        
+                        # Names should remain as extracted
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        expected_names = {
+                            'Make Basic Fertilizer (Fish)',
+                            'Make Basic Fertilizer (Berry)'
+                        }
+                        
+                        assert set(craft_names) == expected_names
+    
+    def test_mixed_generic_and_specific_names(self, temp_exports_dir, mock_config_manager):
+        """Test handling of mixed generic and already-specific craft names."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Mix of generic and specific names from AI
+                    new_crafts = [
+                        {
+                            'name': 'Make Basic Fertilizer',  # Generic
+                            'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.85
+                        },
+                        {
+                            'name': 'Make Basic Fertilizer (Berry)',  # Already specific
+                            'materials': [{'item': 'Basic Berry', 'qty': 2}],
+                            'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                            'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                            'confidence': 0.88
+                        }
+                    ]
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        data = {'items_found': [], 'crafts_found': new_crafts}
+                        result = export_manager.process_extraction_results(data)
+                        
+                        # Should add both crafts
+                        assert result['new_crafts_added'] == 2
+                        assert len(export_manager.existing_crafts) == 2
+                        
+                        # Generic name should be disambiguated, specific should remain
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        # Should include both the original specific name and disambiguated generic
+                        expected_names = {
+                            'Make Basic Fertilizer (Breezy Fin Darter)',  # Disambiguated
+                            'Make Basic Fertilizer (Berry)'               # Preserved
+                        }
+                        
+                        assert set(craft_names) == expected_names
+
+
+@pytest.mark.unit
+class TestExportManagerCircularRecipeRejection:
+    """Test ExportManager rejection of circular recipes during processing."""
+    
+    def test_process_extraction_rejects_circular_recipes(self, temp_exports_dir, mock_config_manager):
+        """Test that circular recipes are rejected during processing with appropriate error reporting."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    # Mix of valid and circular recipes
+                    extraction_data = {
+                        'items_found': [],
+                        'crafts_found': [
+                            # Valid recipe
+                            {
+                                'name': 'Make Basic Fertilizer',
+                                'confidence': 0.85,
+                                'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                                'materials': [{'item': 'Breezy Fin Darter', 'qty': 2}],
+                                'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                            },
+                            # Circular recipe (should be rejected)
+                            {
+                                'name': 'Make Basic Fertilizer (Circular)',
+                                'confidence': 0.90,  # High confidence but still invalid
+                                'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                                'materials': [{'item': 'Basic Fertilizer', 'qty': 1}],  # Same as output!
+                                'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                            },
+                            # Another valid recipe
+                            {
+                                'name': 'Craft Stone Axe',
+                                'confidence': 0.88,
+                                'requirements': {'profession': 'tool_making'},
+                                'materials': [{'item': 'Stone', 'qty': 2}, {'item': 'Wood', 'qty': 1}],
+                                'outputs': [{'item': 'Stone Axe', 'qty': 1}]
+                            }
+                        ]
+                    }
+                    
+                    # Mock _save_data to avoid file operations
+                    with patch.object(export_manager, '_save_data'):
+                        result = export_manager.process_extraction_results(extraction_data)
+                        
+                        # Should add 2 valid crafts and reject 1 circular recipe
+                        assert result['new_crafts_added'] == 2
+                        assert result['crafts_rejected'] == 1
+                        assert result['crafts_processed'] == 3
+                        
+                        # Verify only valid crafts were added
+                        craft_names = [craft['name'] for craft in export_manager.existing_crafts.values()]
+                        
+                        expected_valid_names = {
+                            'Make Basic Fertilizer (Breezy Fin Darter)',  # Disambiguated 
+                            'Craft Stone Axe'
+                        }
+                        
+                        assert set(craft_names) == expected_valid_names
+                        
+                        # Verify circular recipe was not added
+                        assert 'Make Basic Fertilizer (Circular)' not in craft_names
+                        assert 'Make Basic Fertilizer (Basic Fertilizer)' not in craft_names
+    
+    def test_circular_recipe_error_logging(self, temp_exports_dir, mock_config_manager):
+        """Test that circular recipes trigger appropriate error logging for user feedback."""
+        with patch('structlog.get_logger') as mock_get_logger:
+            mock_logger = Mock()
+            mock_get_logger.return_value = mock_logger
+            
+            with patch.object(ExportManager, '_load_existing_items', return_value={}):
+                with patch.object(ExportManager, '_load_existing_crafts', return_value={}):
+                    export_manager = ExportManager(temp_exports_dir, mock_config_manager)
+                    
+                    circular_craft = {
+                        'name': 'Make Basic Fertilizer',
+                        'confidence': 0.85,
+                        'requirements': {'profession': 'farming', 'tool': 'basic_tools'},
+                        'materials': [{'item': 'Basic Fertilizer', 'qty': 1}],
+                        'outputs': [{'item': 'Basic Fertilizer', 'qty': 1}]
+                    }
+                    
+                    # Call validation directly to test logging
+                    validation = export_manager._validate_craft(circular_craft)
+                    
+                    # Should be invalid
+                    assert validation['is_valid'] is False
+                    assert any('Circular recipe detected' in reason for reason in validation['reasons'])
+                    
+                    # Check that warning was logged for user awareness
+                    mock_logger.warning.assert_called()
+                    warning_call = mock_logger.warning.call_args
+                    assert 'Circular recipe detected' in warning_call[0][0]
+                    assert warning_call[1]['craft_name'] == 'Make Basic Fertilizer'
+                    assert 'basic fertilizer' in warning_call[1]['circular_items']
 
 
 @pytest.mark.unit
