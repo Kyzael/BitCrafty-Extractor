@@ -1393,7 +1393,8 @@ class BitCraftyExtractor:
         summary_text.append(f"  💡 Detailed results and metadata preserved\n\n", style="dim")
         
         summary_text.append("\n🎉 Thank you for using BitCrafty-Extractor!\n", style="bold green")
-        summary_text.append("   📦 Export data: /exports/ folder for BitCrafty integration\n", style="dim")
+        summary_text.append("   � GitHub: https://github.com/Kyzael/BitCrafty-Extractor\n", style="blue")
+        summary_text.append("   �📦 Export data: /exports/ folder for BitCrafty integration\n", style="dim")
         summary_text.append("   📄 Analysis logs: /analysis_logs/ folder for detailed review\n", style="dim")
         
         panel = Panel(summary_text, title="[bold blue]Session Complete[/bold blue]", border_style="blue")
