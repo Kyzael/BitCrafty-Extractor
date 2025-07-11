@@ -251,6 +251,25 @@ def normalize_extractor_data(items_export, crafts_export):
     # Create item name to ID mapping
     item_name_to_id = {}
     
+    # Load existing BitCrafty items to check for name matches
+    existing_bitcrafty_items = load_json(ITEMS_DATA_PATH) or []
+    existing_item_names = {}
+    existing_item_fuzzy_names = {}  # For fuzzy matching
+    for item in existing_bitcrafty_items:
+        name = item.get('name', '').strip()
+        item_id = item.get('id')
+        if name and item_id:
+            existing_item_names[name] = item_id
+            
+            # Also create fuzzy matching entries
+            # Remove common prefixes for fuzzy matching
+            fuzzy_name = name
+            for prefix in ['Plain ', 'Basic ', 'Simple ', 'Rough ']:
+                fuzzy_name = fuzzy_name.replace(prefix, '').strip()
+            
+            if fuzzy_name != name:
+                existing_item_fuzzy_names[fuzzy_name] = item_id
+    
     # Normalize items - match BitCrafty format exactly
     if items_export and 'items' in items_export:
         for item in items_export['items']:
@@ -271,10 +290,11 @@ def normalize_extractor_data(items_export, crafts_export):
                     continue
                 
             bitcrafty_id = transform_to_bitcrafty_id('item', name, profession)
-            # Match BitCrafty items.json format exactly
+            # Match BitCrafty items.json format exactly and include description
             normalized_items[bitcrafty_id] = {
                 'id': bitcrafty_id,
                 'name': name,
+                'description': item.get('description', ''),  # Include description from extractor exports
                 'tier': item.get('tier', 1),
                 'rank': item.get('rarity', 'Common').title()  # Use 'rank' not 'rarity', capitalize
             }
@@ -307,33 +327,58 @@ def normalize_extractor_data(items_export, crafts_export):
                         'qty': material.get('qty', 1)
                     })
                 else:
-                    # For input materials, try to find existing ID in BitCrafty data
-                    # or infer profession, but DON'T use the current craft's profession
-                    inferred_profession = infer_profession_from_item_name(item_name)
-                    if inferred_profession:
-                        normalized_inferred = normalize_name(inferred_profession)
-                        item_id = transform_to_bitcrafty_id('item', item_name, normalized_inferred)
-                    else:
-                        # Fallback: use foraging for raw materials, current profession otherwise
-                        fallback_profession = get_fallback_profession_for_material(item_name, normalized_profession)
-                        normalized_fallback = normalize_name(fallback_profession)
-                        item_id = transform_to_bitcrafty_id('item', item_name, normalized_fallback)
-                        print(f"[WARN] Using fallback profession '{normalized_fallback}' for material: {item_name}")
+                    # Check if this item already exists in BitCrafty first
+                    existing_item_id = existing_item_names.get(item_name)
                     
-                    materials.append({
-                        'item': item_id,
-                        'qty': material.get('qty', 1)
-                    })
-                    # Also create the missing item entry
-                    if item_id not in normalized_items:
-                        normalized_items[item_id] = {
-                            'id': item_id,
-                            'name': item_name,
-                            'tier': 1,
-                            'rank': 'Common'
-                        }
-                        item_name_to_id[item_name] = item_id
-                        print(f"[INFO] Created missing material item: {item_id}")
+                    # If no exact match, try fuzzy matching
+                    if not existing_item_id:
+                        # Try without common prefixes
+                        fuzzy_name = item_name
+                        for prefix in ['Plain ', 'Basic ', 'Simple ', 'Rough ']:
+                            fuzzy_name = fuzzy_name.replace(prefix, '').strip()
+                        
+                        existing_item_id = existing_item_fuzzy_names.get(fuzzy_name)
+                        if existing_item_id:
+                            print(f"[INFO] Fuzzy match found for material '{item_name}' -> existing item with full name")
+                    
+                    if existing_item_id:
+                        # For materials, we should prefer using existing items even if profession differs
+                        # since materials come from other crafts and should maintain their original profession
+                        materials.append({
+                            'item': existing_item_id,
+                            'qty': material.get('qty', 1)
+                        })
+                        item_name_to_id[item_name] = existing_item_id
+                        print(f"[INFO] Using existing BitCrafty material: {item_name} -> {existing_item_id}")
+                    else:
+                        # For input materials, try to find existing ID in BitCrafty data
+                        # or infer profession, but DON'T use the current craft's profession
+                        inferred_profession = infer_profession_from_item_name(item_name)
+                        if inferred_profession:
+                            normalized_inferred = normalize_name(inferred_profession)
+                            item_id = transform_to_bitcrafty_id('item', item_name, normalized_inferred)
+                        else:
+                            # Fallback: use foraging for raw materials, current profession otherwise
+                            fallback_profession = get_fallback_profession_for_material(item_name, normalized_profession)
+                            normalized_fallback = normalize_name(fallback_profession)
+                            item_id = transform_to_bitcrafty_id('item', item_name, normalized_fallback)
+                            print(f"[WARN] Using fallback profession '{normalized_fallback}' for material: {item_name}")
+                        
+                        materials.append({
+                            'item': item_id,
+                            'qty': material.get('qty', 1)
+                        })
+                        # Also create the missing item entry
+                        if item_id not in normalized_items:
+                            normalized_items[item_id] = {
+                                'id': item_id,
+                                'name': item_name,
+                                'description': '',  # Placeholder description for missing items
+                                'tier': 1,
+                                'rank': 'Common'
+                            }
+                            item_name_to_id[item_name] = item_id
+                            print(f"[INFO] Created missing material item: {item_id}")
             
             # Transform outputs to use item IDs (these should already be mapped)
             outputs = []
@@ -345,22 +390,75 @@ def normalize_extractor_data(items_export, crafts_export):
                         'qty': output.get('qty', 1)
                     })
                 else:
-                    # Output should use the craft's profession
-                    item_id = transform_to_bitcrafty_id('item', item_name, normalized_profession)
-                    outputs.append({
-                        'item': item_id,
-                        'qty': output.get('qty', 1)
-                    })
-                    # Also create the missing item entry
-                    if item_id not in normalized_items:
-                        normalized_items[item_id] = {
-                            'id': item_id,
-                            'name': item_name,
-                            'tier': 1,
-                            'rank': 'Common'
-                        }
-                        item_name_to_id[item_name] = item_id
-                        print(f"[INFO] Created missing output item: {item_id}")
+                    # Check if this item already exists in BitCrafty with a different profession
+                    existing_item_id = existing_item_names.get(item_name)
+                    
+                    # If no exact match, try fuzzy matching
+                    if not existing_item_id:
+                        # Try without common prefixes
+                        fuzzy_name = item_name
+                        for prefix in ['Plain ', 'Basic ', 'Simple ', 'Rough ']:
+                            fuzzy_name = fuzzy_name.replace(prefix, '').strip()
+                        
+                        existing_item_id = existing_item_fuzzy_names.get(fuzzy_name)
+                        if existing_item_id:
+                            print(f"[INFO] Fuzzy match found for '{item_name}' -> existing item with full name")
+                    
+                    if existing_item_id:
+                        # Validate if the existing item matches what this craft should produce
+                        existing_profession = existing_item_id.split(':')[1] if ':' in existing_item_id else None
+                        expected_profession = normalized_profession
+                        
+                        if existing_profession == expected_profession:
+                            # Perfect match - use existing item
+                            outputs.append({
+                                'item': existing_item_id,
+                                'qty': output.get('qty', 1)
+                            })
+                            item_name_to_id[item_name] = existing_item_id
+                            print(f"[INFO] Using existing BitCrafty item: {item_name} -> {existing_item_id}")
+                        else:
+                            # Profession mismatch - this craft should create a new item with correct profession
+                            correct_item_id = transform_to_bitcrafty_id('item', item_name, normalized_profession)
+                            outputs.append({
+                                'item': correct_item_id,
+                                'qty': output.get('qty', 1)
+                            })
+                            item_name_to_id[item_name] = correct_item_id
+                            
+                            print(f"[WARN] Profession mismatch for '{item_name}':")
+                            print(f"  Existing: {existing_item_id} (profession: {existing_profession})")
+                            print(f"  Expected: {correct_item_id} (profession: {expected_profession})")
+                            print(f"  Creating new item with correct profession for craft output")
+                            
+                            # Create the new item entry with correct profession
+                            if correct_item_id not in normalized_items:
+                                normalized_items[correct_item_id] = {
+                                    'id': correct_item_id,
+                                    'name': item_name,
+                                    'description': '',  # Placeholder description for new items
+                                    'tier': 1,
+                                    'rank': 'Common'
+                                }
+                                print(f"[INFO] Created new output item with correct profession: {correct_item_id}")
+                    else:
+                        # No existing item found - create new one with craft's profession
+                        item_id = transform_to_bitcrafty_id('item', item_name, normalized_profession)
+                        outputs.append({
+                            'item': item_id,
+                            'qty': output.get('qty', 1)
+                        })
+                        # Also create the missing item entry
+                        if item_id not in normalized_items:
+                            normalized_items[item_id] = {
+                                'id': item_id,
+                                'name': item_name,
+                                'description': '',  # Placeholder description for missing items
+                                'tier': 1,
+                                'rank': 'Common'
+                            }
+                            item_name_to_id[item_name] = item_id
+                            print(f"[INFO] Created missing output item: {item_id}")
             
             # Match BitCrafty crafts.json format exactly
             normalized_crafts[bitcrafty_id] = {
@@ -385,8 +483,8 @@ def infer_profession_from_item_name(item_name):
         return 'tailoring'  
     elif any(word in name_lower for word in ['mushroom', 'berry', 'fruit', 'vegetable']):
         return 'foraging'
-    elif any(word in name_lower for word in ['clay', 'stone', 'ore', 'metal']):
-        return 'mining'
+    elif any(word in name_lower for word in ['clay', 'stone', 'ore', 'metal', 'pot', 'brick', 'glass']):
+        return 'mining'  # Pottery items (pots) are often made from clay, so mining
     elif any(word in name_lower for word in ['sap', 'resin']):
         return 'forestry'
     elif any(word in name_lower for word in ['seed', 'fertilizer', 'grain']):
@@ -481,6 +579,40 @@ def resolve_craft_name_conflicts(normalized_crafts):
     return updated_crafts
 
 
+def find_items_needing_descriptions(bitcrafty_items, items_export):
+    """Find existing BitCrafty items that are missing descriptions but have them in extractor exports."""
+    items_needing_descriptions = {}
+    
+    if not items_export or 'items' not in items_export:
+        return items_needing_descriptions
+    
+    # Create name-to-description mapping from extractor exports
+    extractor_descriptions = {}
+    for item in items_export['items']:
+        name = item.get('name', '').strip()
+        description = item.get('description', '') or ''  # Handle None case
+        description = description.strip()
+        if name and description:
+            extractor_descriptions[name] = description
+    
+    # Find BitCrafty items missing descriptions
+    for item_id, item in bitcrafty_items.items():
+        item_name = item.get('name', '').strip()
+        existing_description = item.get('description', '') or ''  # Handle None case
+        existing_description = existing_description.strip()
+        
+        # If item has no description but extractor has one for this name
+        if not existing_description and item_name in extractor_descriptions:
+            items_needing_descriptions[item_id] = {
+                'existing': item,
+                'description': extractor_descriptions[item_name],
+                'reason': f"Adding missing description for '{item_name}'"
+            }
+            print(f"[INFO] Found missing description for: {item_id} ({item_name})")
+    
+    return items_needing_descriptions
+
+
 def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts):
     """Compare normalized extractor data with BitCrafty data."""
     
@@ -489,7 +621,8 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
             'new': {},
             'updated': {},
             'identical': {},
-            'id_updates': {}  # Items that need ID changes due to name matches
+            'id_updates': {},  # Items that need ID changes due to name matches
+            'description_updates': {}  # Items that need description updates
         },
         'crafts': {
             'new': {},
@@ -526,7 +659,8 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
             else:
                 # Same name and ID - check for other differences
                 if (item.get('description') != existing_item.get('description') or 
-                    item.get('tier') != existing_item.get('tier')):
+                    item.get('tier') != existing_item.get('tier') or
+                    item.get('rank') != existing_item.get('rank')):
                     changes['items']['updated'][item_id] = {
                         'existing': existing_item,
                         'new': item,
@@ -539,7 +673,9 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
             if item_id in bitcrafty_items:
                 existing = bitcrafty_items[item_id]
                 if (item.get('name') != existing.get('name') or 
-                    item.get('description') != existing.get('description')):
+                    item.get('description') != existing.get('description') or
+                    item.get('tier') != existing.get('tier') or
+                    item.get('rank') != existing.get('rank')):
                     changes['items']['updated'][item_id] = {
                         'existing': existing,
                         'new': item,
@@ -773,6 +909,7 @@ def print_comparison_summary(changes, metadata_changes=None, new_metadata=None, 
     print(f"  {Colors.highlight('New items to add:')} {Colors.bold(str(len(items['new'])))}")
     print(f"  {Colors.highlight('Items to update:')} {Colors.bold(str(len(items['updated'])))}")
     print(f"  {Colors.highlight('Items needing ID updates:')} {Colors.bold(str(len(items['id_updates'])))}")
+    print(f"  {Colors.highlight('Items needing description updates:')} {Colors.bold(str(len(items.get('description_updates', {}))))}")
     print(f"  {Colors.highlight('Identical items:')} {Colors.gray(str(len(items['identical'])))}")
     
     if items['new']:
@@ -781,6 +918,17 @@ def print_comparison_summary(changes, metadata_changes=None, new_metadata=None, 
             print(f"    {Colors.colorize('+', Colors.GREEN)} {Colors.highlight(item_id)}: {item.get('name')}")
         if len(items['new']) > 5:
             remaining = len(items['new']) - 5
+            print(f"    {Colors.gray(f'... and {remaining} more')}")
+    
+    if items.get('description_updates'):
+        print(f"\n  {Colors.colorize('Items needing description updates:', Colors.CYAN)}")
+        for item_id, update_info in list(items['description_updates'].items())[:5]:  # Show first 5
+            item_name = update_info['existing']['name']
+            description_preview = update_info['description'][:50] + ('...' if len(update_info['description']) > 50 else '')
+            print(f"    {Colors.colorize('📝', Colors.CYAN)} {Colors.highlight(item_id)}: {item_name}")
+            print(f"      {Colors.gray(f'Description: {description_preview}')}")
+        if len(items['description_updates']) > 5:
+            remaining = len(items['description_updates']) - 5
             print(f"    {Colors.gray(f'... and {remaining} more')}")
     
     if items['id_updates']:
@@ -889,7 +1037,6 @@ def main():
     tools_meta = load_json(TOOLS_META_PATH)
     buildings_meta = load_json(BUILDINGS_META_PATH)
 
-    # TODO: Continue with normalization and reconciliation logic
     print_success("Data loaded. Ready for normalization and comparison.")
     
     # Step 2: Transform & Normalize extractor data
@@ -915,12 +1062,25 @@ def main():
     print_info("Comparing data and identifying changes...")
     changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
     
+    # Step 5.5: Find existing items needing descriptions
+    print_info("Checking for existing items missing descriptions...")
+    description_updates = find_items_needing_descriptions(bitcrafty_items, items_export)
+    if description_updates:
+        changes['items']['description_updates'] = description_updates
+        print_success(f"Found {Colors.bold(str(len(description_updates)))} items needing description updates")
+    else:
+        print_info("No existing items need description updates")
+    
     # Step 6: Update craft item references based on ID changes
     if changes['items']['id_updates']:
         print_info("Updating craft item references...")
         normalized_crafts = update_craft_item_references(normalized_crafts, changes['items']['id_updates'])
         # Re-run comparison for crafts after updating references
-        changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
+        updated_changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
+        # Preserve description_updates from the previous comparison
+        if 'description_updates' in changes['items']:
+            updated_changes['items']['description_updates'] = changes['items']['description_updates']
+        changes = updated_changes
     
     # Step 7: Extract and compare metadata
     print("\n" + Colors.section_divider("METADATA & REQUIREMENTS PROCESSING", 60))
@@ -967,7 +1127,11 @@ def main():
     normalized_items = ensure_item_references_exist(normalized_crafts, normalized_items)
     
     # Re-run craft comparison after requirement updates
-    changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
+    updated_changes = compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts)
+    # Preserve description_updates from the previous comparison
+    if 'description_updates' in changes['items']:
+        updated_changes['items']['description_updates'] = changes['items']['description_updates']
+    changes = updated_changes
     
     # Step 10: Print final summary with metadata and requirements
     print_comparison_summary(changes, metadata_changes, new_metadata, requirement_changes)
@@ -1019,6 +1183,7 @@ def prompt_for_confirmation(changes, metadata_changes, new_metadata, requirement
     
     total_changes = (
         len(changes['items']['new']) + len(changes['items']['id_updates']) +
+        len(changes['items'].get('description_updates', {})) +
         len(changes['crafts']['new']) +
         len(metadata_changes['buildings']['new']) +
         len(requirement_changes['new'])
@@ -1042,6 +1207,7 @@ def prompt_for_confirmation(changes, metadata_changes, new_metadata, requirement
     print(f"\n{Colors.colorize('Ready to apply', Colors.BOLD)} {Colors.colorize(str(total_changes), Colors.BOLD + Colors.GREEN)} {Colors.colorize('changes to BitCrafty data:', Colors.BOLD)}")
     print(f"  • {Colors.colorize(str(len(changes['items']['id_updates'])), Colors.YELLOW)} item ID updates")
     print(f"  • {Colors.colorize(str(len(changes['items']['new'])), Colors.GREEN)} new items")
+    print(f"  • {Colors.colorize(str(len(changes['items'].get('description_updates', {}))), Colors.CYAN)} description updates")
     print(f"  • {Colors.colorize(str(len(changes['crafts']['new'])), Colors.GREEN)} new crafts")
     print(f"  • {Colors.colorize(str(len(requirement_changes['new'])), Colors.GREEN)} new requirements")
     print(f"  • {Colors.colorize(str(len(metadata_changes['buildings']['new'])), Colors.GREEN)} new buildings")
@@ -1162,6 +1328,15 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
             tier_color = Colors.get_tier_color(item.get('tier'))
             tier_text = Colors.colorize(f"T{item.get('tier', '?')}", tier_color)
             print(f"  {Colors.colorize('✓', Colors.GREEN)} Added new item: {Colors.highlight(item_id)} {Colors.gray(f'({tier_text})')}")
+    
+    if changes['items'].get('description_updates'):
+        print(f"\n{Colors.colorize('DESCRIPTION UPDATES:', Colors.BOLD + Colors.CYAN)}")
+        print(f"{Colors.gray('File:')} {Colors.highlight(ITEMS_DATA_PATH)}")
+        for item_id, update_info in changes['items']['description_updates'].items():
+            item_name = update_info['existing']['name']
+            description = update_info['description']
+            print(f"  {Colors.colorize('📝', Colors.CYAN)} {Colors.highlight(item_id)}: {item_name}")
+            print(f"    {Colors.colorize('Adding description:', Colors.CYAN)} {Colors.gray(description[:80] + ('...' if len(description) > 80 else ''))}")
     
     if changes['items']['updated']:
         print(f"\n{Colors.colorize('UPDATED ITEMS:', Colors.BOLD + Colors.YELLOW)}")
@@ -1328,6 +1503,23 @@ def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requ
                                 output['item'] = new_id
                                 print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft output reference: {Colors.gray(old_id)} → {Colors.gray(new_id)}")
         
+        # Apply description updates to existing items
+        if changes['items'].get('description_updates'):
+            count = len(changes['items']['description_updates'])
+            print_info(f"Adding descriptions to {Colors.colorize(str(count), Colors.YELLOW)} existing items...")
+            for item_id, update_info in changes['items']['description_updates'].items():
+                description = update_info['description']
+                # Find and update item
+                for item in items_data:
+                    if item['id'] == item_id:
+                        item['description'] = description
+                        item_name = item['name']
+                        description_preview = description[:50] + ('...' if len(description) > 50 else '')
+                        print(f"  {Colors.colorize('📝', Colors.CYAN)} Updated description for: {Colors.highlight(item_id)} ({item_name})")
+                        print(f"    {Colors.gray(description_preview)}")
+                        changes_applied += 1
+                        break
+        
         # Update existing items
         if changes['items']['updated']:
             count = len(changes['items']['updated'])
@@ -1435,6 +1627,7 @@ def clean_item_for_bitcrafty(item):
     return {
         'id': item['id'],
         'name': item['name'],
+        'description': item.get('description', ''),  # Include description in BitCrafty format
         'tier': item.get('tier', 1),
         'rank': item.get('rank', 'Common')
     }
@@ -1481,6 +1674,7 @@ def ensure_item_references_exist(normalized_crafts, normalized_items):
                     normalized_items[item_id] = {
                         'id': item_id,
                         'name': name_part,
+                        'description': '',  # Placeholder description for missing items
                         'tier': 1,
                         'rank': 'Common'
                     }
@@ -1494,6 +1688,7 @@ def clean_item_for_bitcrafty(item):
     return {
         'id': item['id'],
         'name': item['name'],
+        'description': item.get('description', ''),  # Include description in BitCrafty format
         'tier': item.get('tier', 1),
         'rank': item.get('rank', 'Common')
     }
@@ -2015,6 +2210,11 @@ class DataIntegrityValidator:
                 item_ref = material.get('item')
                 if item_ref and item_ref not in self.item_ids:
                     self.error(f'Craft "{craft_id}" references non-existent item "{item_ref}" in materials')
+                    
+                    # Try to suggest a fix by finding similar item names
+                    suggested_fix = self.suggest_item_fix(item_ref)
+                    if suggested_fix:
+                        self.error(f'  → Suggested fix: use "{suggested_fix}" instead')
             
             # Check outputs
             outputs = craft.get('outputs', [])
@@ -2022,6 +2222,39 @@ class DataIntegrityValidator:
                 item_ref = output.get('item')
                 if item_ref and item_ref not in self.item_ids:
                     self.error(f'Craft "{craft_id}" references non-existent item "{item_ref}" in outputs')
+                    
+                    # Try to suggest a fix by finding similar item names
+                    suggested_fix = self.suggest_item_fix(item_ref)
+                    if suggested_fix:
+                        self.error(f'  → Suggested fix: use "{suggested_fix}" instead')
+    
+    def suggest_item_fix(self, broken_item_id):
+        """Suggest a fix for a broken item reference by finding similar existing items"""
+        if not broken_item_id or ':' not in broken_item_id:
+            return None
+        
+        # Extract the broken item name part
+        parts = broken_item_id.split(':')
+        if len(parts) < 3:
+            return None
+        
+        broken_profession = parts[1]
+        broken_name_part = parts[2]
+        
+        # Look for items with similar names in the same profession
+        for item_id in self.item_ids:
+            if item_id.startswith(f"item:{broken_profession}:"):
+                existing_name_part = item_id.split(':')[2]
+                
+                # Check for common patterns that might indicate a match
+                if broken_name_part in existing_name_part or existing_name_part in broken_name_part:
+                    return item_id
+                
+                # Check for "plain-" prefix pattern
+                if broken_name_part.replace('-', '') == existing_name_part.replace('plain-', '').replace('-', ''):
+                    return item_id
+        
+        return None
     
     def validate_entity_profession_categories(self):
         """Validate entity ID profession categories"""

@@ -2,8 +2,8 @@
   "metadata": {
     "version": "1.0",
     "source": "bitcrafty-extractor",
-    "last_updated": "2025-07-01T22:26:43.693139",
-    "total_items": 116
+    "last_updated": "2025-07-11T17:20:24.858058",
+    "total_items": 159
   },
   "items": [
     {
@@ -66,16 +66,6 @@
       "extracted_at": "2025-06-29T01:57:19.442302",
       "extraction_source": "bitcrafty-extractor",
       "id": "b882c3dd8bcd"
-    },
-    {
-      "name": "Pitch",
-      "description": "A sticky material made by processing tree sap in a kiln",
-      "rarity": "common",
-      "tier": null,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T01:42:10.649801",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "b662fedcec01"
     },
     {
       "name": "Basic Berry",
@@ -1176,6 +1166,446 @@
       "extracted_at": "2025-07-01T22:25:55.673586",
       "extraction_source": "bitcrafty-extractor",
       "id": "823093bc2f17"
+    },
+    {
+      "name": "Rough Parchment",
+      "description": "A scholar could use this with ink to create study journals",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:02:56.223288",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "1774b7806f46"
+    },
+    {
+      "name": "Rough Leather",
+      "description": "A large piece of leather. Could be used to build or craft something",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:30:52.223097",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "6a1b73125f34"
+    },
+    {
+      "name": "Rough Leather Belt",
+      "description": "Tier 1 Leather Clothing",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:34:54.337357",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "56187fe48c67"
+    },
+    {
+      "name": "Basic Leather Treatment",
+      "description": "A treatment made by Scholars to purify leather further.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:35:21.003088",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "af1eda1378fb"
+    },
+    {
+      "name": "Refined Rough Leather",
+      "description": "A large piece of smooth leather. Could be used for crafting or building.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:35:21.003088",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "ca5e24751c0e"
+    },
+    {
+      "name": "Rough Leather Boots",
+      "description": "Basic leather footwear",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:35:49.186081",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "25dcf75aa4d1"
+    },
+    {
+      "name": "Rough Leather Gloves",
+      "description": "Tier 1 Leather Clothing",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:36:10.169029",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "2ede18c29a28"
+    },
+    {
+      "name": "Rough Leather Sheeting",
+      "description": "Can be used in the construction of buildings and material packs",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:36:29.167588",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "b66146dbd34d"
+    },
+    {
+      "name": "Ferralith Ingot",
+      "description": "A rectangular ingot of metal forged at a smithing station",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:36:49.736826",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9d14b4a03e7c"
+    },
+    {
+      "name": "Rough Woven Cap",
+      "description": "Common cloth clothing item that adds a collectible to your vault",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:37:57.816316",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "004ab15ec4be"
+    },
+    {
+      "name": "Basic Potter's Mix",
+      "description": "A mix made by a mason that can be used to make various clay goods.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:53:46.706698",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "8b967ce96f34"
+    },
+    {
+      "name": "Beech Seed",
+      "description": "A seed to plant a sapling in a tree pot",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:54:35.700633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d148dc679ef2"
+    },
+    {
+      "name": "Rough Forester's Pot",
+      "description": "Could be used to plant a sapling to grow a tree",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:54:35.700633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "e6b600864374"
+    },
+    {
+      "name": "Potted Beech Sapling",
+      "description": "A potted sapling that's ready to be planted. Will grow into a tree eventually into a mature tree",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:54:35.700633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d063e5b73c70"
+    },
+    {
+      "name": "Oak Seed",
+      "description": "A seed to plant a sapling in a tree pot",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:55:25.945995",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0570303ac29f"
+    },
+    {
+      "name": "Potted Oak Sapling",
+      "description": "A potted sapling that's ready to be planted. Will grow into a young tree and eventually into a mature tree.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:55:25.945995",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "84bf8630f12b"
+    },
+    {
+      "name": "Rough Unfired Forester's Pot",
+      "description": "Could be used to plant a sapling to grow a tree",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:56:02.580102",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "6ea2471b3a30"
+    },
+    {
+      "name": "Unfired Rough Brick",
+      "description": "Potter's mix shaped into a brick. Could be fired in a kiln to be used for construction and crafting",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:56:45.765597",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "99f787b1543b"
+    },
+    {
+      "name": "Rough Ruby Fragment",
+      "description": "A cut gem that could be used in various jewelry.",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:58:28.909576",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9db02bba9460"
+    },
+    {
+      "name": "Rough Diamond Fragment",
+      "description": "A cut gem that could be used in various jewelry.",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:58:28.909576",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "3215f758e431"
+    },
+    {
+      "name": "Rough Sapphire Fragment",
+      "description": "A cut gem that could be used in various jewelry.",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:58:28.909576",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "51932b80d856"
+    },
+    {
+      "name": "Rough Emerald Fragment",
+      "description": "A cut gem that could be used in various jewelry.",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:58:28.909576",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4cb4f9dc8c96"
+    },
+    {
+      "name": "Pitch",
+      "description": "A sticky material made by processing tree sap in a kiln.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T16:59:40.911064",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "2658ac9aff15"
+    },
+    {
+      "name": "Basic Sand",
+      "description": "Sand primarily used to make glass",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:01:55.860685",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "6ff137206afa"
+    },
+    {
+      "name": "Rough Glass",
+      "description": "Used to make vials as well as some decorative items",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:01:55.860685",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "9eb860890874"
+    },
+    {
+      "name": "Ferralith Frames",
+      "description": "Can be used in the construction of buildings",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:12:09.360958",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "481e3438292d"
+    },
+    {
+      "name": "Ferralith Ingot Package",
+      "description": "A package of Metal Ingots",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:12:40.428966",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "3423f496cddb"
+    },
+    {
+      "name": "Ferralith Plated Boots",
+      "description": "Metal armor that provides protection",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:13:04.851923",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "ec6b88044c23"
+    },
+    {
+      "name": "Jakyl Fur",
+      "description": "Fur found commonly on Jakyl",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:13:40.945633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "0c5361ea16b6"
+    },
+    {
+      "name": "Jakyl Fang",
+      "description": "A fang rarely found while killing on Jakyl",
+      "rarity": "rare",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:13:40.945633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "5459772f4d11"
+    },
+    {
+      "name": "Rough Jakyl Fang Amulet",
+      "description": "A metal amulet made with a Jakyl Fang",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:13:40.945633",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d2f454bd0980"
+    },
+    {
+      "name": "Umbura Fur",
+      "description": "Fur found commonly on Umburas",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:14:15.288800",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "e8afee78a5a9"
+    },
+    {
+      "name": "Umbura Fang",
+      "description": "A fang rarely found when killing an Umbura",
+      "rarity": "rare",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:14:15.288800",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4a53fee95e14"
+    },
+    {
+      "name": "Rough Umbura Fang Amulet",
+      "description": "A metal amulet made with a Umbura Fang",
+      "rarity": "rare",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:14:15.288800",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "451d9f114545"
+    },
+    {
+      "name": "Ferralith Axe",
+      "description": "An axe made from ferralith.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:14:46.844217",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "40ebb033662c"
+    },
+    {
+      "name": "Ferralith Nails",
+      "description": "A nail forged at a smithing station. Often used for construction",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:17:34.941145",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "bbe2980cb043"
+    },
+    {
+      "name": "Ferralith Plated Belt",
+      "description": "Consuming this will add a collectible to your vault. Can be converted back to a deed from the vault.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:17:54.574716",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "f2d9b709c2e0"
+    },
+    {
+      "name": "Ferralith Plated Bracers",
+      "description": "Metal armor",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:18:14.486278",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c7cb6e2d1f41"
+    },
+    {
+      "name": "Basic Metal Solvent",
+      "description": "A solvent used to purify metal further",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:18:36.125783",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "8c6f0ba285f8"
+    },
+    {
+      "name": "Refined Ferralith Ingot",
+      "description": "A rectangular ingot of metal forged at a smithing station",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:18:36.125783",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "c9ff5739c62e"
+    },
+    {
+      "name": "Ferralith Daggers",
+      "description": "Small, sharp daggers that could do some real damage if you're on the receiving end of them.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:19:36.044646",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "1f0a394855ef"
+    },
+    {
+      "name": "Ferralith Plated Armor",
+      "description": "Metal armor that provides protection",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:20:36.939065",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "704637959c78"
+    },
+    {
+      "name": "Ferralith Plated Helm",
+      "description": "Tier 1 Metal Armor",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:20:59.919163",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "d684e9f7e4d0"
+    },
+    {
+      "name": "Ferralith Plated Legguards",
+      "description": "Metal armor",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-10T17:23:30.122718",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "ea2511697a8c"
     }
   ]
 }
