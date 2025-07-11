@@ -753,8 +753,8 @@ class TestExportManagerCraftDuplicateDetection:
                         assert result2['crafts_found_duplicates'] == 0
                         assert len(export_manager.existing_crafts) == 2
     
-    def test_different_quantities_not_duplicates(self, temp_exports_dir, mock_config_manager):
-        """Test that crafts with same materials but different quantities are not duplicates."""
+    def test_different_quantities_update_behavior(self, temp_exports_dir, mock_config_manager):
+        """Test that crafts with same materials but different quantities trigger updates when appropriate."""
         with patch('structlog.get_logger') as mock_get_logger:
             mock_logger = Mock()
             mock_get_logger.return_value = mock_logger
@@ -778,22 +778,26 @@ class TestExportManagerCraftDuplicateDetection:
                         
                         assert result1['new_crafts_added'] == 1
                         
-                        # Same materials but different quantity
+                        # Same craft but with higher confidence and different quantity
                         craft2 = {
                             'name': 'Make Test Food',
                             'materials': [{'item': 'Ingredient A', 'qty': 2}],  # Different quantity
                             'outputs': [{'item': 'Test Food', 'qty': 1}],
                             'requirements': {'profession': 'cooking'},
-                            'confidence': 0.87
+                            'confidence': 0.87  # Higher confidence
                         }
                         
                         data2 = {'items_found': [], 'crafts_found': [craft2]}
                         result2 = export_manager.process_extraction_results(data2)
                         
-                        # Should be different crafts
-                        assert result2['new_crafts_added'] == 1
-                        assert result2['crafts_found_duplicates'] == 0
-                        assert len(export_manager.existing_crafts) == 2
+                        # With our new update logic, this should not create a new craft
+                        # Updates might be counted differently or not increment standard counters
+                        assert result2['new_crafts_added'] == 0
+                        assert len(export_manager.existing_crafts) == 1
+                        
+                        # The existing craft should still exist (may have disambiguated name)
+                        existing_craft = list(export_manager.existing_crafts.values())[0]
+                        assert 'Make Test Food' in existing_craft['name']  # Name might be disambiguated
     
     def test_bitcrafty_fertilizer_scenario(self, temp_exports_dir, mock_config_manager):
         """Test the exact BitCrafty fertilizer scenario that prompted this improvement."""

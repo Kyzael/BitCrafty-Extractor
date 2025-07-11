@@ -4,7 +4,7 @@ import json
 import hashlib
 import re
 from pathlib import Path
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any, Set, Union
 from datetime import datetime
 import structlog
 
@@ -788,6 +788,106 @@ class ExportManager:
         
         # If we get here, they're very similar (essentially the same craft)
         return True
+
+    def _are_crafts_similar_for_update(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
+        """Check if two crafts are similar enough to warrant updating instead of adding separately.
+        
+        This is more lenient than _are_crafts_very_similar, allowing for quantity differences
+        and slight requirement variations that we want to update.
+        """
+        # Must have same name (case insensitive)
+        new_name = new_craft.get('name', '').lower().strip()
+        existing_name = existing_craft.get('name', '').lower().strip()
+        if new_name != existing_name:
+            return False
+        
+        # Compare material items (ignoring quantities)
+        new_materials = new_craft.get('materials', [])
+        existing_materials = existing_craft.get('materials', [])
+        if not self._materials_same_items(new_materials, existing_materials):
+            return False
+        
+        # Compare output items (ignoring quantities)
+        new_outputs = new_craft.get('outputs', [])
+        existing_outputs = existing_craft.get('outputs', [])
+        if not self._outputs_same_items(new_outputs, existing_outputs):
+            return False
+        
+        # Compare core requirements - tools and buildings should also match for updates
+        new_reqs = new_craft.get('requirements', {})
+        existing_reqs = existing_craft.get('requirements', {})
+        
+        # Profession must match
+        new_prof = str(new_reqs.get('profession', '') or '').lower().strip()
+        existing_prof = str(existing_reqs.get('profession', '') or '').lower().strip()
+        
+        if new_prof and existing_prof and new_prof != existing_prof:
+            return False
+        
+        # Tool requirement - if one has a tool and the other doesn't, they're different
+        new_tool = str(new_reqs.get('tool', '') or '').lower().strip()
+        existing_tool = str(existing_reqs.get('tool', '') or '').lower().strip()
+        
+        # If one has a tool and the other doesn't, they're different crafts
+        if bool(new_tool) != bool(existing_tool):
+            return False
+        
+        # If both have tools, they must match
+        if new_tool and existing_tool and new_tool != existing_tool:
+            return False
+        
+        # Building requirement - if one has a building and the other doesn't, they're different
+        new_building = str(new_reqs.get('building', '') or '').lower().strip()
+        existing_building = str(existing_reqs.get('building', '') or '').lower().strip()
+        
+        # If one has a building and the other doesn't, they're different crafts
+        if bool(new_building) != bool(existing_building):
+            return False
+        
+        # If both have buildings, they must match
+        if new_building and existing_building and new_building != existing_building:
+            return False
+        
+        # If we get here, they're similar enough to consider for updating
+        return True
+
+    def _materials_same_items(self, materials1: List[Dict], materials2: List[Dict]) -> bool:
+        """Check if two materials lists have the same items (ignoring quantities)."""
+        if len(materials1) != len(materials2):
+            return False
+        
+        # Get item names from both lists
+        items1 = set()
+        items2 = set()
+        
+        for material in materials1:
+            if isinstance(material, dict) and 'item' in material:
+                items1.add(material['item'].lower().strip())
+        
+        for material in materials2:
+            if isinstance(material, dict) and 'item' in material:
+                items2.add(material['item'].lower().strip())
+        
+        return items1 == items2
+
+    def _outputs_same_items(self, outputs1: List[Dict], outputs2: List[Dict]) -> bool:
+        """Check if two outputs lists have the same items (ignoring quantities)."""
+        if len(outputs1) != len(outputs2):
+            return False
+        
+        # Get item names from both lists
+        items1 = set()
+        items2 = set()
+        
+        for output in outputs1:
+            if isinstance(output, dict) and 'item' in output:
+                items1.add(output['item'].lower().strip())
+        
+        for output in outputs2:
+            if isinstance(output, dict) and 'item' in output:
+                items2.add(output['item'].lower().strip())
+        
+        return items1 == items2
     
     def _materials_equal(self, materials1: List[Dict], materials2: List[Dict]) -> bool:
         """Check if two materials lists are equal."""
@@ -836,8 +936,8 @@ class ExportManager:
     def _should_update_existing_craft(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
         """Determine if an existing craft should be updated with new information.
         
-        Only updates if the new craft has significantly better confidence or
-        more complete information, ensuring we don't replace good data with worse data.
+        Updates if the new craft has better confidence, more complete information,
+        or more accurate quantities/materials.
         """
         # Check if new craft has significantly higher confidence
         new_confidence = new_craft.get('confidence', 0)
@@ -854,7 +954,7 @@ class ExportManager:
         new_req_count = sum(1 for v in new_reqs.values() if v and str(v).strip())
         existing_req_count = sum(1 for v in existing_reqs.values() if v and str(v).strip())
         
-        # Only update if significantly more complete requirements
+        # Update if significantly more complete requirements
         if new_req_count > existing_req_count + 1:
             return True
         
@@ -864,12 +964,257 @@ class ExportManager:
         new_outputs = new_craft.get('outputs', [])
         existing_outputs = existing_craft.get('outputs', [])
         
-        # Prefer craft with more detailed material/output information
+        # Update if more detailed material/output information
         if (len(new_materials) > len(existing_materials) or 
             len(new_outputs) > len(existing_outputs)):
             return True
         
+        # Check for better quantity information
+        if self._has_better_quantities(new_craft, existing_craft):
+            return True
+        
+        # Check for more specific building/tool requirements
+        if self._has_better_requirements(new_craft, existing_craft):
+            return True
+        
         return False
+
+    def _has_better_quantities(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
+        """Check if new craft has better quantity information.
+        
+        Better quantities are:
+        - Specific numbers instead of ranges
+        - Specific ranges instead of generic "0-1"
+        - More precise ranges
+        """
+        # Check materials
+        new_materials = new_craft.get('materials', [])
+        existing_materials = existing_craft.get('materials', [])
+        
+        for new_mat, existing_mat in zip(new_materials, existing_materials):
+            if not (isinstance(new_mat, dict) and isinstance(existing_mat, dict)):
+                continue
+            
+            new_qty = new_mat.get('qty', 1)
+            existing_qty = existing_mat.get('qty', 1)
+            
+            if self._is_quantity_better(new_qty, existing_qty):
+                return True
+        
+        # Check outputs
+        new_outputs = new_craft.get('outputs', [])
+        existing_outputs = existing_craft.get('outputs', [])
+        
+        for new_out, existing_out in zip(new_outputs, existing_outputs):
+            if not (isinstance(new_out, dict) and isinstance(existing_out, dict)):
+                continue
+            
+            new_qty = new_out.get('qty', 1)
+            existing_qty = existing_out.get('qty', 1)
+            
+            if self._is_quantity_better(new_qty, existing_qty):
+                return True
+        
+        return False
+
+    def _is_quantity_better(self, new_qty: Union[int, str], existing_qty: Union[int, str]) -> bool:
+        """Check if new quantity is better than existing quantity."""
+        # Convert to strings for comparison
+        new_str = str(new_qty)
+        existing_str = str(existing_qty)
+        
+        # Special case: "0-1" is our generic default, so almost anything specific is better
+        if existing_str == "0-1":
+            # Specific numbers are better than "0-1"
+            try:
+                int(new_qty)
+                return True
+            except (ValueError, TypeError):
+                pass
+            
+            # Specific ranges that aren't "0-1" are better
+            if new_str != "0-1" and "-" in new_str:
+                return True
+        
+        # Specific numbers are better than ranges (unless existing is "0-1")
+        if existing_str != "0-1":
+            try:
+                new_int = int(new_qty)
+                if "-" in existing_str:
+                    return True  # Specific number beats range
+            except (ValueError, TypeError):
+                pass
+        
+        # More precise ranges are better (smaller range is more precise)
+        if "-" in new_str and "-" in existing_str and existing_str != "0-1":
+            try:
+                new_parts = new_str.split("-")
+                existing_parts = existing_str.split("-")
+                if len(new_parts) == 2 and len(existing_parts) == 2:
+                    new_range = int(new_parts[1]) - int(new_parts[0])
+                    existing_range = int(existing_parts[1]) - int(existing_parts[0])
+                    # Smaller range is more precise (better)
+                    if new_range < existing_range:
+                        return True
+            except (ValueError, IndexError):
+                pass
+        
+        return False
+
+    def _has_better_requirements(self, new_craft: Dict[str, Any], existing_craft: Dict[str, Any]) -> bool:
+        """Check if new craft has better requirement specificity."""
+        new_reqs = new_craft.get('requirements', {})
+        existing_reqs = existing_craft.get('requirements', {})
+        
+        # Check for more specific building requirements
+        new_building = str(new_reqs.get('building', '') or '').strip()
+        existing_building = str(existing_reqs.get('building', '') or '').strip()
+        
+        # More specific building names are better
+        if new_building and existing_building:
+            # "Tier 1 Farming Station" is better than "Farming Station"
+            if "tier" in new_building.lower() and "tier" not in existing_building.lower():
+                return True
+            # Longer, more specific names are generally better
+            if len(new_building) > len(existing_building) * 1.2:
+                return True
+        
+        # Check for more specific tool requirements
+        new_tool = str(new_reqs.get('tool', '') or '').strip()
+        existing_tool = str(existing_reqs.get('tool', '') or '').strip()
+        
+        if new_tool and existing_tool:
+            # "Tier 1 Hoe" is better than "Hoe"
+            if "tier" in new_tool.lower() and "tier" not in existing_tool.lower():
+                return True
+            # More specific tool names are better
+            if len(new_tool) > len(existing_tool) * 1.2:
+                return True
+        
+        return False
+
+    def _merge_craft_data(self, existing_craft: Dict[str, Any], new_craft: Dict[str, Any]) -> Dict[str, Any]:
+        """Merge existing and new craft data, keeping the best information from both.
+        
+        Args:
+            existing_craft: The current craft data
+            new_craft: The new craft data from AI
+            
+        Returns:
+            Merged craft with best information from both
+        """
+        # Start with the new craft as base (since it passed the update check)
+        merged = new_craft.copy()
+        
+        # Preserve original extraction metadata from existing craft
+        merged['extracted_at'] = existing_craft.get('extracted_at', new_craft.get('extracted_at'))
+        merged['extraction_source'] = existing_craft.get('extraction_source', new_craft.get('extraction_source'))
+        
+        # Add update timestamp
+        merged['last_updated'] = datetime.now().isoformat()
+        merged['update_source'] = 'bitcrafty-extractor'
+        
+        # Merge requirements - use most specific from either
+        existing_reqs = existing_craft.get('requirements', {})
+        new_reqs = new_craft.get('requirements', {})
+        merged_reqs = {}
+        
+        for field in ['profession', 'building', 'tool']:
+            existing_val = str(existing_reqs.get(field, '') or '').strip()
+            new_val = str(new_reqs.get(field, '') or '').strip()
+            
+            # Use the more specific/detailed value
+            if len(new_val) > len(existing_val):
+                merged_reqs[field] = new_val or None
+            elif len(existing_val) > len(new_val):
+                merged_reqs[field] = existing_val or None
+            else:
+                merged_reqs[field] = new_val or existing_val or None
+        
+        merged['requirements'] = merged_reqs
+        
+        # Merge materials - prefer better quantities
+        merged['materials'] = self._merge_item_lists(
+            existing_craft.get('materials', []), 
+            new_craft.get('materials', [])
+        )
+        
+        # Merge outputs - prefer better quantities
+        merged['outputs'] = self._merge_item_lists(
+            existing_craft.get('outputs', []), 
+            new_craft.get('outputs', [])
+        )
+        
+        # Use higher confidence
+        existing_confidence = existing_craft.get('confidence', 0)
+        new_confidence = new_craft.get('confidence', 0)
+        merged['confidence'] = max(existing_confidence, new_confidence)
+        
+        self.logger.debug("Merged craft data", 
+                         craft_name=merged.get('name'),
+                         old_confidence=existing_confidence,
+                         new_confidence=new_confidence,
+                         merged_confidence=merged['confidence'])
+        
+        return merged
+
+    def _merge_item_lists(self, existing_items: List[Dict], new_items: List[Dict]) -> List[Dict]:
+        """Merge two lists of items (materials or outputs), keeping best quantities.
+        
+        Args:
+            existing_items: Current item list
+            new_items: New item list
+            
+        Returns:
+            Merged item list with best quantities
+        """
+        if not existing_items:
+            return new_items
+        if not new_items:
+            return existing_items
+        
+        # Create mapping of item names to data
+        existing_map = {}
+        for item in existing_items:
+            if isinstance(item, dict) and 'item' in item:
+                existing_map[item['item']] = item
+        
+        merged_items = []
+        
+        # Process new items, merging with existing where possible
+        for new_item in new_items:
+            if not isinstance(new_item, dict) or 'item' not in new_item:
+                merged_items.append(new_item)
+                continue
+            
+            item_name = new_item['item']
+            
+            if item_name in existing_map:
+                # Merge this item
+                existing_item = existing_map[item_name]
+                merged_item = new_item.copy()
+                
+                # Choose better quantity
+                existing_qty = existing_item.get('qty', 1)
+                new_qty = new_item.get('qty', 1)
+                
+                if self._is_quantity_better(new_qty, existing_qty):
+                    merged_item['qty'] = new_qty
+                else:
+                    merged_item['qty'] = existing_qty
+                
+                merged_items.append(merged_item)
+                # Remove from existing map so we don't add it again
+                del existing_map[item_name]
+            else:
+                # New item not in existing list
+                merged_items.append(new_item)
+        
+        # Add any remaining items from existing that weren't in new
+        for remaining_item in existing_map.values():
+            merged_items.append(remaining_item)
+        
+        return merged_items
     
     def _clean_craft_name(self, name: str) -> str:
         """Clean craft name by removing sequence prefixes like '1/2', '2/3', etc.
@@ -1253,9 +1598,11 @@ class ExportManager:
                     
                     # If we find a very similar craft (not identical but close),
                     # check if we should update it
-                    if self._are_crafts_very_similar(processed_craft, existing_craft):
+                    if self._are_crafts_similar_for_update(processed_craft, existing_craft):
                         if self._should_update_existing_craft(processed_craft, existing_craft):
-                            # Update the existing craft with better information
+                            # Merge the existing and new craft data
+                            merged_craft = self._merge_craft_data(existing_craft, processed_craft)
+                            
                             self.logger.info("Updating existing similar craft with better information", 
                                            name=processed_craft.get('name'),
                                            old_confidence=existing_craft.get('confidence'),
@@ -1265,12 +1612,12 @@ class ExportManager:
                             if existing_hash in self.existing_crafts:
                                 del self.existing_crafts[existing_hash]
                             
-                            # Add the updated craft
-                            processed_craft['id'] = craft_hash
-                            self.existing_crafts[craft_hash] = processed_craft
-                            new_crafts.append(processed_craft)
+                            # Add the merged craft with new hash
+                            merged_craft['id'] = craft_hash
+                            self.existing_crafts[craft_hash] = merged_craft
+                            new_crafts.append(merged_craft)
                             # Track updated crafts for session summary
-                            self.session_new_crafts.append(processed_craft)
+                            self.session_new_crafts.append(merged_craft)
                             should_add_as_new = False
                             break
                         else:

@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import sys
 from copy import deepcopy
 from datetime import datetime
 import shutil
@@ -8,6 +9,10 @@ try:
     from deepdiff import DeepDiff
 except ImportError:
     DeepDiff = None  # Will warn if diffing is attempted without it
+
+# Import ExportManager for intelligent craft comparison
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+from bitcrafty_extractor.export.export_manager import ExportManager
 
 # Color codes for CLI output
 class Colors:
@@ -613,8 +618,124 @@ def find_items_needing_descriptions(bitcrafty_items, items_export):
     return items_needing_descriptions
 
 
+def intelligent_craft_comparison(normalized_craft, existing_craft, export_manager):
+    """Use ExportManager's intelligent logic to determine if craft should be updated.
+    
+    Args:
+        normalized_craft: Normalized extractor craft data
+        existing_craft: Existing BitCrafty craft data  
+        export_manager: ExportManager instance for comparison logic
+        
+    Returns:
+        tuple: (should_update: bool, reason: str)
+    """
+    try:
+        # Convert BitCrafty format back to extractor format for comparison
+        extractor_format_existing = {
+            'name': existing_craft.get('name', ''),
+            'materials': existing_craft.get('materials', []),
+            'outputs': existing_craft.get('outputs', []),
+            'requirements': {
+                'profession': 'unknown',  # Will be inferred from requirement
+                'building': 'unknown',
+                'tool': 'unknown'
+            },
+            'confidence': 0.95,  # Assume existing data is high confidence
+            'id': existing_craft.get('id', '')
+        }
+        
+        # Use ExportManager's intelligent comparison logic
+        should_update = export_manager._should_update_existing_craft(
+            normalized_craft, extractor_format_existing
+        )
+        
+        if should_update:
+            # Determine the reason for update
+            reasons = []
+            
+            # Check quantity improvements
+            if export_manager._has_better_quantities(normalized_craft, extractor_format_existing):
+                reasons.append("better quantities")
+                
+            # Check materials/outputs differences
+            new_materials = normalized_craft.get('materials', [])
+            old_materials = existing_craft.get('materials', [])
+            if len(new_materials) != len(old_materials):
+                reasons.append("material count difference")
+                
+            new_outputs = normalized_craft.get('outputs', [])
+            old_outputs = existing_craft.get('outputs', [])
+            if len(new_outputs) != len(old_outputs):
+                reasons.append("output count difference")
+                
+            reason = f"ExportManager logic: {', '.join(reasons) if reasons else 'general improvements'}"
+        else:
+            reason = "No improvements detected by ExportManager logic"
+            
+        return should_update, reason
+        
+    except Exception as e:
+        print(f"[WARNING] Error in intelligent craft comparison: {e}")
+        # Fallback to simple comparison
+        return False, f"Error in intelligent comparison: {e}"
+
+
+def intelligent_craft_merge(existing_craft, new_craft, export_manager):
+    """Use ExportManager's intelligent merging to create updated craft.
+    
+    Args:
+        existing_craft: Existing BitCrafty craft data
+        new_craft: New normalized extractor craft data
+        export_manager: ExportManager instance for merging logic
+        
+    Returns:
+        dict: Merged craft data in BitCrafty format
+    """
+    try:
+        # Convert BitCrafty format to extractor format for merging
+        extractor_format_existing = {
+            'name': existing_craft.get('name', ''),
+            'materials': existing_craft.get('materials', []),
+            'outputs': existing_craft.get('outputs', []),
+            'requirements': {
+                'profession': 'unknown',
+                'building': 'unknown', 
+                'tool': 'unknown'
+            },
+            'confidence': 0.95,
+            'id': existing_craft.get('id', '')
+        }
+        
+        # Use ExportManager's merge logic
+        merged_craft = export_manager._merge_craft_data(extractor_format_existing, new_craft)
+        
+        # Convert back to BitCrafty format
+        bitcrafty_format = {
+            'id': existing_craft.get('id', ''),  # Keep original ID
+            'name': merged_craft.get('name', ''),
+            'materials': merged_craft.get('materials', []),
+            'outputs': merged_craft.get('outputs', []),
+            'requirement': existing_craft.get('requirement', '')  # Keep original requirement format
+        }
+        
+        return bitcrafty_format
+        
+    except Exception as e:
+        print(f"[WARNING] Error in intelligent craft merge: {e}")
+        # Fallback to new craft data
+        return clean_craft_for_bitcrafty(new_craft)
+
+
 def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts):
-    """Compare normalized extractor data with BitCrafty data."""
+    """Compare normalized extractor data with BitCrafty data using intelligent logic."""
+    
+    # Create ExportManager instance for intelligent craft comparison
+    try:
+        export_manager = ExportManager()
+        print_info("Using ExportManager for intelligent craft comparison...")
+    except Exception as e:
+        print(f"[WARNING] Could not create ExportManager: {e}")
+        export_manager = None
     
     changes = {
         'items': {
@@ -685,22 +806,37 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
                     changes['items']['identical'][item_id] = item
             else:
                 # Completely new item
-                changes['items']['new'][item_id] = item        # Compare crafts
+                changes['items']['new'][item_id] = item        # Compare crafts using intelligent logic
         for craft_id, craft in normalized_crafts.items():
             if craft_id in bitcrafty_crafts:
                 existing = bitcrafty_crafts[craft_id]
-                # Compare using BitCrafty craft format
-                if (craft.get('name') != existing.get('name') or 
-                    craft.get('materials') != existing.get('materials') or
-                    craft.get('outputs') != existing.get('outputs') or
-                    craft.get('requirement') != existing.get('requirement')):
-                    changes['crafts']['updated'][craft_id] = {
-                        'existing': existing,
-                        'new': craft,
-                        'changes': []
-                    }
+                
+                if export_manager:
+                    # Use intelligent comparison
+                    should_update, reason = intelligent_craft_comparison(craft, existing, export_manager)
+                    if should_update:
+                        changes['crafts']['updated'][craft_id] = {
+                            'existing': existing,
+                            'new': craft,
+                            'changes': [reason]
+                        }
+                        print(f"[INFO] Craft update needed: {craft_id} - {reason}")
+                    else:
+                        changes['crafts']['identical'][craft_id] = craft
+                        print(f"[DEBUG] Craft unchanged: {craft_id} - {reason}")
                 else:
-                    changes['crafts']['identical'][craft_id] = craft
+                    # Fallback to simple comparison
+                    if (craft.get('name') != existing.get('name') or 
+                        craft.get('materials') != existing.get('materials') or
+                        craft.get('outputs') != existing.get('outputs') or
+                        craft.get('requirement') != existing.get('requirement')):
+                        changes['crafts']['updated'][craft_id] = {
+                            'existing': existing,
+                            'new': craft,
+                            'changes': ['Simple field comparison']
+                        }
+                    else:
+                        changes['crafts']['identical'][craft_id] = craft
             else:
                 changes['crafts']['new'][craft_id] = craft
     
@@ -1182,11 +1318,11 @@ def prompt_for_confirmation(changes, metadata_changes, new_metadata, requirement
     print("\n" + Colors.section_divider("CONFIRMATION REQUIRED"))
     
     total_changes = (
-        len(changes['items']['new']) + len(changes['items']['id_updates']) +
+        len(changes['items']['new']) + len(changes['items']['updated']) + len(changes['items']['id_updates']) +
         len(changes['items'].get('description_updates', {})) +
-        len(changes['crafts']['new']) +
+        len(changes['crafts']['new']) + len(changes['crafts']['updated']) +
         len(metadata_changes['buildings']['new']) +
-        len(requirement_changes['new'])
+        len(requirement_changes['new']) + len(requirement_changes['updated'])
     )
     
     if total_changes == 0:
@@ -1207,9 +1343,12 @@ def prompt_for_confirmation(changes, metadata_changes, new_metadata, requirement
     print(f"\n{Colors.colorize('Ready to apply', Colors.BOLD)} {Colors.colorize(str(total_changes), Colors.BOLD + Colors.GREEN)} {Colors.colorize('changes to BitCrafty data:', Colors.BOLD)}")
     print(f"  • {Colors.colorize(str(len(changes['items']['id_updates'])), Colors.YELLOW)} item ID updates")
     print(f"  • {Colors.colorize(str(len(changes['items']['new'])), Colors.GREEN)} new items")
+    print(f"  • {Colors.colorize(str(len(changes['items']['updated'])), Colors.CYAN)} item updates")
     print(f"  • {Colors.colorize(str(len(changes['items'].get('description_updates', {}))), Colors.CYAN)} description updates")
     print(f"  • {Colors.colorize(str(len(changes['crafts']['new'])), Colors.GREEN)} new crafts")
+    print(f"  • {Colors.colorize(str(len(changes['crafts']['updated'])), Colors.CYAN)} craft updates")
     print(f"  • {Colors.colorize(str(len(requirement_changes['new'])), Colors.GREEN)} new requirements")
+    print(f"  • {Colors.colorize(str(len(requirement_changes['updated'])), Colors.CYAN)} requirement updates")
     print(f"  • {Colors.colorize(str(len(metadata_changes['buildings']['new'])), Colors.GREEN)} new buildings")
     
     while True:
@@ -1566,13 +1705,32 @@ def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requ
         if changes['crafts']['updated']:
             count = len(changes['crafts']['updated'])
             print_info(f"Updating {Colors.colorize(str(count), Colors.YELLOW)} existing crafts...")
+            
+            # Create ExportManager for intelligent merging
+            try:
+                merge_manager = ExportManager()
+            except Exception as e:
+                print(f"[WARNING] Could not create ExportManager for merging: {e}")
+                merge_manager = None
+                
             for craft_id, update_info in changes['crafts']['updated'].items():
-                new_craft = clean_craft_for_bitcrafty(update_info['new'])
+                if merge_manager:
+                    # Use intelligent merging
+                    merged_craft = intelligent_craft_merge(
+                        update_info['existing'], 
+                        update_info['new'], 
+                        merge_manager
+                    )
+                else:
+                    # Fallback to simple replacement
+                    merged_craft = clean_craft_for_bitcrafty(update_info['new'])
+                
                 # Find and replace the existing craft
                 for i, craft in enumerate(crafts_data):
                     if craft['id'] == craft_id:
-                        crafts_data[i] = new_craft
-                        print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft: {Colors.highlight(craft_id)}")
+                        crafts_data[i] = merged_craft
+                        reason = ', '.join(update_info.get('changes', ['update']))
+                        print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft: {Colors.highlight(craft_id)} ({reason})")
                         changes_applied += 1
                         break
         

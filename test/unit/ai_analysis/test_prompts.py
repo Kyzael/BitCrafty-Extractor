@@ -24,10 +24,10 @@ def prompt_builder():
 
 @pytest.fixture
 def expected_max_sizes():
-    """Expected maximum prompt sizes (updated for validation improvements June 2025)."""
+    """Expected maximum prompt sizes (updated for quantity formatting improvements July 2025)."""
     return {
-        "queue_full": 3600,     # ~3455 chars with validation rules and examples
-        "queue_compact": 2800,   # ~2640 chars without examples but with validation
+        "queue_full": 4500,     # ~4466 chars with quantity formatting rules and examples  
+        "queue_compact": 3200,   # ~3000 chars without examples but with validation
         "item_tooltip": 900,     # ~816 chars with validation instructions
         "craft_recipe": 1500,    # ~1364 chars with validation requirements
         "single_item": 750       # ~670 chars (minimal changes)

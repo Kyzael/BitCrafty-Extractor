@@ -58,7 +58,7 @@ class PromptBuilder:
                         {"item": "string - ingredient name", "qty": "number"}
                     ],
                     "outputs": [
-                        {"item": "string - output name", "qty": "number or string for variable"}
+                        {"item": "string - output name", "qty": "number or range like '1-3' or '0-2' (avoid 'variable/varied')"}
                     ],
                     "confidence": "number - 0.0-1.0"
                 }
@@ -98,24 +98,56 @@ EXAMPLE:
                 {"item": "cloth", "qty": 1}
             ],
             "confidence": 0.88
+        },
+        {
+            "name": "Harvest Seeds",
+            "requirements": {
+                "profession": "farming",
+                "building": "farming-station",
+                "tool": "hoe"
+            },
+            "materials": [
+                {"item": "embergrain-plant", "qty": 1}
+            ],
+            "outputs": [
+                {"item": "embergrain", "qty": "1-3"},
+                {"item": "embergrain-seeds", "qty": "0-2"}
+            ],
+            "confidence": 0.90
         }
     ],
     "total_confidence": 0.91
 }, indent=2)}
 """
         
-        craft_validation_rules = """
+        
+        quantity_rules = ""
+        if include_examples:
+            quantity_rules = """
+
+CRITICAL QUANTITY FORMATTING RULES:
+1. ALWAYS use specific number ranges instead of generic terms
+2. Use format "min-max" for variable quantities (e.g., "1-3", "0-2", "10-20")
+3. NEVER use "variable", "varied", "random", or similar generic terms
+4. If you see variable output, estimate the range based on visible quantities
+5. Default to "0-1" if the range is unclear but clearly variable
+6. Use single numbers for fixed quantities
+
+QUANTITY FORMATS:
+- Good: "qty": 1, "qty": "2-4", "qty": "0-3"
+- Bad: "qty": "variable", "qty": "varied", "qty": "random"
+"""
+        
+        craft_validation_rules = f"""
 CRITICAL CRAFTING RECIPE VALIDATION RULES:
 1. ONLY extract crafts_found if you see an ACTUAL CRAFTING INTERFACE with materials, tools, or profession requirements
 2. Do NOT extract crafts for simple item tooltips or item information screens
 3. A craft MUST have at least one of: materials list, profession requirement, tool requirement, or building requirement
 4. If you only see an item description without crafting details, extract it as items_found ONLY
 5. Crafts without materials[] AND without profession AND without tools are INVALID - exclude them
-6. Item hover tooltips or information screens are NOT crafting recipes
-
+6. Item hover tooltips or information screens are NOT crafting recipes{quantity_rules}
 CRAFT NAME CLEANING RULES:
 - Remove recipe sequence prefixes like "1/2", "2/2", "1/3", etc. from craft names
-- Example: "1/2 Burn Pitch" should be extracted as "Burn Pitch"
 - Example: "2/3 Cook Stew" should be extracted as "Cook Stew"
 - Only extract the actual recipe name, not the sequence indicator
 
@@ -210,7 +242,7 @@ Return ONLY JSON following the schema above."""
                 {"item": "string - ingredient name", "qty": "number or string"}
             ],
             "outputs": [
-                {"item": "string - output name", "qty": "number or string"}
+                {"item": "string - output name", "qty": "number or range like '1-3' or '0-2' (avoid 'variable/varied')"}
             ],
             "confidence": "number - 0.0-1.0"
         }

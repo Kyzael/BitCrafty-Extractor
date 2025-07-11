@@ -7,6 +7,7 @@ Anthropic Claude) to extract structured game data from screenshots.
 import base64
 import json
 import time
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 import asyncio
@@ -239,7 +240,8 @@ class VisionClient:
         """
         # First try direct JSON parsing
         try:
-            return json.loads(raw_response)
+            data = json.loads(raw_response)
+            return self._post_process_response_data(data)
         except json.JSONDecodeError:
             pass
         
@@ -257,12 +259,91 @@ class VisionClient:
             if match:
                 try:
                     json_text = match.group(1).strip()
-                    return json.loads(json_text)
+                    data = json.loads(json_text)
+                    return self._post_process_response_data(data)
                 except json.JSONDecodeError:
                     continue
         
         # If no JSON found, return as raw text
         return {"raw_text": raw_response}
+
+    def _post_process_response_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Post-process AI response data to clean up quantity formats.
+        
+        Args:
+            data: Parsed JSON data from AI response
+            
+        Returns:
+            Cleaned data with proper quantity formatting
+        """
+        # Process crafts_found array if it exists
+        if 'crafts_found' in data and isinstance(data['crafts_found'], list):
+            for craft in data['crafts_found']:
+                if 'outputs' in craft and isinstance(craft['outputs'], list):
+                    for output in craft['outputs']:
+                        if 'qty' in output:
+                            output['qty'] = self._normalize_quantity(output['qty'])
+                
+                if 'materials' in craft and isinstance(craft['materials'], list):
+                    for material in craft['materials']:
+                        if 'qty' in material:
+                            material['qty'] = self._normalize_quantity(material['qty'])
+        
+        # Process single craft format
+        if 'outputs' in data and isinstance(data['outputs'], list):
+            for output in data['outputs']:
+                if 'qty' in output:
+                    output['qty'] = self._normalize_quantity(output['qty'])
+        
+        if 'materials' in data and isinstance(data['materials'], list):
+            for material in data['materials']:
+                if 'qty' in material:
+                    material['qty'] = self._normalize_quantity(material['qty'])
+        
+        return data
+
+    def _normalize_quantity(self, qty: Any) -> Union[int, str]:
+        """Normalize quantity values to proper format.
+        
+        Args:
+            qty: Quantity value (int, str, or other)
+            
+        Returns:
+            Normalized quantity (int for fixed, str for ranges)
+        """
+        if isinstance(qty, int):
+            return qty
+        
+        if isinstance(qty, str):
+            qty_lower = qty.lower().strip()
+            
+            # Convert generic terms to default range
+            if qty_lower in ['variable', 'varied', 'random', 'varies', 'multiple']:
+                self.logger.info("Converting generic quantity term to default range", 
+                               original=qty, normalized="0-1")
+                return "0-1"
+            
+            # Check if it's already a proper range format
+            range_match = re.match(r'^(\d+)-(\d+)$', qty.strip())
+            if range_match:
+                return qty.strip()
+            
+            # Try to parse as int
+            try:
+                return int(qty)
+            except ValueError:
+                # If we can't parse it, default to "0-1" 
+                self.logger.warning("Could not parse quantity, defaulting to range", 
+                                  original=qty, normalized="0-1")
+                return "0-1"
+        
+        # For any other type, try to convert to int or default to "0-1"
+        try:
+            return int(qty)
+        except (ValueError, TypeError):
+            self.logger.warning("Unknown quantity type, defaulting to range", 
+                              original=qty, normalized="0-1")
+            return "0-1"
 
     async def _analyze_with_openai(self, prompt: str, image_base64: str) -> AIResponse:
         """Analyze image using OpenAI GPT-4 Vision.
