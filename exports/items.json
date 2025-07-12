@@ -2,470 +2,129 @@
   "metadata": {
     "version": "1.0",
     "source": "bitcrafty-extractor",
-    "last_updated": "2025-07-11T17:20:24.858058",
-    "total_items": 159
+    "last_updated": "2025-07-11T21:31:18.164089",
+    "total_items": 36
   },
   "items": [
     {
-      "name": "Rough Spool of Thread",
-      "description": "A spool of thread made from fibers. Can be used to make cloth strips.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T00:17:52.307773",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a35913a3624f"
-    },
-    {
-      "name": "Rough Stripped Wood",
-      "description": "Strips of wood taken from a log from a tree. A skilled carpenter could form these into a plank to be used in construction or other crafting recipes.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.98,
-      "extracted_at": "2025-06-29T01:42:36.823386",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "c37b9e204d12"
-    },
-    {
-      "name": "Rough Plank",
-      "description": "A plank of wood crafted from stripped wood",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.98,
-      "extracted_at": "2025-06-29T00:58:36.546561",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "5eba152a834c",
-      "last_seen": "2025-06-29T01:43:06.091992"
-    },
-    {
-      "name": "Basic Mushroom",
-      "description": "A plump mushroom that looks edible and quite hearty. Probably better cooked.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T01:09:06.896229",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "0c69b27dfe4b"
-    },
-    {
-      "name": "Plain Mushroom Skewer",
-      "description": "Mushrooms roasted on a fire skewered on a stick",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T01:09:06.896229",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "7285c6f9c006"
-    },
-    {
-      "name": "Basic Clay Lump",
-      "description": "A lump of clay. Could be used to build or craft something, or even pave the ground.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.98,
-      "extracted_at": "2025-06-29T01:57:19.442302",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "b882c3dd8bcd"
-    },
-    {
-      "name": "Basic Berry",
-      "description": "A juicy edible berry. Probably better cooked.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T07:52:41.665486",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "41751d76886f"
-    },
-    {
-      "name": "Basic Fertilizer",
-      "description": "A basic fertilizer made at a farming station.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-29T07:52:41.665486",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "deb82d6fecd7"
-    },
-    {
-      "name": "Training Shortsword",
-      "description": "A flimsy wooden sword. Could be discarded if you could find something better.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T14:02:47.103217",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "49e32248074c"
-    },
-    {
-      "name": "Knapped Flint",
-      "description": "A small shard of flint rock. Brittle but sharp.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T14:04:42.827369",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d3fcd2519dfc"
-    },
-    {
-      "name": "Flint Tool Bundle",
-      "description": "A bundle that contains all the tools you'll need to get started.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T14:02:47.103217",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "9dc551efddfa"
-    },
-    {
-      "name": "Depleted Automata's Heart",
-      "description": "A depleted Automata's Heart used by Wisp. This heart could be filled with energy to more efficiently power your body.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T14:04:42.827369",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "86222010c61c"
-    },
-    {
-      "name": "Flint Bow",
-      "description": "A bow made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T14:05:05.508788",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "1a49e92e2c33"
-    },
-    {
-      "name": "Stick",
-      "description": "A regular stick harvested from bushes or striplings. Could be used for crafting or building.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.98,
-      "extracted_at": "2025-06-30T14:02:47.103217",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "233208b3f7e3"
-    },
-    {
-      "name": "Basic Flower",
-      "description": "A flower that could be ground up to make pigment or used to make tea",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:37:38.950827",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a080e0969dd4"
-    },
-    {
-      "name": "Basic Pigment",
-      "description": "Pigment made from flowers. Could be used for ink or certain clothing",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:37:38.950827",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "0bc87844c626"
-    },
-    {
-      "name": "Basic Starbulb Plant",
-      "description": "Can be husked into Starlight Onion to get or Starlight Onion Seeds to replant",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:42:38.122319",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "857e7d77555b"
-    },
-    {
-      "name": "Basic Starbulb Seeds",
-      "description": "Can be grown into a Basic Onion Plant in a farming field",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:42:38.122319",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "6126866d3795"
-    },
-    {
-      "name": "Basic Starbulb",
-      "description": "A Starlight Onion. Maybe a cook could make something good out of this!",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:42:38.122319",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "65d80a10cc94"
-    },
-    {
-      "name": "Basic Crop Oil",
-      "description": "Oil made from mashing starbulbs. Could be used to make equipment at a scholar station.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:42:38.122319",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "4eb8ee1920c8"
-    },
-    {
-      "name": "Plain Roasted Fish",
-      "description": "Filets from a fresh water fish roasted on a fire",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:50:12.182237",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "022b8d73eda1"
-    },
-    {
-      "name": "Plain Mashed Bulbs",
-      "description": "Mashed potatoes. Tasty and filling but not overly interesting",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:50:12.182237",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "56904a063e1f"
-    },
-    {
-      "name": "Plain Fish and Bulbs",
-      "description": "Fish arranged in a dish with salty fried potatoes. Delicious and filling",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T17:50:12.182237",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "cba8ae27a765"
-    },
-    {
-      "name": "Plain Berry Pie",
-      "description": "Smells delicious. You can hardly wait to eat it.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T19:15:00.877908",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "b3cbb1b31806"
-    },
-    {
-      "name": "Plain Raw Berry Pie",
-      "description": "An uncooked pie. Bake it in an oven to eat it!",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T19:15:00.877908",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "2a179bc8532d"
-    },
-    {
-      "name": "Rough Wood Log",
-      "description": "A cross section of a tree trunk harvested from trees or fallen trunks. Could be used to build or craft something.",
-      "rarity": "common",
-      "tier": 1,
-      "properties": [],
-      "buffs": [],
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T21:03:05.355903",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "72b06efac6db"
-    },
-    {
-      "name": "Rough Wood Trunk",
-      "description": "Can be processed into timber or cut into logs",
-      "rarity": "common",
-      "tier": 1,
-      "properties": [],
-      "buffs": [],
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T21:03:56.206314",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "be2a7933ff04"
-    },
-    {
-      "name": "Basic Amber Resin",
-      "description": "Pure Resin from a tree. Could be used to make wood polish.",
-      "rarity": "common",
-      "tier": 1,
-      "properties": [],
-      "buffs": [],
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T21:03:56.206314",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a147d952d95e"
-    },
-    {
-      "name": "Rough Tree Bark",
-      "description": "A piece of tree bark. Could be used to make brown or a leatherworking station.",
-      "rarity": "common",
-      "tier": 1,
-      "properties": [],
-      "buffs": [],
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T21:03:56.206314",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "e4e12c551435"
-    },
-    {
-      "name": "Basic Citric Berry",
-      "description": "A berry full of citric acid. Could be used by a scholar to make a solvent for refining metal.",
-      "rarity": "common",
-      "tier": 1,
-      "properties": [],
-      "buffs": [],
-      "confidence": 0.95,
-      "extracted_at": "2025-06-30T21:52:06.322697",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a661b15a8504"
-    },
-    {
-      "name": "Flint Hammer",
-      "description": "A hammer made from flint",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:40:23.693033",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "fd2c22fd43cc"
-    },
-    {
-      "name": "Flint Chisel",
-      "description": "A chisel made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:40:53.171196",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "7afc5f03641b"
-    },
-    {
       "name": "Rough Pebbles",
-      "description": "A handful of tiny pebbles of rock made at a masonry station. Can be used to by masons to make various crafting materials or grinded down to search for gem fragments",
+      "description": "A handful of tiny pebbles of rock made at a masonry station. Can be used to make various crafting materials or ground down to search for gem fragments.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:42:29.857324",
+      "extracted_at": "2025-07-11T19:59:04.542307",
       "extraction_source": "bitcrafty-extractor",
       "id": "0fe2c39e2257"
     },
     {
-      "name": "Basic Wood Polish",
-      "description": "Polish that can be used to enhance wood planks. Made by a scholar from Resin and Crop Oil",
-      "rarity": "common",
+      "name": "Rough Ruby Fragment",
+      "description": "A cut gem that could be used in various jewelry",
+      "rarity": "uncommon",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:44:51.877526",
+      "extracted_at": "2025-07-11T19:59:04.542307",
       "extraction_source": "bitcrafty-extractor",
-      "id": "d8c9a598fd2b"
+      "id": "9db02bba9460"
     },
     {
-      "name": "Refined Rough Plank",
-      "description": "A plank of wood treated using oil at a carpentry station. Good to make more advanced structures.",
+      "name": "Rough Sapphire Fragment",
+      "description": "A cut gem that could be used in various jewelry",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-11T19:59:04.542307",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "51932b80d856"
+    },
+    {
+      "name": "Rough Emerald Fragment",
+      "description": "A cut gem that could be used in various jewelry",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-11T19:59:04.542307",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "4cb4f9dc8c96"
+    },
+    {
+      "name": "Rough Diamond Fragment",
+      "description": "A cut gem that could be used in various jewelry",
+      "rarity": "uncommon",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-11T19:59:04.542307",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "3215f758e431"
+    },
+    {
+      "name": "Rough Cloth",
+      "description": "A thick weave of cloth made by a tailor",
       "rarity": "epic",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:44:51.877526",
+      "extracted_at": "2025-07-11T20:06:32.784122",
       "extraction_source": "bitcrafty-extractor",
-      "id": "cbc4c2251577"
+      "id": "6d353d3ddbb7"
     },
     {
-      "name": "Button Mushrooms",
-      "description": null,
-      "rarity": "common",
+      "name": "Rough Textile",
+      "description": "A textile made by a leatherworker to refine cloth",
+      "rarity": "epic",
       "tier": 1,
-      "confidence": 0.9,
-      "extracted_at": "2025-07-01T20:45:54.252317",
+      "confidence": 0.95,
+      "extracted_at": "2025-07-11T20:06:32.784122",
       "extraction_source": "bitcrafty-extractor",
-      "id": "26f7895760e7"
+      "id": "4c2109def9bf"
     },
     {
-      "name": "Breezy Fin Darter",
-      "description": "A fish found in the deeper parts of lakes and some rivers. Can provide fish oil, food and also be used as claim for ocean fishing.",
+      "name": "Refined Rough Cloth",
+      "description": "A thick weave of cloth cloth embroidered with refined hemp",
+      "rarity": "epic",
+      "tier": 1,
+      "confidence": 0.95,
+      "extracted_at": "2025-07-11T20:06:32.784122",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "a642f7c0bf38"
+    },
+    {
+      "name": "Rough Straw",
+      "description": "Straw that comes from embergrain. Can be used to make textiles to refine cloth.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:46:26.853310",
+      "extracted_at": "2025-07-11T20:07:38.961800",
       "extraction_source": "bitcrafty-extractor",
-      "id": "90edacbdd311"
+      "id": "2553c266bd43"
     },
     {
-      "name": "Breezy Fin Darter Filet",
-      "description": "A filet from a fish from the deeper parts of a lake. Could be used to make charm for ocean fishing.",
+      "name": "Rough Animal Hair",
+      "description": "A particularly bristly hair from an animal. This could be used to make more refined cloth.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:46:26.853310",
+      "extracted_at": "2025-07-11T20:07:38.961800",
       "extraction_source": "bitcrafty-extractor",
-      "id": "848a5ae147bd"
+      "id": "85b6f7f7948f"
     },
     {
       "name": "Basic Fish Oil",
       "description": "Oil made from fish. Can be used for making leather treatment and ink.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:46:26.853310",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "5d25b558c4f0"
-    },
-    {
-      "name": "Wild Fiberplant Seeds",
-      "description": "Can be grown into a domesticated plant which produces filaments",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:47:34.562031",
+      "extracted_at": "2025-07-11T20:27:42.690413",
       "extraction_source": "bitcrafty-extractor",
-      "id": "834fbe888a5e"
+      "id": "46a35e8447a4"
     },
     {
-      "name": "Basic Wispweave Plant",
-      "description": "Can be used to harvest filament for gathering and Wispweave Seeds to replant",
+      "name": "Basic Starbulb Seeds",
+      "description": "Can be grown into a Starbulb Onion Plant in a farming field",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:47:34.562031",
+      "extracted_at": "2025-07-11T20:27:42.690413",
       "extraction_source": "bitcrafty-extractor",
-      "id": "b9e6c778a738"
-    },
-    {
-      "name": "Basic Wispweave Seeds",
-      "description": "Can be grown into a Wispweave Plant in a farming field. Produces filaments used for making cloth.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:48:02.317929",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "83d6f0c6eaf4"
-    },
-    {
-      "name": "Wild Vegetable Seeds",
-      "description": "Can be turned into white onion seeds by a farmer.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:49:02.880826",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "8042c1587645"
-    },
-    {
-      "name": "Wild Grain Seeds",
-      "description": "A wild grain seed. Can be grown into a better crop by farmers.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:49:31.832654",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "bd7d03ecd948"
-    },
-    {
-      "name": "Basic Embergrain Plant",
-      "description": "Can be sold, used directly to cook or Embergrain Seeds to replant.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:49:31.832654",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "c1be569d7777"
+      "id": "6126866d3795"
     },
     {
       "name": "Basic Embergrain Seeds",
@@ -473,89 +132,39 @@
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:49:52.458829",
+      "extracted_at": "2025-07-11T20:28:34.329973",
       "extraction_source": "bitcrafty-extractor",
       "id": "c02b911f53d9"
     },
     {
-      "name": "Plain Mushroom Stuffed Bulbs",
-      "description": "Onions stuffed with wild mushrooms.",
+      "name": "Basic Wispweave Seeds",
+      "description": "Can be grown into a Wispweave Plant in a farming field. Produces filaments used for making cloth.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:50:52.094419",
+      "extracted_at": "2025-07-11T20:30:12.792275",
       "extraction_source": "bitcrafty-extractor",
-      "id": "6d623decb69c"
+      "id": "83d6f0c6eaf4"
     },
     {
-      "name": "Oceancrest Marlin",
-      "description": "A huge ocean fish. Could be processed into filets, fish oil or scales.",
+      "name": "Basic Chemical Catalyst",
+      "description": "A catalyst that can be made and used by scholars to create various potions or consumables.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:51:29.061193",
+      "extracted_at": "2025-07-11T20:30:12.792275",
       "extraction_source": "bitcrafty-extractor",
-      "id": "fd86da3ebd6f"
+      "id": "58427b12e1d1"
     },
     {
-      "name": "Oceancrest Marlin Fillet",
-      "description": "A filet from a large ocean fish. Could be used to make food.",
+      "name": "Basic Mushroom",
+      "description": "A plump mushroom that looks edible and quite hearty. Probably better cooked.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:51:29.061193",
+      "extracted_at": "2025-07-11T20:35:50.212779",
       "extraction_source": "bitcrafty-extractor",
-      "id": "320eba8f11b2"
-    },
-    {
-      "name": "Oceancrest Marlin Scale",
-      "description": "A fish scale crystalized by the salt in the ocean. Various travelers would be interested in this.",
-      "rarity": "epic",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:51:29.061193",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "e79479fce512"
-    },
-    {
-      "name": "Flint Knife",
-      "description": "A knife made from flint. Requires Leatherworker Lv 1 to equip.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:53:50.295692",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "757b2fc403da"
-    },
-    {
-      "name": "Flint Hoe",
-      "description": "A hoe made from flint",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:54:11.156410",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "8d9f34c76656"
-    },
-    {
-      "name": "Rough Plant Roots",
-      "description": "Massive plant roots that could be processed into plant fiber at a forager's workstation",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:54:32.823921",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "eb7a4b0baf68"
-    },
-    {
-      "name": "Rough Plant Fiber",
-      "description": "A strong piece of plant fiber. Could be used to build or craft something",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:54:32.823921",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "31014f3ed090"
+      "id": "8e5f9d8e967f"
     },
     {
       "name": "Rough Glass Vial",
@@ -563,1049 +172,199 @@
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:56:03.238574",
+      "extracted_at": "2025-07-11T20:35:50.212779",
       "extraction_source": "bitcrafty-extractor",
       "id": "6e538208a077"
-    },
-    {
-      "name": "Plain Cooked Berries",
-      "description": "Berries that have been cooked into a mushy mess. Tasty enough though.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:56:47.725017",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "7aeffc41f2c1"
-    },
-    {
-      "name": "Crushed Rough Shells",
-      "description": "Ground sea shells. Can be used by a mason to make more refined bricks.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:57:15.184707",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3a098eefc1dd"
-    },
-    {
-      "name": "Rough Gypsite",
-      "description": "A rare mineral found in clay. Can be used to make more refined bricks.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:57:15.184707",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "5d6a08dd7b29"
-    },
-    {
-      "name": "Basic Firesand",
-      "description": "Various stone materials ground, boiled and baked by a cook. Can be used to refine bricks.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:57:15.184707",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "0999ca6c8733"
-    },
-    {
-      "name": "Basic Ink",
-      "description": "Ink made of pigment and fish oil. Could be used by a scholar to transcribe some sayings found in hieroglyphs around the world and in ruins.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:57:41.990181",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "e4286c5627bf"
-    },
-    {
-      "name": "Basic Embergrain Dough",
-      "description": "A dough ball made of Embergrain Flour",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:58:38.079826",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a5b3a5e3c064"
-    },
-    {
-      "name": "Flint Pickaxe",
-      "description": "A pickaxe made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.98,
-      "extracted_at": "2025-07-01T20:59:39.576530",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "20a56029dfd6"
-    },
-    {
-      "name": "Flint Machete",
-      "description": "A machete made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T20:59:59.295357",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "008ab469a047"
-    },
-    {
-      "name": "Rough Stone Chunk",
-      "description": "Can be used in construction or refined into a block",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:01.185770",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "27a253524127"
-    },
-    {
-      "name": "Rough Braxite",
-      "description": "A rare abrasive stone that can be used to make a leather finish solution to refine leather",
-      "rarity": "rare",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:01.185770",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "faed69acfc12"
-    },
-    {
-      "name": "Rough Wispweave Filament",
-      "description": "A finer cloth filament that could be used to make cloth. Grown by farmers.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:29.275748",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "ac7501ab9cac"
-    },
-    {
-      "name": "Rough Cloth Strip",
-      "description": "Could be sewed into either Rope or Cloth by a skilled tailor.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:29.275748",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "1e50dd49f233"
-    },
-    {
-      "name": "Rough Cloth",
-      "description": "A thick weave of cloth made by a tailor.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:29.275748",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "50b05e0c76a8"
-    },
-    {
-      "name": "Moonlit Crawdad",
-      "description": "A fish found in shallow lakes and rivers. Can be used to cook food or as bait and a source of shells.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:53.595454",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "baa7d8dec285"
-    },
-    {
-      "name": "Basic Bait",
-      "description": "Bait made of a dried fish. Could be used to catch larger fish.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:01:53.595454",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "4425fdccc832"
-    },
-    {
-      "name": "Basic Embergrain",
-      "description": "Embergrains which could be cooked into dough",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:03:15.389056",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "4f27d9b12b5a"
-    },
-    {
-      "name": "Flint Quill",
-      "description": "A quill made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:03:44.247873",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3a5719d4d51c"
-    },
-    {
-      "name": "Flint Rod",
-      "description": "A fishing rod made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:04:30.842991",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "9eda30055679"
-    },
-    {
-      "name": "Ferralith Ore Concentrate",
-      "description": "Ore that's been processed into a fine concentrate. Could be smelted into metal.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:05:17.728956",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d1312e5c4dc5"
-    },
-    {
-      "name": "Molten Ferralith",
-      "description": "A bar of molten metal made by smelting concentrate.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:05:17.728956",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "96322492a461"
-    },
-    {
-      "name": "Rough Rope",
-      "description": "A thick rope made out of multiple strands of cordage. Could be used for crafting or building.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:05:50.388896",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "57ca3b45e441"
     },
     {
       "name": "Water Bucket",
       "description": "A bucket full of fresh water",
       "rarity": "common",
-      "tier": 1,
+      "tier": null,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:07:12.480632",
+      "extracted_at": "2025-07-11T20:35:50.212779",
       "extraction_source": "bitcrafty-extractor",
-      "id": "6f6fc8c54acc"
+      "id": "db0f67676278"
     },
     {
-      "name": "Flint Saw",
-      "description": "A saw made from flint.",
+      "name": "Sugar",
+      "description": "Sugar made from boiled sap. Could be used to cook something tasty",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:08:20.170259",
+      "extracted_at": "2025-07-11T20:35:50.212779",
       "extraction_source": "bitcrafty-extractor",
-      "id": "ba6d590176ab"
+      "id": "3cdff21af5f1"
     },
     {
-      "name": "Flint Scissors",
-      "description": "A pair of scissors made from flint.",
+      "name": "Basic Flower",
+      "description": "A flower that could be grinded up to make pigment or used to make tea",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:08:43.064357",
+      "extracted_at": "2025-07-11T20:37:35.621814",
       "extraction_source": "bitcrafty-extractor",
-      "id": "914efbc896de"
+      "id": "a080e0969dd4"
     },
     {
-      "name": "Plain Skewered Baitfish",
-      "description": "Small fish skewered on a stick and cooked on a fire",
+      "name": "Tier 1 Sugar",
+      "description": "Sugar made from boiled sap. Could be used to cook something tasty.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T20:39:39.531850",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "5ac9e9cfb7da"
+    },
+    {
+      "name": "Basic Berry",
+      "description": "A juicy edible berry. Probably better cooked.",
+      "rarity": "common",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T20:39:39.531850",
+      "extraction_source": "bitcrafty-extractor",
+      "id": "878e53293926"
+    },
+    {
+      "name": "Rough Chemical Supply Pack",
+      "description": "A package of chemical supplies made by a scholar. Can be used to provide supplies to a claim totem to add supplies to claim.",
       "rarity": "common",
       "tier": 1,
       "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:09:46.379345",
+      "extracted_at": "2025-07-11T20:41:01.102737",
       "extraction_source": "bitcrafty-extractor",
-      "id": "a08c72af5f04"
+      "id": "41b70a3e4f2e"
     },
     {
-      "name": "Basic Raw Meat",
-      "description": "A piece of meat from a wild animal. Could be used as a cooking ingredient.",
+      "name": "Rough Bauxite",
+      "description": "A rare abrasive stone that can be used to make a leather treatment solution to refine leather.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:10:30.067912",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T20:56:01.411741",
       "extraction_source": "bitcrafty-extractor",
-      "id": "d7c1bbf267dc"
-    },
-    {
-      "name": "Basic Chum",
-      "description": "Can be used to chum fishing nodes in the ocean. Once chummed, nodes remain fishable for 15 minutes.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:10:30.067912",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "02cb1002828c"
-    },
-    {
-      "name": "Flint Axe",
-      "description": "An axe made from flint.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:11:30.990717",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "917debfbfeae"
-    },
-    {
-      "name": "Breezy Darter Filet",
-      "description": "A filet from a fish from the deeper parts of a lake. Could be used for food or to make chum for ocean fishing.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:12:18.480827",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "eda140487b5e"
-    },
-    {
-      "name": "Basic Food Waste",
-      "description": "Discarded scraps of food. Can be used to create fertilizer.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:13:43.236763",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "97cff23ab901"
-    },
-    {
-      "name": "Sagi Bird",
-      "description": "An animal body that could be processed for meat and hides",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:49:22.726284",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d4b7c0baf12f"
-    },
-    {
-      "name": "Rough Animal Hair",
-      "description": "A particularly strong hair from an animal. This could be used to make more refined cloth.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:49:22.726284",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "85b6f7f7948f"
-    },
-    {
-      "name": "Rough Raw Pelt",
-      "description": "A fresh pelt from a wild animal. Could be cleaned at a leatherworking station for use.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:49:22.726284",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "c5252c07e262"
-    },
-    {
-      "name": "Salt",
-      "description": "Sea salt. Could be used to cook something tasty.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:49:53.761355",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "19938edb17a9"
-    },
-    {
-      "name": "Empty Bucket",
-      "description": "An empty wood bucket, could be filled with water from a well",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:50:29.169072",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "6fae04083f5e"
-    },
-    {
-      "name": "Simple Fertilizer",
-      "description": "A more advanced type of fertilizer made at a farming station. Used to fertilize better crops.",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:52:37.344628",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "55c93516238a"
-    },
-    {
-      "name": "Simple Wispweave Plant",
-      "description": "Can be split into Wispweave Filament for tailoring and Wispweave Seeds to replant.",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T21:53:20.856083",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "495f2e408099"
-    },
-    {
-      "name": "Simple Starbulb Plant",
-      "description": "Can be hooked into Starlight Onions to eat or Starlight Onion Seeds to replant",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:08:57.463594",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "7043318c6fdd"
-    },
-    {
-      "name": "Simple Embergrain Plant",
-      "description": "Can be split into Embergrain to cook or Embergrain Seeds to replant",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:09:26.301881",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "046c2baf9ec4"
-    },
-    {
-      "name": "Plain Roasted Meat",
-      "description": "Meat cooked on an open fire",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:10:32.560830",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3525e61f5a03"
-    },
-    {
-      "name": "Rough Cleaned Pelt",
-      "description": "A hide that has been cleaned and prepared for use. Can be used to make leather at a tanning station.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:10:52.162747",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "7eed412f7554"
-    },
-    {
-      "name": "Basic Tannin",
-      "description": "A material made from processing water and bark in a tanning tub. Used to tan leather.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:11:18.219118",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "bd46005626fa"
-    },
-    {
-      "name": "Rough Tanned Pelt",
-      "description": "A tanned pelt that could be turned into leather at a leatherworking station.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:11:18.219118",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "a657aba462aa"
+      "id": "9758bee2270f"
     },
     {
       "name": "Ferralith Ore Piece",
       "description": "A piece of rock with exposed bits of ore. Could be processed at a Smithing Station.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:19:15.720118",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:00:40.406127",
       "extraction_source": "bitcrafty-extractor",
       "id": "34eb1d66241b"
     },
     {
-      "name": "Ferralith Ore Chunk",
-      "description": "A chunk of ore. Could be processed into ore pieces.",
+      "name": "Crushed Ferralith Ore",
+      "description": "A pile of crushed ore. Could be processed into concentrate at by a smith.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:19:53.724047",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:00:40.406127",
       "extraction_source": "bitcrafty-extractor",
-      "id": "8a9309c3a3eb"
+      "id": "6a93abaa396d"
     },
     {
-      "name": "Tattered Automata's Heart Wiring",
-      "description": "Damaged wires that could be used to repair an Automata's heart",
-      "rarity": "common",
-      "tier": null,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:21:01.147174",
+      "name": "Rough Braxite",
+      "description": "A rare abrasive stone that can be used to make a leather treatment solution to refine leather.",
+      "rarity": "rare",
+      "tier": 1,
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:00:40.406127",
       "extraction_source": "bitcrafty-extractor",
-      "id": "9e4ca359f580"
+      "id": "faed69acfc12"
     },
     {
-      "name": "Simple Cloth",
-      "description": "A thick weave of cloth made by a tailor",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:21:01.147174",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "64c8f9541a52"
-    },
-    {
-      "name": "Pyrelite Ingot",
-      "description": "A rectangular ingot of metal forged at a smithing station",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:21:01.147174",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "f7002a364e5e"
-    },
-    {
-      "name": "Refined Simple Leather",
-      "description": "A large piece of high quality leather used for outfitting or building",
-      "rarity": "common",
-      "tier": 2,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:21:01.147174",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "cead57b01f39"
-    },
-    {
-      "name": "Insulating Wires",
-      "description": "A component that could be used to expand the capacity of your Automata's Heart",
+      "name": "Rough Stone Chunk",
+      "description": "Can be used in construction or refined into a crafting block.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:22:04.754021",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:01:14.018853",
       "extraction_source": "bitcrafty-extractor",
-      "id": "c6d9f87a3d22"
+      "id": "27a253524127"
     },
     {
-      "name": "Charged Automata's Heart I",
-      "description": "An Automata's Heart filled to the brim with energy. Could be upgraded to accept more energy.",
+      "name": "Plain Mashed Bulbs",
+      "description": "Mashed potatoes. Tasty and filling but not overly interesting.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:22:04.754021",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:22:36.749760",
       "extraction_source": "bitcrafty-extractor",
-      "id": "33b4481c95d3"
+      "id": "56904a063e1f"
     },
     {
-      "name": "Expanded Automata's Heart I",
-      "description": "An Automata's Heart that's been expanded. Could be filled with more energy.",
+      "name": "Basic Embergrain Dough",
+      "description": "A dough ball made of Embergrain Flour.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:22:04.754021",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:22:36.749760",
       "extraction_source": "bitcrafty-extractor",
-      "id": "29a18e72b9a7"
+      "id": "a5b3a5e3c064"
     },
     {
-      "name": "Rough Straw",
-      "description": "Straw that comes from undergrain. Can be used to make textiles to refine cloth.",
+      "name": "Plain Raw Bulb Rolls",
+      "description": "Uncooked onion rolls. Cook them in an oven to craft them!",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:22:33.040575",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:22:36.749760",
       "extraction_source": "bitcrafty-extractor",
-      "id": "2553c266bd43"
-    },
-    {
-      "name": "Rough Textile",
-      "description": "A textile made by a leatherworker to refine cloth.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:22:33.040575",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "89a0653f1546"
-    },
-    {
-      "name": "Plain Ground Meat and Mashed Bulbs",
-      "description": "Ground meat served with a side of potatoes with onions. Delicious and filling.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:24:05.029337",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "cf5a31609c76"
-    },
-    {
-      "name": "Sugar",
-      "description": "Sugar made from boiled sap. Could be used to cook something tasty.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:24:34.334798",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3cdff21af5f1"
+      "id": "4527ad119ef6"
     },
     {
       "name": "Plain Bulb Rolls",
-      "description": "Warm, tasty onion rolls",
+      "description": "Warm, toasty onion rolls.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:24:34.334798",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:25:49.858876",
       "extraction_source": "bitcrafty-extractor",
       "id": "dd6a959b1e03"
     },
     {
-      "name": "Plain Deluxe Bulb Rolls",
-      "description": "Warm, tasty onion rolls",
+      "name": "Basic Fertilizer",
+      "description": "A basic fertilizer made at a farming station. Used for fertilizing crops.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:24:34.334798",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:28:17.315475",
       "extraction_source": "bitcrafty-extractor",
-      "id": "abeb8c41841e"
+      "id": "f2daec306f7e"
     },
     {
-      "name": "Tree Sap",
-      "description": "A small amount of sticky tree resin",
+      "name": "Wild Vegetable Seeds",
+      "description": "Can be turned into white onion seeds by a farmer.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:25:35.042327",
+      "confidence": 0.97,
+      "extracted_at": "2025-07-11T21:28:17.315475",
       "extraction_source": "bitcrafty-extractor",
-      "id": "d02105cb4dc6"
+      "id": "8042c1587645"
     },
     {
-      "name": "Refined Rough Cloth",
-      "description": "A thick weave of refined cloth embroidered with animal hairs",
+      "name": "Basic Starbulb Plant",
+      "description": "Can be husked into Starlight Onions to eat or Starlight Onion Seeds to replant.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-01T22:25:55.673586",
+      "confidence": 0.97,
+      "extracted_at": "2025-07-11T21:28:17.315475",
       "extraction_source": "bitcrafty-extractor",
-      "id": "823093bc2f17"
+      "id": "857e7d77555b"
     },
     {
-      "name": "Rough Parchment",
-      "description": "A scholar could use this with ink to create study journals",
+      "name": "Basic Embergrain",
+      "description": "Embergrains which could be cooked into dough.",
       "rarity": "common",
       "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:02:56.223288",
+      "confidence": 0.98,
+      "extracted_at": "2025-07-11T21:30:57.774256",
       "extraction_source": "bitcrafty-extractor",
-      "id": "1774b7806f46"
-    },
-    {
-      "name": "Rough Leather",
-      "description": "A large piece of leather. Could be used to build or craft something",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:30:52.223097",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "6a1b73125f34"
-    },
-    {
-      "name": "Rough Leather Belt",
-      "description": "Tier 1 Leather Clothing",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:34:54.337357",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "56187fe48c67"
-    },
-    {
-      "name": "Basic Leather Treatment",
-      "description": "A treatment made by Scholars to purify leather further.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:35:21.003088",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "af1eda1378fb"
-    },
-    {
-      "name": "Refined Rough Leather",
-      "description": "A large piece of smooth leather. Could be used for crafting or building.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:35:21.003088",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "ca5e24751c0e"
-    },
-    {
-      "name": "Rough Leather Boots",
-      "description": "Basic leather footwear",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:35:49.186081",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "25dcf75aa4d1"
-    },
-    {
-      "name": "Rough Leather Gloves",
-      "description": "Tier 1 Leather Clothing",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:36:10.169029",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "2ede18c29a28"
-    },
-    {
-      "name": "Rough Leather Sheeting",
-      "description": "Can be used in the construction of buildings and material packs",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:36:29.167588",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "b66146dbd34d"
-    },
-    {
-      "name": "Ferralith Ingot",
-      "description": "A rectangular ingot of metal forged at a smithing station",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:36:49.736826",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "9d14b4a03e7c"
-    },
-    {
-      "name": "Rough Woven Cap",
-      "description": "Common cloth clothing item that adds a collectible to your vault",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:37:57.816316",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "004ab15ec4be"
-    },
-    {
-      "name": "Basic Potter's Mix",
-      "description": "A mix made by a mason that can be used to make various clay goods.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:53:46.706698",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "8b967ce96f34"
-    },
-    {
-      "name": "Beech Seed",
-      "description": "A seed to plant a sapling in a tree pot",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:54:35.700633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d148dc679ef2"
-    },
-    {
-      "name": "Rough Forester's Pot",
-      "description": "Could be used to plant a sapling to grow a tree",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:54:35.700633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "e6b600864374"
-    },
-    {
-      "name": "Potted Beech Sapling",
-      "description": "A potted sapling that's ready to be planted. Will grow into a tree eventually into a mature tree",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:54:35.700633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d063e5b73c70"
-    },
-    {
-      "name": "Oak Seed",
-      "description": "A seed to plant a sapling in a tree pot",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:55:25.945995",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "0570303ac29f"
-    },
-    {
-      "name": "Potted Oak Sapling",
-      "description": "A potted sapling that's ready to be planted. Will grow into a young tree and eventually into a mature tree.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:55:25.945995",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "84bf8630f12b"
-    },
-    {
-      "name": "Rough Unfired Forester's Pot",
-      "description": "Could be used to plant a sapling to grow a tree",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:56:02.580102",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "6ea2471b3a30"
-    },
-    {
-      "name": "Unfired Rough Brick",
-      "description": "Potter's mix shaped into a brick. Could be fired in a kiln to be used for construction and crafting",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:56:45.765597",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "99f787b1543b"
-    },
-    {
-      "name": "Rough Ruby Fragment",
-      "description": "A cut gem that could be used in various jewelry.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:58:28.909576",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "9db02bba9460"
-    },
-    {
-      "name": "Rough Diamond Fragment",
-      "description": "A cut gem that could be used in various jewelry.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:58:28.909576",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3215f758e431"
-    },
-    {
-      "name": "Rough Sapphire Fragment",
-      "description": "A cut gem that could be used in various jewelry.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:58:28.909576",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "51932b80d856"
-    },
-    {
-      "name": "Rough Emerald Fragment",
-      "description": "A cut gem that could be used in various jewelry.",
-      "rarity": "uncommon",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:58:28.909576",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "4cb4f9dc8c96"
-    },
-    {
-      "name": "Pitch",
-      "description": "A sticky material made by processing tree sap in a kiln.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T16:59:40.911064",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "2658ac9aff15"
-    },
-    {
-      "name": "Basic Sand",
-      "description": "Sand primarily used to make glass",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:01:55.860685",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "6ff137206afa"
-    },
-    {
-      "name": "Rough Glass",
-      "description": "Used to make vials as well as some decorative items",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:01:55.860685",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "9eb860890874"
-    },
-    {
-      "name": "Ferralith Frames",
-      "description": "Can be used in the construction of buildings",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:12:09.360958",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "481e3438292d"
-    },
-    {
-      "name": "Ferralith Ingot Package",
-      "description": "A package of Metal Ingots",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:12:40.428966",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "3423f496cddb"
-    },
-    {
-      "name": "Ferralith Plated Boots",
-      "description": "Metal armor that provides protection",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:13:04.851923",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "ec6b88044c23"
-    },
-    {
-      "name": "Jakyl Fur",
-      "description": "Fur found commonly on Jakyl",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:13:40.945633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "0c5361ea16b6"
-    },
-    {
-      "name": "Jakyl Fang",
-      "description": "A fang rarely found while killing on Jakyl",
-      "rarity": "rare",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:13:40.945633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "5459772f4d11"
-    },
-    {
-      "name": "Rough Jakyl Fang Amulet",
-      "description": "A metal amulet made with a Jakyl Fang",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:13:40.945633",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d2f454bd0980"
-    },
-    {
-      "name": "Umbura Fur",
-      "description": "Fur found commonly on Umburas",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:14:15.288800",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "e8afee78a5a9"
-    },
-    {
-      "name": "Umbura Fang",
-      "description": "A fang rarely found when killing an Umbura",
-      "rarity": "rare",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:14:15.288800",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "4a53fee95e14"
-    },
-    {
-      "name": "Rough Umbura Fang Amulet",
-      "description": "A metal amulet made with a Umbura Fang",
-      "rarity": "rare",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:14:15.288800",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "451d9f114545"
-    },
-    {
-      "name": "Ferralith Axe",
-      "description": "An axe made from ferralith.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:14:46.844217",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "40ebb033662c"
-    },
-    {
-      "name": "Ferralith Nails",
-      "description": "A nail forged at a smithing station. Often used for construction",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:17:34.941145",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "bbe2980cb043"
-    },
-    {
-      "name": "Ferralith Plated Belt",
-      "description": "Consuming this will add a collectible to your vault. Can be converted back to a deed from the vault.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:17:54.574716",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "f2d9b709c2e0"
-    },
-    {
-      "name": "Ferralith Plated Bracers",
-      "description": "Metal armor",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:18:14.486278",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "c7cb6e2d1f41"
-    },
-    {
-      "name": "Basic Metal Solvent",
-      "description": "A solvent used to purify metal further",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:18:36.125783",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "8c6f0ba285f8"
-    },
-    {
-      "name": "Refined Ferralith Ingot",
-      "description": "A rectangular ingot of metal forged at a smithing station",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:18:36.125783",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "c9ff5739c62e"
-    },
-    {
-      "name": "Ferralith Daggers",
-      "description": "Small, sharp daggers that could do some real damage if you're on the receiving end of them.",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:19:36.044646",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "1f0a394855ef"
-    },
-    {
-      "name": "Ferralith Plated Armor",
-      "description": "Metal armor that provides protection",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:20:36.939065",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "704637959c78"
-    },
-    {
-      "name": "Ferralith Plated Helm",
-      "description": "Tier 1 Metal Armor",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:20:59.919163",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "d684e9f7e4d0"
-    },
-    {
-      "name": "Ferralith Plated Legguards",
-      "description": "Metal armor",
-      "rarity": "common",
-      "tier": 1,
-      "confidence": 0.95,
-      "extracted_at": "2025-07-10T17:23:30.122718",
-      "extraction_source": "bitcrafty-extractor",
-      "id": "ea2511697a8c"
+      "id": "4f27d9b12b5a"
     }
   ]
 }

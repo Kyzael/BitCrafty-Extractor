@@ -178,6 +178,38 @@ def clean_craft_name(name):
     return cleaned
 
 
+def convert_roman_to_arabic(text):
+    """Convert Roman numerals to Arabic numbers in text (e.g., 'tier i' -> 'tier 1')."""
+    import re
+    
+    roman_to_arabic = {
+        'i': '1',
+        'ii': '2', 
+        'iii': '3',
+        'iv': '4',
+        'v': '5',
+        'vi': '6',
+        'vii': '7',
+        'viii': '8',
+        'ix': '9',
+        'x': '10'
+    }
+    
+    # Convert "tier [roman]" patterns to "tier [arabic]"
+    def replace_tier_roman(match):
+        tier_part = match.group(1)  # "tier "
+        roman_part = match.group(2).lower()  # roman numeral
+        if roman_part in roman_to_arabic:
+            return f"{tier_part}{roman_to_arabic[roman_part]}"
+        return match.group(0)  # Return original if no match
+    
+    # Pattern: "tier" followed by optional space and roman numeral
+    pattern = r'(tier\s+)([ivx]+)(?=\s|$)'
+    result = re.sub(pattern, replace_tier_roman, text, flags=re.IGNORECASE)
+    
+    return result
+
+
 def normalize_name(name):
     """Normalize name to BitCrafty ID format: lowercase, hyphens, no spaces, no apostrophes."""
     import re
@@ -260,11 +292,13 @@ def normalize_extractor_data(items_export, crafts_export):
     existing_bitcrafty_items = load_json(ITEMS_DATA_PATH) or []
     existing_item_names = {}
     existing_item_fuzzy_names = {}  # For fuzzy matching
+    existing_items_by_id = {}  # For lookup by ID
     for item in existing_bitcrafty_items:
         name = item.get('name', '').strip()
         item_id = item.get('id')
         if name and item_id:
             existing_item_names[name] = item_id
+            existing_items_by_id[item_id] = item  # Store full item data
             
             # Also create fuzzy matching entries
             # Remove common prefixes for fuzzy matching
@@ -355,6 +389,17 @@ def normalize_extractor_data(items_export, crafts_export):
                         })
                         item_name_to_id[item_name] = existing_item_id
                         print(f"[INFO] Using existing BitCrafty material: {item_name} -> {existing_item_id}")
+                        
+                        # Add existing BitCrafty item to normalized_items to prevent it from being flagged for update
+                        if existing_item_id not in normalized_items and existing_item_id in existing_items_by_id:
+                            existing_item = existing_items_by_id[existing_item_id]
+                            normalized_items[existing_item_id] = {
+                                'id': existing_item.get('id'),
+                                'name': existing_item.get('name'),
+                                'description': existing_item.get('description', ''),
+                                'tier': existing_item.get('tier', 1),
+                                'rank': existing_item.get('rank', 'Common')
+                            }
                     else:
                         # For input materials, try to find existing ID in BitCrafty data
                         # or infer profession, but DON'T use the current craft's profession
@@ -729,13 +774,10 @@ def intelligent_craft_merge(existing_craft, new_craft, export_manager):
 def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcrafty_crafts):
     """Compare normalized extractor data with BitCrafty data using intelligent logic."""
     
-    # Create ExportManager instance for intelligent craft comparison
-    try:
-        export_manager = ExportManager()
-        print_info("Using ExportManager for intelligent craft comparison...")
-    except Exception as e:
-        print(f"[WARNING] Could not create ExportManager: {e}")
-        export_manager = None
+    # DISABLE ExportManager for comparison - it causes infinite loops in reconciliation
+    # The ExportManager is designed for processing new extractions, not for reconciliation
+    export_manager = None
+    print_info("Using simple comparison logic (ExportManager disabled to prevent infinite loops)...")
     
     changes = {
         'items': {
@@ -825,15 +867,45 @@ def compare_entities(normalized_items, normalized_crafts, bitcrafty_items, bitcr
                         changes['crafts']['identical'][craft_id] = craft
                         print(f"[DEBUG] Craft unchanged: {craft_id} - {reason}")
                 else:
-                    # Fallback to simple comparison
-                    if (craft.get('name') != existing.get('name') or 
-                        craft.get('materials') != existing.get('materials') or
-                        craft.get('outputs') != existing.get('outputs') or
-                        craft.get('requirement') != existing.get('requirement')):
+                    # Intelligent craft comparison instead of simple field comparison
+                    needs_update = False
+                    
+                    # Compare name (case-insensitive, trimmed)
+                    if craft.get('name', '').strip().lower() != existing.get('name', '').strip().lower():
+                        needs_update = True
+                        
+                    # Compare materials (normalize and sort for comparison)
+                    craft_materials = sorted(craft.get('materials', []), key=lambda x: x.get('item', ''))
+                    existing_materials = sorted(existing.get('materials', []), key=lambda x: x.get('item', ''))
+                    if craft_materials != existing_materials:
+                        needs_update = True
+                        
+                    # Compare outputs (normalize and sort for comparison)
+                    craft_outputs = sorted(craft.get('outputs', []), key=lambda x: x.get('item', ''))
+                    existing_outputs = sorted(existing.get('outputs', []), key=lambda x: x.get('item', ''))
+                    if craft_outputs != existing_outputs:
+                        needs_update = True
+                        
+                    # Compare requirements - be smart about requirement references
+                    craft_req = craft.get('requirement', '').strip()
+                    existing_req = existing.get('requirement', '').strip()
+                    if craft_req != existing_req:
+                        # Only flag as needing update if both are non-empty and different
+                        # If one is empty and the other isn't, it might be an addition, not an update
+                        if craft_req and existing_req:
+                            needs_update = True
+                        elif not craft_req and existing_req:
+                            # Extracted craft is missing requirement that exists - leave existing
+                            pass
+                        elif craft_req and not existing_req:
+                            # New requirement being added - this is an update
+                            needs_update = True
+                    
+                    if needs_update:
                         changes['crafts']['updated'][craft_id] = {
                             'existing': existing,
                             'new': craft,
-                            'changes': ['Simple field comparison']
+                            'changes': ['Intelligent field comparison']
                         }
                     else:
                         changes['crafts']['identical'][craft_id] = craft
@@ -896,15 +968,19 @@ def extract_metadata_from_crafts(normalized_crafts):
         # Extract tool
         tool = requirements.get('tool')
         if tool and tool != 'null' and tool is not None:
+            # Convert Roman numerals to Arabic before cleaning
+            tool_normalized = convert_roman_to_arabic(tool)
             # Clean tool name (remove "Tier 1", etc.)
-            clean_tool = tool.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+            clean_tool = tool_normalized.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
             tools.add(clean_tool)
         
         # Extract building
         building = requirements.get('building')
         if building and building != 'null' and building is not None:
+            # Convert Roman numerals to Arabic before cleaning
+            building_normalized = convert_roman_to_arabic(building)
             # Clean building name and extract the actual building name
-            clean_building = building.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
+            clean_building = building_normalized.lower().replace('tier 1 ', '').replace('tier 2 ', '').replace('tier 3 ', '')
             
             # Extract building type (e.g., "carpentry station" -> "station", "kiln" -> "kiln")
             if 'station' in clean_building:
@@ -1480,10 +1556,15 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
     if changes['items']['updated']:
         print(f"\n{Colors.colorize('UPDATED ITEMS:', Colors.BOLD + Colors.YELLOW)}")
         print(f"{Colors.gray('File:')} {Colors.highlight(ITEMS_DATA_PATH)}")
-        for item_id, updated_item in changes['items']['updated'].items():
-            tier_color = Colors.get_tier_color(updated_item.get('tier'))
-            tier_text = Colors.colorize(f"T{updated_item.get('tier', '?')}", tier_color)
-            print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated item: {Colors.highlight(item_id)} {Colors.gray(f'({tier_text})')}")
+        for item_id, update_info in changes['items']['updated'].items():
+            existing = update_info['existing']
+            new = update_info['new']
+            print(f"  {Colors.colorize('✓', Colors.YELLOW)} Updated item: {Colors.highlight(item_id)}")
+            print(f"    {Colors.colorize('Name:', Colors.CYAN)} {existing.get('name', '')} → {new.get('name', '')}")
+            if existing.get('tier') != new.get('tier'):
+                print(f"    {Colors.colorize('Tier:', Colors.CYAN)} {existing.get('tier', 'None')} → {new.get('tier', 'None')}")
+            if existing.get('description') != new.get('description'):
+                print(f"    {Colors.colorize('Description changed:', Colors.CYAN)} {Colors.gray('Yes')}")
     
     if requirement_changes['new']:
         print(f"\n{Colors.colorize('NEW REQUIREMENTS:', Colors.BOLD + Colors.GREEN)}")
@@ -1500,6 +1581,58 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
             if 'building' in req_entry:
                 print(f"    {Colors.colorize('Building:', Colors.CYAN)} {req_entry['building']['name']}")
     
+    if requirement_changes['updated']:
+        print(f"\n{Colors.colorize('REQUIREMENT UPDATES:', Colors.BOLD + Colors.YELLOW)}")
+        print(f"{Colors.gray('File:')} {Colors.highlight(REQUIREMENTS_DATA_PATH)}")
+        
+        for req_id, update_info in requirement_changes['updated'].items():
+            existing = update_info['existing']
+            new = update_info['new']
+            craft_count = len(update_info['crafts'])
+            
+            print(f"  {Colors.colorize('⚠️', Colors.YELLOW)} {Colors.highlight(req_id)}")
+            print(f"    {Colors.colorize('Used by', Colors.CYAN)} {Colors.colorize(str(craft_count), Colors.YELLOW)} {Colors.colorize('crafts:', Colors.CYAN)} {Colors.gray(', '.join(update_info['crafts'][:3]))}{Colors.gray('...' if craft_count > 3 else '')}")
+            
+            # Compare names
+            existing_name = existing.get('name', '')
+            new_name = new.get('name', '')
+            if existing_name.lower().strip() != new_name.lower().strip():
+                print(f"    {Colors.colorize('Name:', Colors.CYAN)} '{existing_name}' → '{new_name}'")
+            
+            # Compare professions
+            existing_prof = existing.get('profession', {})
+            new_prof = new.get('profession', {})
+            existing_prof_name = existing_prof.get('name', '') if isinstance(existing_prof, dict) else str(existing_prof)
+            new_prof_name = new_prof.get('name', '') if isinstance(new_prof, dict) else str(new_prof)
+            if existing_prof_name.lower().strip() != new_prof_name.lower().strip():
+                print(f"    {Colors.colorize('Profession:', Colors.CYAN)} '{existing_prof_name}' → '{new_prof_name}'")
+            
+            # Compare tools
+            existing_tool = existing.get('tool', {})
+            new_tool = new.get('tool', {})
+            existing_tool_name = existing_tool.get('name', '') if isinstance(existing_tool, dict) else str(existing_tool or '')
+            new_tool_name = new_tool.get('name', '') if isinstance(new_tool, dict) else str(new_tool or '')
+            if existing_tool_name.lower().strip() != new_tool_name.lower().strip():
+                if existing_tool_name and new_tool_name:
+                    print(f"    {Colors.colorize('Tool:', Colors.CYAN)} '{existing_tool_name}' → '{new_tool_name}'")
+                elif existing_tool_name and not new_tool_name:
+                    print(f"    {Colors.colorize('Tool:', Colors.CYAN)} '{existing_tool_name}' → {Colors.colorize('(removed)', Colors.RED)}")
+                elif not existing_tool_name and new_tool_name:
+                    print(f"    {Colors.colorize('Tool:', Colors.CYAN)} {Colors.colorize('(none)', Colors.GRAY)} → '{new_tool_name}'")
+            
+            # Compare buildings
+            existing_building = existing.get('building', {})
+            new_building = new.get('building', {})
+            existing_building_name = existing_building.get('name', '') if isinstance(existing_building, dict) else str(existing_building or '')
+            new_building_name = new_building.get('name', '') if isinstance(new_building, dict) else str(new_building or '')
+            if existing_building_name.lower().strip() != new_building_name.lower().strip():
+                if existing_building_name and new_building_name:
+                    print(f"    {Colors.colorize('Building:', Colors.CYAN)} '{existing_building_name}' → '{new_building_name}'")
+                elif existing_building_name and not new_building_name:
+                    print(f"    {Colors.colorize('Building:', Colors.CYAN)} '{existing_building_name}' → {Colors.colorize('(removed)', Colors.RED)}")
+                elif not existing_building_name and new_building_name:
+                    print(f"    {Colors.colorize('Building:', Colors.CYAN)} {Colors.colorize('(none)', Colors.GRAY)} → '{new_building_name}'")
+    
     if changes['crafts']['new']:
         print(f"\n{Colors.colorize('NEW CRAFTS:', Colors.BOLD + Colors.GREEN)}")
         print(f"{Colors.gray('File:')} {Colors.highlight(CRAFTS_DATA_PATH)}")
@@ -1508,18 +1641,64 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
             print(f"  {Colors.colorize('+', Colors.GREEN)} {Colors.highlight(craft_id)}: {craft['name']}")
             if craft.get('requirement'):
                 print(f"    {Colors.colorize('Requirement:', Colors.CYAN)} {Colors.gray(craft['requirement'])}")
-            if craft.get('inputs'):
-                input_count = len(craft['inputs'])
-                print(f"    {Colors.colorize('Inputs:', Colors.CYAN)} {Colors.colorize(str(input_count), Colors.YELLOW)} items")
+            if craft.get('materials'):
+                material_count = len(craft['materials'])
+                print(f"    {Colors.colorize('Materials:', Colors.CYAN)} {Colors.colorize(str(material_count), Colors.YELLOW)} items")
             if craft.get('outputs'):
                 output_count = len(craft['outputs'])
                 print(f"    {Colors.colorize('Outputs:', Colors.CYAN)} {Colors.colorize(str(output_count), Colors.YELLOW)} items")
     
     if changes['crafts']['updated']:
-        print(f"\n{Colors.colorize('UPDATED CRAFTS:', Colors.BOLD + Colors.YELLOW)}")
+        print(f"\n{Colors.colorize('CRAFT UPDATES:', Colors.BOLD + Colors.YELLOW)}")
         print(f"{Colors.gray('File:')} {Colors.highlight(CRAFTS_DATA_PATH)}")
-        for craft_id, updated_craft in changes['crafts']['updated'].items():
-            print(f"  {Colors.colorize('✓', Colors.GREEN)} Updated craft: {Colors.highlight(craft_id)}")
+        
+        for craft_id, update_info in changes['crafts']['updated'].items():
+            existing = update_info['existing']
+            new = update_info['new']
+            reasons = update_info.get('changes', [])
+            
+            print(f"  {Colors.colorize('⚠️', Colors.YELLOW)} {Colors.highlight(craft_id)}: {existing.get('name', '')}")
+            if reasons:
+                print(f"    {Colors.colorize('Change type:', Colors.CYAN)} {', '.join(reasons)}")
+            
+            # Compare names
+            if existing.get('name', '').strip().lower() != new.get('name', '').strip().lower():
+                print(f"    {Colors.colorize('Name:', Colors.CYAN)} '{existing.get('name', '')}' → '{new.get('name', '')}'")
+            
+            # Compare requirements
+            existing_req = existing.get('requirement', '').strip()
+            new_req = new.get('requirement', '').strip()
+            if existing_req != new_req:
+                if existing_req and new_req:
+                    print(f"    {Colors.colorize('Requirement:', Colors.CYAN)} '{existing_req}' → '{new_req}'")
+                elif existing_req and not new_req:
+                    print(f"    {Colors.colorize('Requirement:', Colors.CYAN)} '{existing_req}' → {Colors.colorize('(removed)', Colors.RED)}")
+                elif not existing_req and new_req:
+                    print(f"    {Colors.colorize('Requirement:', Colors.CYAN)} {Colors.colorize('(none)', Colors.GRAY)} → '{new_req}'")
+            
+            # Compare materials
+            existing_materials = existing.get('materials', [])
+            new_materials = new.get('materials', [])
+            if len(existing_materials) != len(new_materials):
+                print(f"    {Colors.colorize('Materials count:', Colors.CYAN)} {len(existing_materials)} → {len(new_materials)}")
+            elif existing_materials != new_materials:
+                print(f"    {Colors.colorize('Materials:', Colors.CYAN)} {Colors.colorize('Content changed', Colors.YELLOW)}")
+                # Show specific material differences
+                for i, (existing_mat, new_mat) in enumerate(zip(existing_materials, new_materials)):
+                    if existing_mat != new_mat:
+                        print(f"      {Colors.colorize(f'Material {i+1}:', Colors.GRAY)} {existing_mat} → {new_mat}")
+            
+            # Compare outputs
+            existing_outputs = existing.get('outputs', [])
+            new_outputs = new.get('outputs', [])
+            if len(existing_outputs) != len(new_outputs):
+                print(f"    {Colors.colorize('Outputs count:', Colors.CYAN)} {len(existing_outputs)} → {len(new_outputs)}")
+            elif existing_outputs != new_outputs:
+                print(f"    {Colors.colorize('Outputs:', Colors.CYAN)} {Colors.colorize('Content changed', Colors.YELLOW)}")
+                # Show specific output differences
+                for i, (existing_out, new_out) in enumerate(zip(existing_outputs, new_outputs)):
+                    if existing_out != new_out:
+                        print(f"      {Colors.colorize(f'Output {i+1}:', Colors.GRAY)} {existing_out} → {new_out}")
     
     if metadata_changes['buildings']['new']:
         print(f"\n{Colors.colorize('NEW BUILDINGS:', Colors.BOLD + Colors.GREEN)}")
@@ -1527,6 +1706,19 @@ def print_detailed_changes(changes, metadata_changes, new_metadata, requirement_
         
         for building_data in new_metadata['buildings']:
             print(f"  {Colors.colorize('+', Colors.GREEN)} {Colors.highlight(building_data['id'])}: {building_data['name']}")
+    
+    print(f"\n{Colors.colorize('Total changes:', Colors.BOLD)} {Colors.colorize(str(_count_total_changes(changes, metadata_changes, requirement_changes)), Colors.YELLOW)}")
+
+
+def _count_total_changes(changes, metadata_changes, requirement_changes):
+    """Count total number of changes across all categories."""
+    return (
+        len(changes['items']['new']) + len(changes['items']['updated']) + len(changes['items']['id_updates']) +
+        len(changes['items'].get('description_updates', {})) +
+        len(changes['crafts']['new']) + len(changes['crafts']['updated']) +
+        len(metadata_changes['buildings']['new']) +
+        len(requirement_changes['new']) + len(requirement_changes['updated'])
+    )
 
 
 def apply_changes_in_correct_order(changes, metadata_changes, new_metadata, requirement_changes, normalized_crafts):
@@ -2052,7 +2244,9 @@ def extract_requirements_from_crafts(normalized_crafts):
         tool_clean = None
         tool_tier = 1
         if tool and tool != 'null' and tool is not None:
-            tool_clean = tool.lower()
+            # Convert Roman numerals to Arabic first
+            tool_normalized = convert_roman_to_arabic(tool)
+            tool_clean = tool_normalized.lower()
             # Dynamic tier extraction using regex
             tier_match = re.search(r'tier\s*(\d+)', tool_clean)
             if tier_match:
@@ -2062,7 +2256,9 @@ def extract_requirements_from_crafts(normalized_crafts):
         building_clean = None
         building_tier = 1
         if building and building != 'null' and building is not None:
-            building_clean = building.lower()
+            # Convert Roman numerals to Arabic first
+            building_normalized = convert_roman_to_arabic(building)
+            building_clean = building_normalized.lower()
             # Dynamic tier extraction using regex
             tier_match = re.search(r'tier\s*(\d+)', building_clean)
             if tier_match:
@@ -2172,11 +2368,38 @@ def compare_requirements(extracted_requirements, existing_requirements):
         
         if req_id in existing_by_id:
             existing_req = existing_by_id[req_id]
-            # Check if requirement needs updating (simplified comparison)
-            if (req_entry.get('name') != existing_req.get('name') or
-                req_entry.get('profession') != existing_req.get('profession') or
-                req_entry.get('tool') != existing_req.get('tool') or
-                req_entry.get('building') != existing_req.get('building')):
+            # Intelligent requirement comparison - compare actual content, not structure
+            needs_update = False
+            
+            # Compare name (case-insensitive)
+            if req_entry.get('name', '').lower().strip() != existing_req.get('name', '').lower().strip():
+                needs_update = True
+                
+            # Compare profession (extract name from both structures)
+            new_prof = req_entry.get('profession', {})
+            existing_prof = existing_req.get('profession', {})
+            new_prof_name = new_prof.get('name', '') if isinstance(new_prof, dict) else str(new_prof)
+            existing_prof_name = existing_prof.get('name', '') if isinstance(existing_prof, dict) else str(existing_prof)
+            if new_prof_name.lower().strip() != existing_prof_name.lower().strip():
+                needs_update = True
+                
+            # Compare tool (extract name from both structures)  
+            new_tool = req_entry.get('tool', {})
+            existing_tool = existing_req.get('tool', {})
+            new_tool_name = new_tool.get('name', '') if isinstance(new_tool, dict) else str(new_tool or '')
+            existing_tool_name = existing_tool.get('name', '') if isinstance(existing_tool, dict) else str(existing_tool or '')
+            if new_tool_name.lower().strip() != existing_tool_name.lower().strip():
+                needs_update = True
+                
+            # Compare building (extract name from both structures)
+            new_building = req_entry.get('building', {})
+            existing_building = existing_req.get('building', {})
+            new_building_name = new_building.get('name', '') if isinstance(new_building, dict) else str(new_building or '')
+            existing_building_name = existing_building.get('name', '') if isinstance(existing_building, dict) else str(existing_building or '')
+            if new_building_name.lower().strip() != existing_building_name.lower().strip():
+                needs_update = True
+            
+            if needs_update:
                 requirement_changes['updated'][req_id] = {
                     'existing': existing_req,
                     'new': req_entry,
@@ -2220,7 +2443,9 @@ def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
             tool_clean = None
             tool_tier = 1
             if tool and tool != 'null' and tool is not None:
-                tool_clean = tool.lower()
+                # Convert Roman numerals to Arabic first
+                tool_normalized = convert_roman_to_arabic(tool)
+                tool_clean = tool_normalized.lower()
                 # Dynamic tier extraction using regex
                 tier_match = re.search(r'tier\s*(\d+)', tool_clean)
                 if tier_match:
@@ -2230,7 +2455,9 @@ def update_crafts_with_requirements(normalized_crafts, extracted_requirements):
             building_clean = None
             building_tier = 1
             if building and building != 'null' and building is not None:
-                building_clean = building.lower()
+                # Convert Roman numerals to Arabic first
+                building_normalized = convert_roman_to_arabic(building)
+                building_clean = building_normalized.lower()
                 # Dynamic tier extraction using regex
                 tier_match = re.search(r'tier\s*(\d+)', building_clean)
                 if tier_match:

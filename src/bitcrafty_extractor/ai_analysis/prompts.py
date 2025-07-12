@@ -125,17 +125,29 @@ EXAMPLE:
         if include_examples:
             quantity_rules = """
 
-CRITICAL QUANTITY FORMATTING RULES:
-1. ALWAYS use specific number ranges instead of generic terms
-2. Use format "min-max" for variable quantities (e.g., "1-3", "0-2", "10-20")
-3. NEVER use "variable", "varied", "random", or similar generic terms
-4. If you see variable output, estimate the range based on visible quantities
-5. Default to "0-1" if the range is unclear but clearly variable
-6. Use single numbers for fixed quantities
+CRITICAL QUANTITY DETECTION & FORMATTING RULES:
+1. PAY EXTREME ATTENTION to output quantities - look carefully for numbers next to output items
+2. Output quantities for potions/consumables are often GREATER than 1 (typically 3-10)
+3. Look for yield numbers, stack counts, or quantity indicators near output items in the UI
+4. ALWAYS use specific number ranges instead of generic terms
+5. Use format "min-max" for variable quantities (e.g., "3-5", "1-3", "10-20")
+6. NEVER use "variable", "varied", "random", or similar generic terms
+7. If you see variable output, estimate the range based on visible quantities
+8. For unclear quantities: potions default to 3-5, materials default to 1-2
+9. Use single numbers for clearly fixed quantities
 
 QUANTITY FORMATS:
-- Good: "qty": 1, "qty": "2-4", "qty": "0-3"
+- Good: "qty": 5, "qty": "3-5", "qty": "1-3" 
 - Bad: "qty": "variable", "qty": "varied", "qty": "random"
+
+POTION-SPECIFIC QUANTITY RULES:
+- Healing/Stamina/Mana potions typically yield 3-10 per craft,
+- If crafting interface shows potions, look for actual yield numbers in the UI
+- Common potion yields: 3, 5
+MATERIAL DETECTION RULES:
+- Scan the Craft interface for ALL required materials, don't stop at the first few
+- Combine all screenshots treat as one craft overview.
+- Pay attention to ingredient quantities - some may require MORE than 1 (e.g., "5x Basic Berry")
 """
         
         craft_validation_rules = f"""
@@ -382,4 +394,4 @@ Be precise with names. Return empty array if no items visible."""
         return self.get_compact_prompt(
             ExtractionType.QUEUE_ANALYSIS,
             screenshot_count=screenshot_count
-        )
+        )  
